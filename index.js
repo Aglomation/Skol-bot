@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { Client, Collection, GatewayIntentBits } = require('discord.js')
+const { Client, Collection, GatewayIntentBits, Locale } = require('discord.js')
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 require('dotenv/config');
@@ -138,7 +138,7 @@ client.on('guildMemberAdd', async (member) => {
               url: member.user.displayAvatarURL({ dynamic: true })
           },
           footer: {
-              text: `${member.guild.members.cache.filter(m => !m.user.bot).size} Medlemmar : ${new Date().toLocaleString()}`
+              text: `${member.guild.members.cache.filter(m => !m.user.bot).size} Medlemmar : ${new Date().toLocaleString(Locale.Swedish)}`
           }
       };
 

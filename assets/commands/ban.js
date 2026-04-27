@@ -2,19 +2,20 @@ const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('softban')
-    .setDescription('Softban a user')
+    .setName('ban')
+    .setDescription('bans a user')
     .addUserOption(option =>
         option.setName('user')
             .setDescription('User to softban')
             .setRequired(true)
     ),
 
+
   async execute(interaction, client) {
 
     await interaction.deferReply({ ephemeral: false });
 
-    if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
         return interaction.editReply("You don't have permission to use this.");
     }
 
@@ -26,15 +27,15 @@ module.exports = {
     }
 
     if (client.banList.has(user.id)) {
-        return interaction.editReply("User is already softbanned.");
+        return interaction.editReply("User is already banned.");
     }
 
     client.banList.add(user.id);
     client.saveBanlist();
 
     try {
-        await member.kick(`Softbanned by ${interaction.user.tag}`);
-        await interaction.editReply(`${user.tag} has been softbanned.`);
+        await member.kick(`banned by ${interaction.user.tag}`);
+        await interaction.editReply(`${user.tag} has been banned.`);
     } catch (err) {
         console.error(err);
         await interaction.editReply("I can't kick that user.");

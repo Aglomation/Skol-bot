@@ -19,7 +19,7 @@ client.commands = new Collection();
 // client.autocompletes = new Collection();
 client.buttons = new Collection();
 
-const BAN_FILE = "./storage/banlist.json";
+const BAN_FILE = "./storage/bans.json";
 
 function loadBanlist() {
     try {

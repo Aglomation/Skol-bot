@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
 import { loadBanlist, saveBanlist } from './utils/banManager.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Ensure environment variables exist
 if (!process.env.token || !process.env.clientId) {
@@ -30,9 +34,13 @@ const fileFilter = (file: string) => file.endsWith('.ts') || file.endsWith('.js'
 
 async function startBot() {
     // --- 1. Load Events ---
-    const eventFiles = fs.readdirSync('./events').filter(fileFilter);
+    const eventsPath = path.join(__dirname, 'events'); 
+    const eventFiles = fs.readdirSync(eventsPath).filter(fileFilter);
+    
     for (const file of eventFiles) {
-        const { default: event } = await import(`./events/${file}`);
+        const filePath = path.join(eventsPath, file);
+        const { default: event } = await import(pathToFileURL(filePath).href);
+        
         if (event.once) {
             client.once(event.name, (...args) => event.execute(...args, client));
         } else {
@@ -41,11 +49,13 @@ async function startBot() {
     }
 
     // --- 2. Load Commands and Components ---
-    const commandFiles = fs.readdirSync('./assets/commands').filter(fileFilter);
+    const commandsPath = path.join(__dirname, 'assets', 'commands');
+    const commandFiles = fs.readdirSync(commandsPath).filter(fileFilter);
     const commandsData: any[] = [];
 
     for (const file of commandFiles) {
-        const { default: command } = await import(`./assets/commands/${file}`);
+        const filePath = path.join(commandsPath, file);
+        const { default: command } = await import(pathToFileURL(filePath).href);
         client.commands.set(command.data.name, command);
         commandsData.push(command.data.toJSON());
     }

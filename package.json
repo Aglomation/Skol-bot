@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx index.ts",
-    "build": "tsc"
+    "build": "tsc", 
+    "start": "node builds/index.js"
   },
+
   "dependencies": {
     "discord.js": "^14.26.3",
     "dotenv": "^17.4.2"

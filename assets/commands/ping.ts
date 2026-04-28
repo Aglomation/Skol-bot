@@ -7,7 +7,7 @@ const command: Command = {
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
         await interaction.deferReply({ 
-            ephemeral: true 
+            ephemeral: false 
         });
         const sent = await interaction.fetchReply()
 

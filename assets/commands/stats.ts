@@ -8,7 +8,7 @@ const command = {
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
         if (!interaction.guild) return;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ ephemeral: false });
 
         await interaction.guild.members.fetch();
 

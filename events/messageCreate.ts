@@ -15,7 +15,7 @@ export default {
                 const [email, verify] = message.content.replace(/\s+/g, '').split("$$");
                 if (!email || !verify) return; // Guard clause in case the webhook format breaks
 
-                const id = findUserByValue("verifycode", verify);
+                const id = findUserByValue("verifycode", verify.toLowerCase());
                 if (!id) return; // Exit if no matching user is found
 
                 updateProfileValue(id, "email", email);

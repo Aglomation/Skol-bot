@@ -24,7 +24,7 @@ const command: Command = {
         const user = interaction.options.getUser('user', true);
         const email = interaction.options.getString('email');
         if (user){
-            const result = getValue(interaction.user.id, "email")
+            const result = getValue(user.id, "email")
 
             await interaction.editReply({
                 content:result || `This user doesn't seem to have an email verified.`

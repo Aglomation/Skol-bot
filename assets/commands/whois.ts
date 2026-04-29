@@ -21,7 +21,7 @@ const command: Command = {
             ephemeral: true 
         });
 
-        const user = interaction.options.getUser('user', true);
+        const user = interaction.options.getUser('user');
         const email = interaction.options.getString('email');
 
         if (user){

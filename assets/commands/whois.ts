@@ -1,10 +1,11 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, Client } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Client, PermissionFlagsBits } from 'discord.js';
 import { findUserByValue, getValue } from '../../utils/profileManager.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName('whois')
         .setDescription('UserID -> Email -> UserID')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to check')

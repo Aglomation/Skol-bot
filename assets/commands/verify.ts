@@ -4,7 +4,7 @@ import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Verify your email via Google Forms')
+        .setDescription('Verify your email via Google Forms'),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
         

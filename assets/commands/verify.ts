@@ -33,6 +33,7 @@ const command: Command = {
             }
 
             await member.roles.add(role);
+            return
         }
 
         const randomnum = generateNaiveRandomString(4)

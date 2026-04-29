@@ -5,7 +5,6 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Verify your email via Google Forms')
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
         

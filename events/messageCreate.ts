@@ -14,7 +14,10 @@ export default {
                 // Removes all whitespace before splitting
                 const [email, verify] = message.content.replace(/\s+/g, '').split("$$");
                 if (!email || !verify) return; // Guard clause in case the webhook format breaks
-
+                
+                if (!email.endsWith("lbs.se")) return
+                if (email.includes("+")) return
+                
                 const id = findUserByValue("verifycode", verify.toLowerCase());
                 if (!id) return; // Exit if no matching user is found
 

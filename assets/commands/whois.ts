@@ -10,7 +10,7 @@ const command: Command = {
                 .setDescription('User to check')
                 .setRequired(false),
         )
-        .addUserOption(option =>
+        .addStringOption(option =>
             option.setName('email')
                 .setDescription('Email to check')
                 .setRequired(false)
@@ -23,6 +23,7 @@ const command: Command = {
 
         const user = interaction.options.getUser('user', true);
         const email = interaction.options.getString('email');
+
         if (user){
             const result = getValue(user.id, "email")
 
@@ -35,7 +36,7 @@ const command: Command = {
             const result = findUserByValue("email", email)
 
             await interaction.editReply({
-                content:result || `No user seems to match the email "${email}"`
+                content:`<@${result}>` || `No user seems to match the email "${email}"`
             })
             return
         }

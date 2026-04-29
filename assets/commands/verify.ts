@@ -40,7 +40,7 @@ const command: Command = {
 
         // add the numbers to list with user id
         await interaction.editReply({
-            content:`Your code is: \`**${randomnum}**\`\nPlease enter the code in the form below\nhttps://forms.gle/b6UgMMjASMrhhRZ3A`
+            content:`Your code is: \`${randomnum}\`\nPlease enter the code in the form below\nhttps://forms.gle/b6UgMMjASMrhhRZ3A`
         })
     },
 };

@@ -30,6 +30,7 @@ client.commands = new Collection();
 client.banList = loadBanlist();
 client.saveBanlist = () => saveBanlist(client.banList);
 
+
 const fileFilter = (file: string) => file.endsWith('.ts') || file.endsWith('.js');
 
 async function startBot() {

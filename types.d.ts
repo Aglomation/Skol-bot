@@ -14,6 +14,12 @@ declare global {
         data: { name: string };
         execute: (interaction: AutocompleteInteraction, client: Client) => Promise<void>;
     }
+    interface UserProfile {
+        verifycode: string;
+        email: string;
+        banned: boolean;
+        
+    }
 }
 
 // 2. Extend the base Discord.js Client
@@ -24,5 +30,7 @@ declare module 'discord.js' {
         buttons: Collection<string, Button>;
         banList: Set<string>;
         saveBanlist: () => void;
+        profilelist: Collection<string, UserProfile>;
+        saveProfilelist: () => void;
     }
 }

@@ -1,9 +1,10 @@
-import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember } from 'discord.js';
+import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits } from 'discord.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName('ban')
         .setDescription('Bans a user from the server (Softban)')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to softban')

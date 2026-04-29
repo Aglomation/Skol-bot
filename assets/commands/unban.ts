@@ -1,9 +1,10 @@
-import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember } from 'discord.js';
+import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits } from 'discord.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName('unban')
         .setDescription('Removes a user from the softban list')
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to unban')
@@ -11,6 +12,7 @@ const command: Command = {
         ),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
+
         await interaction.deferReply({ ephemeral: false });
 
         const executor = interaction.member as GuildMember;

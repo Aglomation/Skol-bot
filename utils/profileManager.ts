@@ -2,7 +2,6 @@ import fs from 'fs';
 
 const PROFILE_FILE = "./storage/profiles.json";
 
-// Define the shape of the full JSON object
 export type ProfileList = Record<string, UserProfile>;
 
 /**
@@ -35,7 +34,6 @@ export const saveProfileList = (profiles: ProfileList): void => {
 
 /**
  * Update a specific key within a user's profile
- * Usage: updateProfileValue("12345", "verifycode", 5544)
  */
 export const updateProfileValue = <K extends keyof UserProfile>(
     userId: string,
@@ -53,7 +51,6 @@ export const updateProfileValue = <K extends keyof UserProfile>(
 
 /**
  * Comprehensive Search: Find a user by any property
- * Usage: findUserByValue("verifycode", 1234)
  */
 export const findUserByValue = <K extends keyof UserProfile>(
     key: K,
@@ -70,6 +67,26 @@ export const getProfile = (userId: string): UserProfile | null => {
     const profiles = loadProfileList();
     return profiles[userId] || null;
 };
+
+export const getValue = <K extends keyof UserProfile>(
+    userId: string,
+    key: K
+): UserProfile[K] | null => {
+    const profiles = loadProfileList();
+
+    const user = profiles[userId];
+    if (!user) {
+        return null;
+    }
+
+    const value = user[key];
+    if (value === undefined) {
+        return null;
+    }
+
+    return value;
+};
+
 
 /**
  * Remove a profile

@@ -30,14 +30,29 @@ export default {
                 if (!member) return; 
 
                 // Fetch only the specific role you need, rather than caching all server roles
-                const roleId = '1498832228145168514';
-                const role = await message.guild?.roles.fetch(roleId).catch(() => null);
+                if (email.endsWith("@elev.ga.lbs.se")){
+                    // Elev
+                    const roleId = '1498832228145168514';
+                    const role = await message.guild?.roles.fetch(roleId).catch(() => null);
 
-                if (role) {
-                    await member.roles.add(role);
+                    if (role) {
+                        await member.roles.add(role);
+                    } else {
+                        console.warn(`Verification role ${roleId} not found in the guild.`);
+                    }
                 } else {
-                    console.warn(`Verification role ${roleId} not found in the guild.`);
+                    // Lärare
+                    const roleId = '1497140069872435217';
+                    const role = await message.guild?.roles.fetch(roleId).catch(() => null);
+
+                    if (role) {
+                        await member.roles.add(role);
+                    } else {
+                        console.warn(`Verification role ${roleId} not found in the guild.`);
+                    }
                 }
+                
+                message.delete()
 
             } catch (error) {
                 console.error("Error processing verification webhook:", error);

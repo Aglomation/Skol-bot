@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -8,6 +8,11 @@ const command: Command = {
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to softban')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('reason')
+                .setDescription('Reason for the ban')
                 .setRequired(true)
         ),
 
@@ -24,6 +29,7 @@ const command: Command = {
 
         const user = interaction.options.getUser('user', true);
         const member = interaction.options.getMember('user') as GuildMember | null;
+        const reason = interaction.options.getString('reason', true)
 
         if (!member) {
             await interaction.editReply("User is not in this server.");
@@ -38,9 +44,10 @@ const command: Command = {
         try {
             client.banList.add(user.id);
             client.saveBanlist();
-            
-            await member.kick(`Banned by ${interaction.user.tag}`);
-            await interaction.editReply(`**${user.tag}** has been softbanned and kicked.`);
+            if (member) await member.kick(reason);
+            await interaction.editReply(`**${user.tag}** has been banned.`);
+
+            ( client.channels.cache.get('1499149296203993169') as TextChannel ).send(`${interaction.user.tag} has banned ${user.tag} for the reason: ${reason}`)
         } catch (err) {
             console.error(err);
             await interaction.editReply("I can't kick that user. They might have a higher role than me.");

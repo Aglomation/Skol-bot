@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
 import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
 const command: Command = {
@@ -10,8 +10,13 @@ const command: Command = {
             option.setName('user')
                 .setDescription('User to unban')
                 .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('reason')
+                .setDescription('Reason for the ban')
+                .setRequired(true)
         ),
-
+    
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
         await interaction.deferReply({ ephemeral: false });
 
@@ -22,6 +27,7 @@ const command: Command = {
         }
 
         const user = interaction.options.getUser('user', true);
+        const reason = interaction.options.getString('reason', true);
 
         if (interaction.guildId !== "1497140069746741338") {
             await interaction.editReply("This command is restricted for this server.");
@@ -38,6 +44,11 @@ const command: Command = {
         updateProfileValue(user.id, "banduration", null);
 
         await interaction.editReply(`**${user.tag}** has been removed from the ban list.`);
+
+        const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;
+        if (logChannel) {
+            await logChannel.send(`${interaction.user.tag} has unbanned <@${user.id}> for the reason: ${reason}`);
+        }
     },
 };
 

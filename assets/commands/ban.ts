@@ -18,8 +18,8 @@ const command: Command = {
         )
         .addStringOption(option =>
             option.setName('duration')
-                .setDescription('Duration of the ban (s, m, h, d, mo, y)')
-                .setRequired(false)
+                .setDescription('Duration of the ban (s, m, h, d, mo, y, inf)')
+                .setRequired(true)
         ),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
@@ -85,7 +85,7 @@ const command: Command = {
 function stringToDate(input: string): Date | null {
     if (!input) return null;
     const cleaned = String(input).replace(/[()\s]/g, '');
-    const re = /(\d+)(mo|y|d|h|m|s)/g;
+    const re = /(\d+)(inf|y|mo|d|h|m|s)/g;
     const multipliers: Record<string, number> = {
         s: 1000,
         m: 60 * 1000,
@@ -93,12 +93,13 @@ function stringToDate(input: string): Date | null {
         d: 24 * 60 * 60 * 1000,
         mo: 30 * 24 * 60 * 60 * 1000,
         y: 365 * 24 * 60 * 60 * 1000,
+        inf: 0,
     };
 
     let totalMs = 0;
     let match: RegExpExecArray | null;
     while ((match = re.exec(cleaned)) !== null) {
-        const value = parseInt(match[1], 10);
+        const value = parseInt(match[1], 10) || 0;
         const unit = match[2];
         if (!Number.isNaN(value) && multipliers[unit]) {
             totalMs += value * multipliers[unit];

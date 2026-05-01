@@ -18,7 +18,8 @@ declare global {
         verifycode: string;
         email: string;
         banned: boolean;
-        
+        banreason: string | null;
+        banduration: string | null;
     }
 }
 

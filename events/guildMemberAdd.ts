@@ -1,17 +1,24 @@
 import { GuildMember, Client, Events, TextChannel } from 'discord.js';
+import { getValue, updateProfileValue } from '../utils/profileManager.js';
 
 export default {
     name: Events.GuildMemberAdd,
     once: false,
     async execute(member: GuildMember, client: Client) {
-        if (client.banList.has(member.id)) {
-            try {
-                await member.kick('User is softbanned');
-                console.log(`Kicked ${member.user.tag} (ban list)`);
-            } catch (err: any) {
-                console.log(`Failed to kick ${member.user.tag}:`, err.message);
+        if (getValue(member.id, "banned")) {
+            if (getValue(member.id, "banduration") && new Date(getValue(member.id, "banduration")!) < new Date()) {
+                updateProfileValue(member.id, "banned", false);
+                updateProfileValue(member.id, "banreason", null);
+                updateProfileValue(member.id, "banduration", null);
+            } else {
+                try {
+                    await member.kick('User is softbanned');
+                    console.log(`Kicked ${member.user.tag} (ban list)`);
+                } catch (err: any) {
+                    console.log(`Failed to kick ${member.user.tag}:`, err.message);
+                }
+                return;
             }
-            return;
         }
 
         // Cast the channel to TextChannel so TypeScript knows we can use .send()

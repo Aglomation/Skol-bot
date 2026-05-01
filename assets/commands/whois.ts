@@ -5,7 +5,7 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName('whois')
         .setDescription('UserID -> Email -> UserID')
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('User to check')
@@ -47,16 +47,5 @@ const command: Command = {
         })
     },
 };
-
-function generateNaiveRandomString(length:number) {
-  const chars = 'abcdefghijklmnpqrstuvwxyz123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    // Generate a random index between 0 and 61
-    const randomIndex = Math.floor(Math.random() * chars.length);
-    result += chars[randomIndex];
-  }
-  return result;
-}
 
 export default command;

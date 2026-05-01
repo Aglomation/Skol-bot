@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js';
-import { loadBanlist, saveBanlist } from './utils/banManager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,10 +25,6 @@ const client = new Client({
 client.commands = new Collection();
 // client.autocompletes = new Collection();
 // client.buttons = new Collection();
-
-client.banList = loadBanlist();
-client.saveBanlist = () => saveBanlist(client.banList);
-
 
 const fileFilter = (file: string) => file.endsWith('.ts') || file.endsWith('.js');
 

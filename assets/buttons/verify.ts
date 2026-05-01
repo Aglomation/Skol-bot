@@ -1,25 +1,10 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, Client, PermissionFlagsBits, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
+import { ButtonInteraction, ChatInputCommandInteraction, Client, PermissionFlagsBits } from 'discord.js';
 import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
-const command: Command = {
-    data: new SlashCommandBuilder()
-        .setName('verify')
-        .setDescription('Verify your email via Google Forms'),
-
-    async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        if (interaction.user.id == "586643628990922752"){
-            const confirm = new ButtonBuilder().setCustomId('verify').setLabel('Verify').setStyle(ButtonStyle.Success);
-
-            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirm);
-
-            await interaction.reply({
-                content: `Click the button below to verify your email! Make sure to use your school email and to fill in the code that will be given to you in the form!`,
-                components: [row],
-            });
-
-            return
-        }
-  
+const button: Button = {
+    data: { name: 'verify' },
+    async execute(interaction: ButtonInteraction, client: Client) {
+        
         if (interaction.channel?.id != "1498834244854878209") return;
 
         await interaction.deferReply({ 
@@ -67,4 +52,4 @@ function generateRandomString(length:number) {
     return result;
 }
 
-export default command;
+export default button;

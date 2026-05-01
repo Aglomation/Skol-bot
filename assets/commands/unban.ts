@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits } from 'discord.js';
+import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -12,7 +13,6 @@ const command: Command = {
         ),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
-
         await interaction.deferReply({ ephemeral: false });
 
         const executor = interaction.member as GuildMember;
@@ -23,20 +23,19 @@ const command: Command = {
 
         const user = interaction.options.getUser('user', true);
 
-        // Security Check: Ensure this is the correct Guild ID
         if (interaction.guildId !== "1497140069746741338") {
             await interaction.editReply("This command is restricted for this server.");
             return;
         }
 
-        // Logical Fix: If the list DOES NOT have the ID, they aren't banned
-        if (!client.banList.has(user.id)) {
+        if (!getValue(user.id, "banned")) {
             await interaction.editReply("That user is not on the ban list.");
             return;
         }
 
-        client.banList.delete(user.id);
-        client.saveBanlist();
+        updateProfileValue(user.id, "banned", false);
+        updateProfileValue(user.id, "banreason", null);
+        updateProfileValue(user.id, "banduration", null);
 
         await interaction.editReply(`**${user.tag}** has been removed from the ban list.`);
     },

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
+import { getValue, updateProfileValue } from '../../utils/profileManager.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -14,6 +15,11 @@ const command: Command = {
             option.setName('reason')
                 .setDescription('Reason for the ban')
                 .setRequired(true)
+        )
+        .addNumberOption(option =>
+            option.setName('duration')
+                .setDescription('Duration of the ban (s, m, h, d, mo, y)')
+                .setRequired(false)
         ),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
@@ -36,14 +42,16 @@ const command: Command = {
             return;
         }
 
-        if (client.banList.has(user.id)) {
+        if (getValue(user.id, "banned")) {
             await interaction.editReply("User is already on the ban list.");
             return;
         }
 
         try {
-            client.banList.add(user.id);
-            client.saveBanlist();
+            updateProfileValue(user.id, "banned", true)
+            updateProfileValue(user.id, "banreason", reason)
+            updateProfileValue(user.id, "banduration", stringToDate(interaction.options.getString('duration') || '')?.toISOString() || null)
+
             if (member) await member.kick(reason);
             await interaction.editReply(`**${user.tag}** has been banned.`);
 
@@ -54,5 +62,31 @@ const command: Command = {
         }
     },
 };
+
+function stringToDate(input: string): Date | null {
+    if (!input) return null;
+    const cleaned = String(input).replace(/[()\s]/g, '');
+    const re = /(\d+)(mo|y|d|h|m|s)/g;
+    const multipliers: Record<string, number> = {
+        s: 1000,
+        m: 60 * 1000,
+        h: 60 * 60 * 1000,
+        d: 24 * 60 * 60 * 1000,
+        mo: 30 * 24 * 60 * 60 * 1000,
+        y: 365 * 24 * 60 * 60 * 1000,
+    };
+
+    let totalMs = 0;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(cleaned)) !== null) {
+        const value = parseInt(match[1], 10);
+        const unit = match[2];
+        if (!Number.isNaN(value) && multipliers[unit]) {
+            totalMs += value * multipliers[unit];
+        }
+    }
+
+    return totalMs > 0 ? new Date(Date.now() + totalMs) : null;
+}
 
 export default command;

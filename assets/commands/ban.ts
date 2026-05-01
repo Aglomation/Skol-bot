@@ -3,7 +3,7 @@ import { getValue, updateProfileValue } from '../../utils/profileManager.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
-        .setName('ban')
+        .setName('softban')
         .setDescription('Bans a user from the server (Softban)')
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
         .addUserOption(option =>
@@ -49,21 +49,32 @@ const command: Command = {
         }
 
         try {
-            updateProfileValue(user.id, "banned", true)
-            updateProfileValue(user.id, "banreason", reason)
-            updateProfileValue(user.id, "banduration", date?.toISOString() || null)
+            updateProfileValue(user.id, "banned", true);
+            updateProfileValue(user.id, "banreason", reason);
+            updateProfileValue(user.id, "banduration", date?.toISOString() || null);
 
-            await user.send(
-                `You have been banned from the server for: ${reason}\n` +
-                `Duration: ${date ? `<t:${Math.floor(date.getTime() / 1000)}>` : 'Indefinite'}\n` +
-                `Expires: ${date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'Indefinite'}\n` +
-                `Invite: https://discord.gg/dUYHv8Dv94`
-            ).catch(() => {});
+            await user.send({
+                embeds: [{
+                    color: 0xFF0000,
+                    title: `You have been banned from ${interaction.guild?.name}`,
+                    fields: [
+                        { name: 'Reason', value: reason, inline: false },
+                        { name: 'Duration', value: date ? `<t:${Math.floor(date.getTime() / 1000)}>` : 'Indefinite', inline: false },
+                        { name: 'Expires', value: date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'Indefinite', inline: false },
+                        { name: 'Invite', value: 'https://discord.gg/dUYHv8Dv94', inline: false }
+                    ]
+                }]
+            }).catch(() => {});
 
-            if (member) await member.kick(reason);
+            // Kicks instead of banning to avoid IP-ban
+            await member.kick(reason);
+
             await interaction.editReply(`**${user.tag}** has been banned.`);
 
-            ( client.channels.cache.get('1499149296203993169') as TextChannel ).send(`${interaction.user.tag} has banned ${user.tag} for the reason: ${reason}`)
+            const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;
+            if (logChannel) {
+                await logChannel.send(`${interaction.user.tag} has banned ${user.tag} for the reason: ${reason}`);
+            }
         } catch (err) {
             console.error(err);
             await interaction.editReply("I can't kick that user. They might have a higher role than me.");

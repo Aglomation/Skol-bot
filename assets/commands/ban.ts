@@ -16,7 +16,7 @@ const command: Command = {
                 .setDescription('Reason for the ban')
                 .setRequired(true)
         )
-        .addNumberOption(option =>
+        .addStringOption(option =>
             option.setName('duration')
                 .setDescription('Duration of the ban (s, m, h, d, mo, y)')
                 .setRequired(false)
@@ -35,7 +35,8 @@ const command: Command = {
 
         const user = interaction.options.getUser('user', true);
         const member = interaction.options.getMember('user') as GuildMember | null;
-        const reason = interaction.options.getString('reason', true)
+        const reason = interaction.options.getString('reason', true);
+        const date = stringToDate(interaction.options.getString('duration') || '');
 
         if (!member) {
             await interaction.editReply("User is not in this server.");
@@ -50,7 +51,14 @@ const command: Command = {
         try {
             updateProfileValue(user.id, "banned", true)
             updateProfileValue(user.id, "banreason", reason)
-            updateProfileValue(user.id, "banduration", stringToDate(interaction.options.getString('duration') || '')?.toISOString() || null)
+            updateProfileValue(user.id, "banduration", date?.toISOString() || null)
+
+            await user.send(
+                `You have been banned from the server for: ${reason}\n` +
+                `Duration: ${date ? `<t:${Math.floor(date.getTime() / 1000)}>` : 'Indefinite'}\n` +
+                `Expires: ${date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'Indefinite'}\n` +
+                `Invite: https://discord.gg/dUYHv8Dv94`
+            ).catch(() => {});
 
             if (member) await member.kick(reason);
             await interaction.editReply(`**${user.tag}** has been banned.`);

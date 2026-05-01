@@ -24,7 +24,7 @@ const client = new Client({
 
 client.commands = new Collection();
 // client.autocompletes = new Collection();
-// client.buttons = new Collection();
+client.buttons = new Collection();
 
 const fileFilter = (file: string) => file.endsWith('.ts') || file.endsWith('.js');
 
@@ -54,6 +54,15 @@ async function startBot() {
         const { default: command } = await import(pathToFileURL(filePath).href);
         client.commands.set(command.data.name, command);
         commandsData.push(command.data.toJSON());
+    }
+
+    const buttonsPath = path.join(__dirname, 'assets', 'buttons');
+    const buttonFiles = fs.readdirSync(buttonsPath).filter(fileFilter);
+
+    for (const file of buttonFiles) {
+        const filePath = path.join(buttonsPath, file);
+        const { default: button } = await import(pathToFileURL(filePath).href);
+        client.buttons.set(button.data.customId, button);
     }
 
     // --- 3. Register Slash Commands ---

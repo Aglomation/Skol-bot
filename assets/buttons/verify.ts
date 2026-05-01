@@ -1,8 +1,10 @@
-import { ButtonInteraction, ChatInputCommandInteraction, Client, PermissionFlagsBits } from 'discord.js';
+import { ButtonInteraction, Client } from 'discord.js';
 import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
 const button: Button = {
-    data: { name: 'verify' },
+    data: { 
+        customId: 'verify' 
+    },
     async execute(interaction: ButtonInteraction, client: Client) {
         
         if (interaction.channel?.id != "1498834244854878209") return;

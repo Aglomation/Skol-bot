@@ -7,7 +7,7 @@ declare global {
         execute: (interaction: ChatInputCommandInteraction, client: Client) => Promise<void>;
     }
     interface Button {
-        data: { name: string };
+        data: { customId: string };
         execute: (interaction: ButtonInteraction, client: Client) => Promise<void>;
     }
     interface Autocomplete {

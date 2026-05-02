@@ -1,16 +1,35 @@
 import { ButtonInteraction, Client } from 'discord.js';
 import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
+function generateRandomString(length:number) {
+    // 36 ^ 4 = 1,679,616
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * chars.length);
+        result += chars[randomIndex];
+    }
+    return result;
+}
+
 const button: Button = {
     data: { 
         customId: 'verify' 
     },
     async execute(interaction: ButtonInteraction, client: Client) {
-        if (interaction.channel?.id != "1498834244854878209") return;
+        if (interaction.channel?.id !== "1498834244854878209") return;
 
         await interaction.deferReply({ 
             ephemeral: true 
         });
+
+        if (getValue(interaction.user.id, "banned") === true){
+            const member = await interaction.guild?.members.fetch(interaction.user.id).catch(() => null);
+            if (!member) return;
+
+            await member.kick();
+            return;
+        }
 
         // Give verified role immediately if the user already has an email connected
         if (getValue(interaction.user.id, "email") !== null){
@@ -25,24 +44,13 @@ const button: Button = {
         }
 
         // Generates random code and adds it to users profile
-        const randomnum = generateRandomString(4)
-        updateProfileValue(interaction.user?.id, "verifycode", randomnum)
+        const verificationCode = generateRandomString(4)
+        updateProfileValue(interaction.user?.id, "verifycode", verificationCode)
 
         await interaction.editReply({
-            content:`Your code is: \`${randomnum}\`\nMake sure you use your school mail!\nPlease enter the code in the form below\nhttps://forms.gle/b6UgMMjASMrhhRZ3A`
+            content:`Your code is: \`${verificationCode}\`\nMake sure you use your school mail!\nPlease enter the code in the form below\nhttps://forms.gle/b6UgMMjASMrhhRZ3A`
         })
     },
 };
-
-function generateRandomString(length:number) {
-    // 36 ^ 4 = 1,679,616
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * chars.length);
-        result += chars[randomIndex];
-    }
-    return result;
-}
 
 export default button;

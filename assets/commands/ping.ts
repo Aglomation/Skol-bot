@@ -14,11 +14,9 @@ const command: Command = {
         const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
         const websocket = client.ws.ping;
 
-        await interaction.editReply(
-            `Pong!\n` +
-            `Roundtrip: \`${roundtrip}ms\`\n` +
-            `WebSocket: \`${websocket}ms\``
-        );
+        await interaction.editReply({
+            content: `Pong!\nRoundtrip: \`${roundtrip}ms\`\nWebSocket: \`${websocket}ms\``
+        });
     },
 };
 

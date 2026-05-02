@@ -13,45 +13,36 @@ export default {
             try {
                 // Removes all whitespace before splitting
                 const [email, verify] = message.content.replace(/\s+/g, '').split("$$");
-                if (!email || !verify) return; // Guard clause in case the webhook format breaks
+                if (!email || !verify) return;
                 
                 if (!email.endsWith("lbs.se")) return
                 if (email.includes("+")) return
                 
                 const id = findUserByValue("verifycode", verify.toLowerCase());
-                if (!id) return; // Exit if no matching user is found
+                if (!id) return; // exit if id is invalid
 
                 updateProfileValue(id, "email", email);
 
-                // Fetch member using the ID as a string, catching potential errors if they left
+                // Fetch member
                 const member = await message.guild?.members.fetch(String(id)).catch(() => null);
-                
-                // Check if the member exists BEFORE trying to modify them
                 if (!member) return; 
 
-                // Fetch only the specific role you need, rather than caching all server roles
-                if (email.endsWith("@elev.ga.lbs.se")){
-                    // Elev
-                    const roleId = '1498832228145168514';
-                    const role = await message.guild?.roles.fetch(roleId).catch(() => null);
+                // Add verified role to the user
+                const verifiedRole = await message.guild?.roles.fetch('1498832228145168514').catch(() => null);
+                if (verifiedRole) {
+                    await member.roles.add(verifiedRole);
+                }
 
-                    if (role) {
-                        await member.roles.add(role);
-                    } else {
-                        console.warn(`Verification role ${roleId} not found in the guild.`);
-                    }
-                } else {
-                    // Lärare
-                    const roleId = '1497140069872435217';
-                    const role = await message.guild?.roles.fetch(roleId).catch(() => null);
+                // Give teacher role if email doesn't end with @elev.ga.lbs.se
+                if (!email.endsWith("@elev.ga.lbs.se")){
+                    const teacherRole = await message.guild?.roles.fetch('1497140069872435217').catch(() => null);
 
-                    if (role) {
-                        await member.roles.add(role);
-                    } else {
-                        console.warn(`Verification role ${roleId} not found in the guild.`);
+                    if (teacherRole) {
+                        await member.roles.add(teacherRole);
                     }
                 }
                 
+                // Deletes emails after being verified
                 message.delete()
 
             } catch (error) {

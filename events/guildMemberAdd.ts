@@ -5,13 +5,16 @@ export default {
     name: Events.GuildMemberAdd,
     once: false,
     async execute(member: GuildMember, client: Client) {
+        // Check if the user is on the ban list
         if (getValue(member.id, "banned")) {
+            // If the ban duration has expired, remove the user from the ban list
             if (getValue(member.id, "banduration") && new Date(getValue(member.id, "banduration")!) < new Date()) {
                 updateProfileValue(member.id, "banned", false);
                 updateProfileValue(member.id, "banreason", null);
                 updateProfileValue(member.id, "banduration", null);
             } else {
                 try {
+                    // Kick the user instead of ban to avoid IP-bans
                     await member.kick('User is softbanned');
                     console.log(`Kicked ${member.user.tag} (ban list)`);
                 } catch (err: any) {

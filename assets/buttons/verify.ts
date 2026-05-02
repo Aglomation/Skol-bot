@@ -6,34 +6,25 @@ const button: Button = {
         customId: 'verify' 
     },
     async execute(interaction: ButtonInteraction, client: Client) {
-        
         if (interaction.channel?.id != "1498834244854878209") return;
 
         await interaction.deferReply({ 
             ephemeral: true 
         });
+
+        // Give verified role immediately if the user already has an email connected
         if (getValue(interaction.user.id, "email") !== null){
-            await interaction.editReply({
-                content:`You already have an email connected.`
-            })
-            // Fetch member using the ID as a string, catching potential errors if they left
             const member = await interaction.guild?.members.fetch(interaction.user.id).catch(() => null);
-            
             if (!member) return;
 
-            const roleId = "1498832228145168514";
-
-            const role = await interaction.guild?.roles.fetch(roleId).catch(() => null);
-
-            if (!role) {
-                console.warn(`Role ${roleId} not found in the guild.`);
-                return;
-            }
+            const role = await interaction.guild?.roles.fetch("1498832228145168514").catch(() => null);
+            if (!role) return;
 
             await member.roles.add(role);
-            return
+            return;
         }
 
+        // Generates random code and adds it to users profile
         const randomnum = generateRandomString(4)
         updateProfileValue(interaction.user?.id, "verifycode", randomnum)
 

@@ -1,49 +1,133 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, Client, EmbedBuilder } from 'discord.js';
+import axios from "axios";
+import {
+    type ChatInputCommandInteraction,
+    type Client,
+    EmbedBuilder,
+    SlashCommandBuilder,
+} from "discord.js";
+import SchoolList from "../data/schools.js";
+
+type UnitsReponsePartial = {
+    value: string; // Ex: "cirka 420" osv
+    valueType: string; // "EXISTS"
+    timePeriod:
+    | "2025/26"
+    | "2024/25"
+    | "2023/24"
+    | "2022/23"
+    | "2021/22"
+    | "2020/21"
+    | "2019/20"
+    | "2018/19"
+    | "2017/18"
+    | "2016/17"
+    | "2015/16";
+};
+
+interface FinalSchoolData {
+    name: string;
+    count: number;
+    studentCount: number;
+    percentage: number;
+}
+
+function parseLeaderboardPosition(position: number): string {
+    switch (position) {
+        case 1:
+            return "🥇";
+        case 2:
+            return "🥈";
+        case 3:
+            return "🥉";
+        default:
+            return position.toString();
+    }
+}
 
 const command = {
     data: new SlashCommandBuilder()
-        .setName('stats')
-        .setDescription('Get the current amount of members per region'),
+        .setName("stats")
+        .setDescription("Get the current amount of members per region"),
 
-    async execute(interaction: ChatInputCommandInteraction, client: Client) {
+    async execute(interaction: ChatInputCommandInteraction, _client: Client) {
         if (!interaction.guild) return;
 
         await interaction.deferReply({ ephemeral: false });
 
         await interaction.guild.members.fetch();
 
-        const rolesToTrack = [
-            { name: '✂️ Borås', id: '1497160597220098148' },
-            { name: '🐟 Göteborg', id: '1497160590647623690' },
-            { name: '🍓 Halmstad', id: '1497142973668917248' },
-            { name: '🏰 Helsingborg', id: '1497142972477734962' },
-            { name: '🌊 Jönköping', id: '1497142974889332836' },
-            { name: '🌹 Kungsbacka', id: '1497142971643072545' },
-            { name: '🐯 Linköping', id: '1497142969726271538' },
-            { name: '🎓 Lund', id: '1497149407169089536' },
-            { name: '🍺 Malmö', id: '1497142975552290888' },
-            { name: '🗝️ Nyköping', id: '1497140788864225360' },
-            { name: '🛒 Stockholm Norra', id: '1497160592056647750' },
-            { name: '👑 Stockholm Södra', id: '1497142976835747840' },
-            { name: '🌉 Trollhättan', id: '1497160595823263804' },
-            { name: '🌳 Växjö', id: '1497160595085066340' },
-            { name: '🦅 Örebro', id: '1497160592866283631' },
-        ];
+        const fields: { name: string; value: string; inline?: boolean }[] = [];
+        const finalSchoolData: FinalSchoolData[] = [];
 
-        let description = "";
+        for (const roleData of SchoolList) {
+            let studentCount = 0;
 
-        // 2. Loop through and build the list
-        for (const roleData of rolesToTrack) {
+            await axios
+                .get(
+                    `https://api.skolverket.se/planned-educations/v4/school-units/${roleData.schoolUnitCode}/statistics/gy`,
+                )
+                .then((response) => {
+                    const data = response.data.body
+                        .totalNumberOfPupils[0] as UnitsReponsePartial;
+                    if (data.valueType !== "EXISTS") return;
+                    const numericValue = parseInt(data.value.replace(/\D/g, ""), 10);
+                    studentCount = Number.isNaN(numericValue) ? 0 : numericValue;
+                })
+                .catch((error) => {
+                    console.error("Error fetching schooldata:", error);
+                });
+
+            if (roleData.medieGymnasietSchoolUnitCode) {
+                await axios
+                    .get(
+                        `https://api.skolverket.se/planned-educations/v4/school-units/${roleData.medieGymnasietSchoolUnitCode}/statistics/gy`,
+                    )
+                    .then((response) => {
+                        const data = response.data.body
+                            .totalNumberOfPupils[0] as UnitsReponsePartial;
+                        if (data.valueType !== "EXISTS") return;
+                        const value = data.value;
+                        const numericValue = parseInt(value.replace(/\D/g, ""), 10);
+                        studentCount += Number.isNaN(numericValue) ? 0 : numericValue;
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching schooldata:", error);
+                    });
+            }
+
             const role = interaction.guild.roles.cache.get(roleData.id);
             const count = role ? role.members.size : 0;
-            description += `**${roleData.name}:** ${count}\n`;
+            finalSchoolData.push({
+                name: roleData.name,
+                count,
+                studentCount,
+                percentage: studentCount > 0 ? (count / studentCount) * 100 : 0,
+            });
+        }
+
+        finalSchoolData.sort((a, b) => b.percentage - a.percentage);
+        // build a summary and detailed fields
+        const totalStudents = finalSchoolData.reduce((s, f) => s + f.studentCount, 0);
+        const totalMembers = interaction.guild.members.cache.filter((m) => !m.user.bot).size;
+        const overallParticipation = totalStudents > 0 ? (totalMembers / totalStudents) * 100 : 0;
+
+        let index = 0;
+        for (const schoolData of finalSchoolData) {
+            index++;
+            fields.push({
+                name: `${parseLeaderboardPosition(index)} ${schoolData.name}`,
+                value: `\`Members: ${schoolData.count} • Students: ${schoolData.studentCount} • ${Math.round(schoolData.percentage)}%\``,
+                inline: false,
+            });
         }
 
         const embed = new EmbedBuilder()
-            .setTitle(`Total Members: ${interaction.guild.members.cache.filter(m => !m.user.bot).size}`)
-            .setDescription(description)
+            .setTitle(`Deltagarstatistik per stad`)
+            .setDescription(`Servermedlemmar: **${totalMembers}** • Nationelltotal: **${totalStudents}** • Deltagande: **${Math.round(overallParticipation)}%**`)
+            .addFields(fields)
             .setColor(0x2b2d31)
-            .setTimestamp();
+            .setTimestamp()
+            .setFooter({ text: 'Data: Skolverket API 🥵' });
 
         await interaction.editReply({ embeds: [embed] });
     },

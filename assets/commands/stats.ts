@@ -66,14 +66,14 @@ const command = {
                 .get(
                     `https://api.skolverket.se/planned-educations/v4/school-units/${roleData.schoolUnitCode}/statistics/gy`,
                 )
-                .then((response) => {
+                .then((response: { data: { body: { totalNumberOfPupils: UnitsReponsePartial[]; }; }; }) => {
                     const data = response.data.body
                         .totalNumberOfPupils[0] as UnitsReponsePartial;
                     if (data.valueType !== "EXISTS") return;
                     const numericValue = parseInt(data.value.replace(/\D/g, ""), 10);
                     studentCount = Number.isNaN(numericValue) ? 0 : numericValue;
                 })
-                .catch((error) => {
+                .catch((error: any) => {
                     console.error("Error fetching schooldata:", error);
                 });
 
@@ -82,7 +82,7 @@ const command = {
                     .get(
                         `https://api.skolverket.se/planned-educations/v4/school-units/${roleData.medieGymnasietSchoolUnitCode}/statistics/gy`,
                     )
-                    .then((response) => {
+                    .then((response: { data: { body: { totalNumberOfPupils: UnitsReponsePartial[]; }; }; }) => {
                         const data = response.data.body
                             .totalNumberOfPupils[0] as UnitsReponsePartial;
                         if (data.valueType !== "EXISTS") return;
@@ -90,7 +90,7 @@ const command = {
                         const numericValue = parseInt(value.replace(/\D/g, ""), 10);
                         studentCount += Number.isNaN(numericValue) ? 0 : numericValue;
                     })
-                    .catch((error) => {
+                    .catch((error: any) => {
                         console.error("Error fetching schooldata:", error);
                     });
             }
@@ -116,7 +116,7 @@ const command = {
             index++;
             fields.push({
                 name: `${parseLeaderboardPosition(index)} ${schoolData.name}`,
-                value: `\`Members: ${schoolData.count} • Students: ${schoolData.studentCount} • ${Math.round(schoolData.percentage)}%\``,
+                value: `\`👥(${schoolData.count}/${schoolData.studentCount}) • ${Math.round(schoolData.percentage)}%\``,
                 inline: false,
             });
         }

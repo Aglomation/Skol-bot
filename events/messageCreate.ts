@@ -29,7 +29,7 @@ export default {
     async execute(message: Message, client: Client) {
 
         // Honeypot
-        if (message.channel.id === "1497140071176863755" && message.member?.permissions.has("Administrator")) {
+        if (message.channel.id === "1497140071176863755" && !message.member?.permissions.has("Administrator")) {
             const compromisedUserId = message.author.id;
 
             const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;

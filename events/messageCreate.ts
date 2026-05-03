@@ -27,7 +27,8 @@ export default {
     name: Events.MessageCreate,
     once: false,
     async execute(message: Message, client: Client) {
-
+        if (!message.guild) return;
+        
         // Honeypot
         if (message.channel.id === "1497140071176863755" && !message.member?.permissions.has("Administrator")) {
             const compromisedUserId = message.author.id;
@@ -38,31 +39,28 @@ export default {
             // Quarantine the user and delete the trigger message. 
             await message.member?.timeout(3 * 24 * 60 * 60 * 1000).catch(() => null);
             await message.delete().catch(() => null);
+            const channels = message.guild.channels.cache.filter(c => c.isTextBased());
+            
+            // Map channels to an array of promises
+            const purgePromises = channels.map(async (channel) => {
+                const textChannel = channel as GuildTextBasedChannel;
 
-            if (message.guild) {
-                const channels = message.guild.channels.cache.filter(c => c.isTextBased());
-                
-                // Map channels to an array of promises
-                const purgePromises = channels.map(async (channel) => {
-                    const textChannel = channel as GuildTextBasedChannel;
-
-                    // No point checking if the channel has had no activity in the last 10 minutes
-                    if (textChannel.lastMessageId) {
-                        const lastMessageTime = SnowflakeUtil.timestampFrom(textChannel.lastMessageId);
-                        if (lastMessageTime < Date.now() - (10 * 60 * 1000)) {
-                            return 0;
-                        }
+                // No point checking if the channel has had no activity in the last 10 minutes
+                if (textChannel.lastMessageId) {
+                    const lastMessageTime = SnowflakeUtil.timestampFrom(textChannel.lastMessageId);
+                    if (lastMessageTime < Date.now() - (10 * 60 * 1000)) {
+                        return 0;
                     }
+                }
 
-                    return await purgeScamMessages(textChannel, compromisedUserId);
-                });
+                return await purgeScamMessages(textChannel, compromisedUserId);
+            });
 
-                // deletes in parrallel
-                const results = await Promise.all(purgePromises);
-                
-                const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
-                if (logChannel) await logChannel.send(`Honeypot wipe complete. Wiped ${totalDeleted} messages from <@${compromisedUserId}>.`);
-            }
+            // deletes in parrallel
+            const results = await Promise.all(purgePromises);
+            
+            const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
+            if (logChannel) await logChannel.send(`Honeypot wipe complete. Wiped ${totalDeleted} messages from <@${compromisedUserId}>.`);
             return; 
         }
 

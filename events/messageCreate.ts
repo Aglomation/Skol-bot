@@ -1,9 +1,9 @@
-import { Client, Events, Message, GuildTextBasedChannel, TextChannel } from 'discord.js';
+import { Client, Events, Message, GuildTextBasedChannel, TextChannel, SnowflakeUtil } from 'discord.js';
 import { updateProfileValue, findUserByValue } from '../utils/profileManager.js';
 
 async function purgeScamMessages(channel: GuildTextBasedChannel, targetUserId: string): Promise<number> {
     try {
-        const fetchedMessages = await channel.messages.fetch({ limit: 100 });
+        const fetchedMessages = await channel.messages.fetch({ limit: 20 });
         
         // Filter for the users messages from the past hour
         const messagesToDelete = fetchedMessages.filter(msg => 
@@ -33,22 +33,34 @@ export default {
             const compromisedUserId = message.author.id;
 
             const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;
-            if (logChannel) await logChannel.send(`Honeypot triggered by <@${compromisedUserId}>!`);
+            if (logChannel) await logChannel.send(`Honeypot triggered by <@${compromisedUserId}>! Wiping messages`);
             
             // Quarantine the user and delete the trigger message. 
-            await message.member?.timeout(24 * 60 * 60 * 1000, `Honeypot triggered, DM an admin when you've recovered your account`).catch(() => null);
+            await message.member?.timeout(3 * 24 * 60 * 60 * 1000).catch(() => null);
             await message.delete().catch(() => null);
 
-            // Purge users messages from the past hour
             if (message.guild) {
-                // Grab all text-based channels
                 const channels = message.guild.channels.cache.filter(c => c.isTextBased());
-                let totalDeleted = 0;
+                
+                // Map channels to an array of promises
+                const purgePromises = channels.map(async (channel) => {
+                    const textChannel = channel as GuildTextBasedChannel;
 
-                for (const [_, channel] of channels) {
-                    const deletedCount = await purgeScamMessages(channel as GuildTextBasedChannel, compromisedUserId);
-                    totalDeleted += deletedCount;
-                }
+                    // No point checking if the channel has had no activity in the last 10 minutes
+                    if (textChannel.lastMessageId) {
+                        const lastMessageTime = SnowflakeUtil.timestampFrom(textChannel.lastMessageId);
+                        if (lastMessageTime < Date.now() - (10 * 60 * 1000)) {
+                            return 0;
+                        }
+                    }
+
+                    return await purgeScamMessages(textChannel, compromisedUserId);
+                });
+
+                // deletes in parrallel
+                const results = await Promise.all(purgePromises);
+                
+                const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
                 if (logChannel) await logChannel.send(`Honeypot wipe complete. Wiped ${totalDeleted} messages from <@${compromisedUserId}>.`);
             }
             return; 

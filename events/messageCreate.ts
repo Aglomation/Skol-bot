@@ -28,7 +28,7 @@ export default {
     once: false,
     async execute(message: Message, client: Client) {
         if (!message.guild) return;
-        
+
         // Honeypot
         if (message.channel.id === "1497140071176863755" && !message.member?.permissions.has("Administrator")) {
             const compromisedUserId = message.author.id;
@@ -45,7 +45,7 @@ export default {
             const purgePromises = channels.map(async (channel) => {
                 const textChannel = channel as GuildTextBasedChannel;
 
-                // No point checking if the channel has had no activity in the last 10 minutes
+                // Skip inactive channels
                 if (textChannel.lastMessageId) {
                     const lastMessageTime = SnowflakeUtil.timestampFrom(textChannel.lastMessageId);
                     if (lastMessageTime < Date.now() - (10 * 60 * 1000)) {

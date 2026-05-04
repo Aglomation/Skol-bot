@@ -23,7 +23,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-// client.autocompletes = new Collection();
+client.autocompletes = new Collection();
 client.buttons = new Collection();
 
 const fileFilter = (file: string) => file.endsWith('.ts') || file.endsWith('.js');
@@ -65,6 +65,29 @@ async function startBot() {
         client.buttons.set(button.data.customId, button);
     }
 
+    const autocompletesPath = path.join(__dirname, 'assets', 'autocompletes');
+    const autcompleteFiles = fs.readdirSync(autocompletesPath).filter(fileFilter);
+
+    for (const file of autcompleteFiles) {
+        const filePath = path.join(autocompletesPath, file);
+        const { default: autocomplete } = await import(pathToFileURL(filePath).href);
+        client.autocompletes.set(autocomplete.data.name, autocomplete);
+    }
+
+    const repeatingPath = path.join(__dirname, 'assets', 'repeating');
+    const repeatingFiles = fs.readdirSync(repeatingPath).filter(fileFilter);
+
+    for (const file of repeatingFiles) {
+        const filePath = path.join(repeatingPath, file);
+        const { default: repeating } = await import(pathToFileURL(filePath).href);
+        if (repeating.repeating) {
+            setInterval(() => repeating.execute(client), repeating.time);
+        }
+        if (repeating.immediate) {
+            await repeating.execute(client);
+        }
+    }
+    
     // --- 3. Register Slash Commands ---
     const rest = new REST({ version: '10' }).setToken(process.env.token as string);
 

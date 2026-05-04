@@ -1,11 +1,10 @@
-import axios from "axios";
 import {
     type ChatInputCommandInteraction,
     type Client,
     EmbedBuilder,
     SlashCommandBuilder,
 } from "discord.js";
-import SchoolList from "../data/schools.js";
+import fs from "fs";
 
 type UnitsReponsePartial = {
     value: string; // Ex: "cirka 420" osv
@@ -59,52 +58,24 @@ const command = {
         const fields: { name: string; value: string; inline?: boolean }[] = [];
         const finalSchoolData: FinalSchoolData[] = [];
 
-        for (const roleData of SchoolList) {
-            let studentCount = 0;
+        if (!fs.existsSync("./cache/schools.json")) {
+            if (!fs.existsSync("./cache")) fs.mkdirSync("./cache");
+            return {};
+        }
+        const data = fs.readFileSync("./cache/schools.json", 'utf-8');
+        const schoolData = JSON.parse(data) as { [key: string]: { id: string; studentCount: number } };
 
-            await axios
-                .get(
-                    `https://api.skolverket.se/planned-educations/v4/school-units/${roleData.schoolUnitCode}/statistics/gy`,
-                )
-                .then((response: { data: { body: { totalNumberOfPupils: UnitsReponsePartial[]; }; }; }) => {
-                    const data = response.data.body
-                        .totalNumberOfPupils[0] as UnitsReponsePartial;
-                    if (data.valueType !== "EXISTS") return;
-                    const numericValue = parseInt(data.value.replace(/\D/g, ""), 10);
-                    studentCount = Number.isNaN(numericValue) ? 0 : numericValue;
-                })
-                .catch((error: any) => {
-                    console.error("Error fetching schooldata:", error);
-                });
-
-            if (roleData.medieGymnasietSchoolUnitCode) {
-                await axios
-                    .get(
-                        `https://api.skolverket.se/planned-educations/v4/school-units/${roleData.medieGymnasietSchoolUnitCode}/statistics/gy`,
-                    )
-                    .then((response: { data: { body: { totalNumberOfPupils: UnitsReponsePartial[]; }; }; }) => {
-                        const data = response.data.body
-                            .totalNumberOfPupils[0] as UnitsReponsePartial;
-                        if (data.valueType !== "EXISTS") return;
-                        const value = data.value;
-                        const numericValue = parseInt(value.replace(/\D/g, ""), 10);
-                        studentCount += Number.isNaN(numericValue) ? 0 : numericValue;
-                    })
-                    .catch((error: any) => {
-                        console.error("Error fetching schooldata:", error);
-                    });
-            }
-
+        for (const [key, roleData] of Object.entries(schoolData)) {
             const role = interaction.guild.roles.cache.get(roleData.id);
             const count = role ? role.members.size : 0;
             finalSchoolData.push({
-                name: roleData.name,
+                name: key,
                 count,
-                studentCount,
-                percentage: studentCount > 0 ? (count / studentCount) * 100 : 0,
+                studentCount: roleData.studentCount,
+                percentage: roleData.studentCount > 0 ? (count / roleData.studentCount) * 100 : 0,
             });
         }
-
+        
         finalSchoolData.sort((a, b) => b.percentage - a.percentage);
         // build a summary and detailed fields
         const totalStudents = finalSchoolData.reduce((s, f) => s + f.studentCount, 0);

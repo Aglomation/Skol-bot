@@ -18,6 +18,7 @@ const repeating = {
 
         timedOutMembers.forEach(member => {
             const timeLeft = getProfile(member.id)?.timeout;
+            console.log(timeLeft)
             if (!timeLeft) return;
 
             console.log(`- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`);

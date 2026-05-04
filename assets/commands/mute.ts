@@ -48,7 +48,8 @@ const command: Command = {
         }
 
         try {
-            await member.timeout(date, reason);
+            // If the duration is longer than 28 days it needs to be refreshed later.
+            await member.timeout(Math.min(date, 28 * 24 * 60 * 60 * 1000), reason);
             updateProfileValue(user.id, "timeout", Date.now() + date);
 
             const expiresAt = date ? Math.floor((Date.now() + date) / 1000) : null;

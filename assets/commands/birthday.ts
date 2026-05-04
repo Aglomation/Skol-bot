@@ -10,10 +10,16 @@ const set = async (interaction: ChatInputCommandInteraction, client: Client) => 
         await interaction.editReply({ content: "Invalid date format. Please use YYYY-MM-DD." });
         return;
     }
+    if (interaction.options.getUser('user')?.id && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+        await interaction.editReply({ content: "You don't have permission to set birthdays for other users." });
+        return;
+    }
 
-    const userId = interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ? interaction.options.getUser('user')?.id : interaction.user.id;
-    if (!userId) return;
-    
+    const userId = interaction.options.getUser('user')?.id || interaction.user.id;
+    if (!userId){
+        await interaction.editReply({ content: "User not found." });
+        return;
+    }
     updateProfileValue(userId, "birthday", { year, month, day });
     await interaction.editReply({
         content: `Birthday has been set to ${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`

@@ -42,12 +42,19 @@ const command: Command = {
             return;
         }
 
+        if (!date){
+            await interaction.editReply("Invalid duration format.");
+            return;
+        }
+        
         try {
+            await member.timeout(date, reason);
+
             await user.send(
                 `## You have been muted from ${interaction.guild?.name}\n` +
                 `For: ${reason}\n`+
-                `Duration: ${date ? `<t:${Math.floor(date.getTime() / 1000)}>` : 'Indefinite'}\n` +
-                `Expires: ${date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'Indefinite'}\n`
+                `Duration: ${date ? `<t:${Math.floor(new Date(String(date)).getTime() / 1000)}>` : 'Indefinite'}\n` +
+                `Expires: ${date ? `<t:${Math.floor(new Date(String(date)).getTime() / 1000)}:R>` : 'Indefinite'}\n`
             ).catch(() => {});
 
             await interaction.editReply(`**${user.tag}** has been muted.`);
@@ -63,7 +70,7 @@ const command: Command = {
     },
 };
 
-function stringToDate(input: string): Date | null {
+function stringToDate(input: string): number | null {
     if (!input) return null;
     const cleaned = String(input).replace(/[()\s]/g, '');
     const re = /(\d+)(inf|y|mo|d|h|m|s)/g;
@@ -87,7 +94,7 @@ function stringToDate(input: string): Date | null {
         }
     }
 
-    return totalMs > 0 ? new Date(Date.now() + totalMs) : null;
+    return totalMs > 0 ? totalMs : null;
 }
 
 export default command;

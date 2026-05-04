@@ -21,6 +21,7 @@ declare global {
         banned: boolean;
         banreason: string | null;
         banduration: string | null;
+        birthday: { year: number; month: number; day: number } | null;
     }
 }
 

@@ -43,6 +43,15 @@ async function startBot() {
             client.on(event.name, (...args) => event.execute(...args, client));
         }
     }
+    
+    // TODO
+    // Make it so folders in commands turns into subcommands of the main.ts file
+    // - ./commands/birthday/main.ts (name: birthday, description: lorem ipsum)
+    // - ./commands/birthday/set.ts
+    // - ./commands/birthday/list.ts
+    //
+    // -> /birthday set 
+    // -> /birthday list
 
     // --- 2. Load Commands and Components ---
     const commandsPath = path.join(__dirname, 'assets', 'commands');

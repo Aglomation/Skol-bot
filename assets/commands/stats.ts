@@ -2,6 +2,7 @@ import {
     type ChatInputCommandInteraction,
     type Client,
     EmbedBuilder,
+    MessageFlags,
     SlashCommandBuilder,
 } from "discord.js";
 import fs from "fs";
@@ -51,7 +52,7 @@ const command = {
     async execute(interaction: ChatInputCommandInteraction, _client: Client) {
         if (!interaction.guild) return;
 
-        await interaction.deferReply({ ephemeral: false });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         await interaction.guild.members.fetch();
 

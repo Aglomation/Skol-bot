@@ -51,6 +51,9 @@ export const updateProfileValue = <K extends keyof UserProfile>(
 
 /**
  * Comprehensive Search: Find a user by any property
+ * @param key The profile property to search by (e.g., "email", "birthday")
+ * @param value The value to match for the specified property
+ * @returns The user ID of the first matching profile, or null if no match is found
  */
 export const findUserByValue = <K extends keyof UserProfile>(
     key: K,
@@ -61,13 +64,50 @@ export const findUserByValue = <K extends keyof UserProfile>(
 };
 
 /**
+ * Find all users by a specific value
+ * @param key The profile property to search by (e.g. "birthday")
+ * @param value The value to match for the specified property
+ * @returns An array of user IDs matching the specified value
+ */
+export const findAllUsersByValue = <K extends keyof UserProfile>(
+    key: K,
+    value: UserProfile[K]
+): UserProfile[] => {
+    const profiles = loadProfileList();
+    return Object.keys(profiles).filter(id => profiles[id][key] === value).map(id => profiles[id]);
+};
+
+/**
+ * Find all users for a specific key
+ * @param key The profile property to search by (e.g. "birthday")
+ * @returns An array of objects containing user IDs and their corresponding values for the specified key
+ */
+export const findAllKeyUsers = <K extends keyof UserProfile>(
+    key: K
+): { userId: string; value: UserProfile[K] }[] => {
+    const profiles = loadProfileList();
+    return Object.keys(profiles).filter(userId => profiles[userId][key] !== undefined).map(userId => ({
+        userId,
+        value: profiles[userId][key]
+    }));
+};
+
+/**
  * Get a single profile
+ * @param userId The ID of the user whose profile to retrieve
+ * @returns The user's profile object, or null if not found
  */
 export const getProfile = (userId: string): UserProfile | null => {
     const profiles = loadProfileList();
     return profiles[userId] || null;
 };
 
+/**
+ * Get a specific value from a user's profile
+ * @param userId The ID of the user whose value you want to get
+ * @param key The key for said value
+ * @returns The value of the specified key for the user, or null if not found
+ */
 export const getValue = <K extends keyof UserProfile>(
     userId: string,
     key: K

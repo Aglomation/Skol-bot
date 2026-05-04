@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, Client } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Client, MessageFlags } from 'discord.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
@@ -6,9 +6,8 @@ const command: Command = {
         .setDescription('Checks the bot latency'),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        await interaction.deferReply({ 
-            ephemeral: false 
-        });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        
         const sent = await interaction.fetchReply()
 
         const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;

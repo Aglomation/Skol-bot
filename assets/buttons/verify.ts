@@ -1,4 +1,4 @@
-import { ButtonInteraction, Client } from 'discord.js';
+import { ButtonInteraction, Client, MessageFlags } from 'discord.js';
 import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
 function generateRandomString(length:number) {
@@ -19,9 +19,7 @@ const button: Button = {
     async execute(interaction: ButtonInteraction, client: Client) {
         if (interaction.channel?.id !== "1498834244854878209") return;
 
-        await interaction.deferReply({ 
-            ephemeral: true 
-        });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral});
 
         if (getValue(interaction.user.id, "banned") === true){
             const member = await interaction.guild?.members.fetch(interaction.user.id).catch(() => null);

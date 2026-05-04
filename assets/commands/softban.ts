@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
+import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel, MessageFlags } from 'discord.js';
 import { getValue, updateProfileValue } from '../../utils/profileManager.js';
 import { stringToDate } from '../../utils/stringConvert.js';
 
@@ -24,7 +24,7 @@ const command: Command = {
         ),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        await interaction.deferReply({ ephemeral: false });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         // Ensure interaction.member is treated as a GuildMember to access permissions
         const executor = interaction.member as GuildMember;

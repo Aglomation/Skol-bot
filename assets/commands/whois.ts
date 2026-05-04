@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, Client, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, Client, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { findUserByValue, getValue } from '../../utils/profileManager.js';
 
 const command: Command = {
@@ -18,9 +18,7 @@ const command: Command = {
         ),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        await interaction.deferReply({ 
-            ephemeral: true 
-        });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const user = interaction.options.getUser('user');
         const email = interaction.options.getString('email');

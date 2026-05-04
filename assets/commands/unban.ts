@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
+import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel, MessageFlags } from 'discord.js';
 import { updateProfileValue, getValue } from '../../utils/profileManager.js';
 
 const command: Command = {
@@ -18,7 +18,7 @@ const command: Command = {
         ),
     
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        await interaction.deferReply({ ephemeral: false });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const executor = interaction.member as GuildMember;
         if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers)) {

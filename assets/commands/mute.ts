@@ -1,24 +1,23 @@
 import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
-import { getValue, updateProfileValue } from '../../utils/profileManager.js';
 
 const command: Command = {
     data: new SlashCommandBuilder()
-        .setName('softban')
-        .setDescription('Bans a user from the server (Softban)')
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+        .setName('mute')
+        .setDescription('Mutes a user (timeout)')
+        .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('User to softban')
+                .setDescription('User to mute')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('reason')
-                .setDescription('Reason for the ban')
+                .setDescription('Reason for the mute')
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('duration')
-                .setDescription('Duration of the ban (s, m, h, d, mo, y, inf)')
+                .setDescription('Duration of the mute (s, m, h, d, mo, y, inf)')
                 .setRequired(true)
         ),
 
@@ -28,7 +27,7 @@ const command: Command = {
         // Ensure interaction.member is treated as a GuildMember to access permissions
         const executor = interaction.member as GuildMember;
 
-        if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+        if (!executor.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
             await interaction.editReply("You don't have permission to use this.");
             return;
         }
@@ -43,36 +42,23 @@ const command: Command = {
             return;
         }
 
-        if (getValue(user.id, "banned")) {
-            await interaction.editReply("User is already on the ban list.");
-            return;
-        }
-
         try {
-            updateProfileValue(user.id, "banned", true);
-            updateProfileValue(user.id, "banreason", reason);
-            updateProfileValue(user.id, "banduration", date?.toISOString() || null);
-
             await user.send(
-                `## You have been banned from ${interaction.guild?.name}\n` +
+                `## You have been muted from ${interaction.guild?.name}\n` +
                 `For: ${reason}\n`+
                 `Duration: ${date ? `<t:${Math.floor(date.getTime() / 1000)}>` : 'Indefinite'}\n` +
-                `Expires: ${date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'Indefinite'}\n` +
-                `Invite: https://discord.gg/dUYHv8Dv94`
+                `Expires: ${date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'Indefinite'}\n`
             ).catch(() => {});
 
-            // Kicks instead of banning to avoid IP-ban
-            await member.kick(reason);
-
-            await interaction.editReply(`**${user.tag}** has been banned.`);
+            await interaction.editReply(`**${user.tag}** has been muted.`);
 
             const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;
             if (logChannel) {
-                await logChannel.send(`${interaction.user.tag} has softbanned <@${user.id}> for the reason: ${reason}`);
+                await logChannel.send(`${interaction.user.tag} has muted <@${user.id}> for the reason: ${reason}`);
             }
         } catch (err) {
             console.error(err);
-            await interaction.editReply("I can't kick that user. They might have a higher role than me.");
+            await interaction.editReply("I can't mute that user. They might have a higher role than me.");
         }
     },
 };

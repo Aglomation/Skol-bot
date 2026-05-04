@@ -17,7 +17,7 @@ const command: Command = {
         )
         .addStringOption(option =>
             option.setName('duration')
-                .setDescription('Duration of the mute (s, m, h, d, mo, y, inf)')
+                .setDescription('Duration of the mute (s, m, h, d, max->28d)')
                 .setRequired(true)
         ),
 
@@ -27,7 +27,7 @@ const command: Command = {
         // Ensure interaction.member is treated as a GuildMember to access permissions
         const executor = interaction.member as GuildMember;
 
-        if (!executor.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
+        if (!executor.permissions.has(PermissionFlagsBits.MuteMembers)) {
             await interaction.editReply("You don't have permission to use this.");
             return;
         }
@@ -46,15 +46,16 @@ const command: Command = {
             await interaction.editReply("Invalid duration format.");
             return;
         }
-        
+
         try {
             await member.timeout(date, reason);
 
+            const expiresAt = date ? Math.floor((Date.now() + date) / 1000) : null;
             await user.send(
                 `## You have been muted from ${interaction.guild?.name}\n` +
-                `For: ${reason}\n`+
-                `Duration: ${date ? `<t:${Math.floor(new Date(String(date)).getTime() / 1000)}>` : 'Indefinite'}\n` +
-                `Expires: ${date ? `<t:${Math.floor(new Date(String(date)).getTime() / 1000)}:R>` : 'Indefinite'}\n`
+                `For: ${reason}\n` +
+                `Duration: ${expiresAt ? `<t:${expiresAt}>` : 'Indefinite'}\n` +
+                `Expires: ${expiresAt ? `<t:${expiresAt}:R>` : 'Indefinite'}\n`
             ).catch(() => {});
 
             await interaction.editReply(`**${user.tag}** has been muted.`);
@@ -73,15 +74,13 @@ const command: Command = {
 function stringToDate(input: string): number | null {
     if (!input) return null;
     const cleaned = String(input).replace(/[()\s]/g, '');
-    const re = /(\d+)(inf|y|mo|d|h|m|s)/g;
+    const re = /(\d+)(max|d|h|m|s)/g;
     const multipliers: Record<string, number> = {
         s: 1000,
         m: 60 * 1000,
         h: 60 * 60 * 1000,
         d: 24 * 60 * 60 * 1000,
-        mo: 30 * 24 * 60 * 60 * 1000,
-        y: 365 * 24 * 60 * 60 * 1000,
-        inf: 0,
+        max: 28 * 24 * 60 * 60 * 1000
     };
 
     let totalMs = 0;

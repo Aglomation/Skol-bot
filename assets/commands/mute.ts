@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
-
+import { updateProfileValue } from '../../utils/profileManager.js';
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName('mute')
@@ -17,7 +17,7 @@ const command: Command = {
         )
         .addStringOption(option =>
             option.setName('duration')
-                .setDescription('Duration of the mute (s, m, h, d, max->28d)')
+                .setDescription('Duration of the mute (s, m, h, d, mo, y, inf) [mutes >28d gets refreshed until <28d]')
                 .setRequired(true)
         ),
 
@@ -49,6 +49,7 @@ const command: Command = {
 
         try {
             await member.timeout(date, reason);
+            updateProfileValue(user.id, "timeout", Date.now() + date);
 
             const expiresAt = date ? Math.floor((Date.now() + date) / 1000) : null;
             await user.send(
@@ -74,13 +75,15 @@ const command: Command = {
 function stringToDate(input: string): number | null {
     if (!input) return null;
     const cleaned = String(input).replace(/[()\s]/g, '');
-    const re = /(\d+)(max|d|h|m|s)/g;
+    const re = /(\d+)(inf|y|mo|d|h|m|s)/g;
     const multipliers: Record<string, number> = {
         s: 1000,
         m: 60 * 1000,
         h: 60 * 60 * 1000,
         d: 24 * 60 * 60 * 1000,
-        max: 28 * 24 * 60 * 60 * 1000
+        mo: 30 * 24 * 60 * 60 * 1000,
+        y: 365 * 24 * 60 * 60 * 1000,
+        inf: 0,
     };
 
     let totalMs = 0;

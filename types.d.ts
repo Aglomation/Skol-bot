@@ -17,6 +17,7 @@ declare global {
     interface UserProfile {
         verifycode: string;
         email: string;
+        timeout: number | null;
         banned: boolean;
         banreason: string | null;
         banduration: string | null;
@@ -29,6 +30,12 @@ declare module 'discord.js' {
         commands: Collection<string, Command>;
         autocompletes: Collection<string, Autocomplete>;
         buttons: Collection<string, Button>;
+        repeating: Collection<string, {
+            repeating: boolean;
+            time: number;
+            immediate: boolean;
+            execute: (client: Client) => Promise<void>;
+        }>;
         banList: Set<string>;
         saveBanlist: () => void;
         profilelist: Collection<string, UserProfile>;

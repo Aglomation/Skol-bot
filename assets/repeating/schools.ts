@@ -93,14 +93,13 @@ const SchoolList: Schools[] = [
     },
 ];
 
-const repeating: { repeating: boolean; time: number; immediate: boolean; execute: (client: Client) => Promise<void> } = {
+const repeating = {
     repeating: true,
-    time: 60 * 60 * 1000,
+    time: 24 *60 * 60 * 1000,
     immediate: true,
 
     async execute(client: Client) {
         getAllSchoolData().then(schoolData => {
-            console.log("Updated school data:", schoolData);
             fs.writeFileSync("./cache/schools.json", JSON.stringify(schoolData, null, 4));
         });
     },

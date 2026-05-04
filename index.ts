@@ -74,20 +74,6 @@ async function startBot() {
     //     client.autocompletes.set(autocomplete.data.name, autocomplete);
     // }
 
-    const repeatingPath = path.join(__dirname, 'assets', 'repeating');
-    const repeatingFiles = fs.readdirSync(repeatingPath).filter(fileFilter);
-
-    for (const file of repeatingFiles) {
-        const filePath = path.join(repeatingPath, file);
-        const { default: repeating } = await import(pathToFileURL(filePath).href);
-        if (repeating.repeating) {
-            setInterval(() => repeating.execute(client), repeating.time);
-        }
-        if (repeating.immediate) {
-            await repeating.execute(client);
-        }
-    }
-
     // --- 3. Register Slash Commands ---
     const rest = new REST({ version: '10' }).setToken(process.env.token as string);
 
@@ -104,6 +90,20 @@ async function startBot() {
 
     // Log in at the very end
     client.login(process.env.token);
+
+    const repeatingPath = path.join(__dirname, 'assets', 'repeating');
+    const repeatingFiles = fs.readdirSync(repeatingPath).filter(fileFilter);
+
+    for (const file of repeatingFiles) {
+        const filePath = path.join(repeatingPath, file);
+        const { default: repeating } = await import(pathToFileURL(filePath).href);
+        if (repeating.repeating) {
+            setInterval(() => repeating.execute(client), repeating.time);
+        }
+        if (repeating.immediate) {
+            await repeating.execute(client);
+        }
+    }
 }
 
 // Execute the function to start the bot

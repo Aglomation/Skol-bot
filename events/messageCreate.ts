@@ -28,6 +28,9 @@ export default {
     once: false,
     async execute(message: Message, client: Client) {
         if (!message.guild) return;
+        if (message.channel.id === "1498834244854878209" && !message.member?.permissions.has("Administrator")){
+            await message.delete().catch(() => null);
+        }
 
         // Honeypot
         if (message.channel.id === "1497140071176863755" && !message.member?.permissions.has("Administrator")) {

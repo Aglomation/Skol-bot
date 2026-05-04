@@ -90,7 +90,9 @@ async function startBot() {
 
     // Log in at the very end
     client.login(process.env.token);
+}
 
+async function loadRepeatingTasks() {
     const repeatingPath = path.join(__dirname, 'assets', 'repeating');
     const repeatingFiles = fs.readdirSync(repeatingPath).filter(fileFilter);
 
@@ -105,12 +107,11 @@ async function startBot() {
                 const now = new Date();
                 let nextRun = new Date();
                 nextRun.setHours(hours, minutes, 0, 0);
-                
+                console.log(now, nextRun);  
                 if (nextRun <= now) {
                     nextRun.setDate(nextRun.getDate() + 1);
                 }
                 
-                // repeating.exacttime == "00:00" runs at midnight
                 const delay = nextRun.getTime() - now.getTime();
                 setTimeout(() => {
                     repeating.execute(client);
@@ -121,15 +122,15 @@ async function startBot() {
             scheduleDaily();
         }
         
-        if (repeating.repeating) {
-            setInterval(() => repeating.execute(client), repeating.time);
-        }
-        
         if (repeating.immediate) {
             await repeating.execute(client);
         }
     }
 }
 
+client.once('ready', () => {
+    loadRepeatingTasks();
+});
+
 // Execute the function to start the bot
-startBot();
+startBot().catch(console.error);

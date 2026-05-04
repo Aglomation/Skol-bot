@@ -24,7 +24,7 @@ const repeating = {
             console.log(`- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`);
 
             // Refreshes the timeout 
-            member.timeout(Math.min(timeLeft, Date.now() +28 * 24 * 60 * 60 * 1000))
+            member.timeout(Math.min(timeLeft, 28 * 24 * 60 * 60 * 1000), "Refreshing timeout")
             .catch(err => {
                 console.error(`Failed to refresh timeout for ${member.user.tag}:`, err);
             });

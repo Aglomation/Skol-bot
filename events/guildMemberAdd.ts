@@ -8,7 +8,7 @@ export default {
         // Check if the user is on the ban list
         if (getValue(member.id, "banned")) {
             // If the ban duration has expired, remove the user from the ban list
-            if (getValue(member.id, "banduration") && new Date(getValue(member.id, "banduration")!) < new Date()) {
+            if (getValue(member.id, "banduration") && new Date(getValue(member.id, "banduration")!).getTime() < Date.now()) {
                 updateProfileValue(member.id, "banned", false);
                 updateProfileValue(member.id, "banreason", null);
                 updateProfileValue(member.id, "banduration", null);

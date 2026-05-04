@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionsBitField, ChatInputCommandInteraction, Client, GuildMember, PermissionFlagsBits, TextChannel } from 'discord.js';
 import { updateProfileValue } from '../../utils/profileManager.js';
+import { stringToDate } from '../../utils/stringConvert.js';
 const command: Command = {
     data: new SlashCommandBuilder()
         .setName('mute')
@@ -52,7 +53,7 @@ const command: Command = {
             await member.timeout(Math.min(date, 28 * 24 * 60 * 60 * 1000-1000), reason);
             updateProfileValue(user.id, "timeout", Date.now() + date);
 
-            const expiresAt = date ? Math.floor((Date.now() + date) / 1000) : null;
+            const expiresAt = Number.isFinite(date) ? Math.floor((Date.now() + date) / 1000) : null;
             await user.send(
                 `## You have been muted from ${interaction.guild?.name}\n` +
                 `For: ${reason}\n` +
@@ -68,36 +69,9 @@ const command: Command = {
             }
         } catch (err) {
             console.error(err);
-            await interaction.editReply("I can't mute that user. They might have a higher role than me.");
+            await interaction.editReply("I got an error while trying to mute that user. Make sure my role is high enough (or my code is just bad).");
         }
     },
 };
-
-function stringToDate(input: string): number | null {
-    if (!input) return null;
-    const cleaned = String(input).replace(/[()\s]/g, '');
-    const re = /(\d+)(inf|y|mo|d|h|m|s)/g;
-    const multipliers: Record<string, number> = {
-        s: 1000,
-        m: 60 * 1000,
-        h: 60 * 60 * 1000,
-        d: 24 * 60 * 60 * 1000,
-        mo: 30 * 24 * 60 * 60 * 1000,
-        y: 365 * 24 * 60 * 60 * 1000,
-        inf: 0,
-    };
-
-    let totalMs = 0;
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(cleaned)) !== null) {
-        const value = parseInt(match[1], 10) || 0;
-        const unit = match[2];
-        if (!Number.isNaN(value) && multipliers[unit]) {
-            totalMs += value * multipliers[unit];
-        }
-    }
-
-    return totalMs > 0 ? totalMs : null;
-}
 
 export default command;

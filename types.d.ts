@@ -32,7 +32,8 @@ declare module 'discord.js' {
         buttons: Collection<string, Button>;
         repeating: Collection<string, {
             repeating: boolean;
-            time: number;
+            time: number | null;
+            exactTime: string | null;
             immediate: boolean;
             execute: (client: Client) => Promise<void>;
         }>;

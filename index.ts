@@ -97,9 +97,34 @@ async function startBot() {
     for (const file of repeatingFiles) {
         const filePath = path.join(repeatingPath, file);
         const { default: repeating } = await import(pathToFileURL(filePath).href);
+        
+        if (repeating.exactTime) {
+            const [hours, minutes] = repeating.exactTime.split(':').map(Number);
+            
+            const scheduleDaily = () => {
+                const now = new Date();
+                let nextRun = new Date();
+                nextRun.setHours(hours, minutes, 0, 0);
+                
+                if (nextRun <= now) {
+                    nextRun.setDate(nextRun.getDate() + 1);
+                }
+                
+                // repeating.exacttime == "00:00" runs at midnight
+                const delay = nextRun.getTime() - now.getTime();
+                setTimeout(() => {
+                    repeating.execute(client);
+                    setInterval(() => repeating.execute(client), 24 * 60 * 60 * 1000);
+                }, delay);
+            };
+            
+            scheduleDaily();
+        }
+        
         if (repeating.repeating) {
             setInterval(() => repeating.execute(client), repeating.time);
         }
+        
         if (repeating.immediate) {
             await repeating.execute(client);
         }

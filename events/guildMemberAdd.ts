@@ -17,7 +17,7 @@ export default {
             // If the ban duration has expired, remove the user from the ban list
             if (
                 profile?.banduration &&
-                new Date(profile.banduration).getTime() < Date.now()
+                parseInt(profile.banduration, 10) < Date.now()
             ) {
                 await UpdateProfile(member.id, {
                     banned: false,

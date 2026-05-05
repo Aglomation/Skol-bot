@@ -12,18 +12,21 @@ const repeating = {
 		const date = new Date();
 
 		const birthdayMembers = await GetAllWithBirthday();
-		const filteredMembers = birthdayMembers.filter(({ birthday }) => {
+		const filteredMembers = birthdayMembers.filter((member) => {
+            const birthday = (member.birthday as UserProfile["birthday"] | null);
 			if (!birthday) return false;
 			return (
-				birthday.month === date.getMonth() + 1 && birthday.day === date.getDate()
+				(birthday).month === date.getMonth() + 1 && (birthday).day === date.getDate()
 			);
 		});
 
-		if (!filteredMembers) return;
+		if (filteredMembers.length === 0) return;
 
 		console.log(filteredMembers);
 		const sortedMembers = filteredMembers.sort(
-			(a, b) => (b.birthday?.year || 0) - (a.birthday?.year || 0),
+			(a, b) => {
+				return ((b.birthday as UserProfile["birthday"])?.year || 0) - ((a.birthday as UserProfile["birthday"])?.year || 0);
+			},
 		);
 
 		const embed = new EmbedBuilder()
@@ -31,8 +34,10 @@ const repeating = {
 			.setDescription(
 				sortedMembers
 					.map(
-						({ id, birthday }) =>
-							`<@${id}> - ${date.getFullYear() - (birthday?.year || 0)} Years old`,
+						({ id, birthday }) => {
+							const birthdayDate = birthday as UserProfile["birthday"] | null;
+							return `<@${id}> - ${date.getFullYear() - (birthdayDate?.year || 0)} Years old`;
+						},
 					)
 					.join("\n"),
 			)

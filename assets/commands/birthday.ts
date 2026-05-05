@@ -6,6 +6,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetAllWithBirthday, GetProfile, UpdateProfile } from "../../utils/profileManager.js";
+import birthday from "../repeating/birthday.js";
 
 const set = async (
 	interaction: ChatInputCommandInteraction,
@@ -50,7 +51,8 @@ const get = async (
 	_client: Client,
 ) => {
 	const profile = await GetProfile(interaction.user.id);
-	const birthday = profile?.birthday;
+	const birthday = profile?.birthday as UserProfile["birthday"] | null;
+	if (!birthday) return await interaction.editReply({ content: "You haven't set your birthday yet." });
 
 	await interaction.editReply({
 		content: birthday
@@ -69,10 +71,10 @@ const list = async (
 		return;
 	}
 	const formattedList = users
-		.map(
-			({ id, birthday }) =>
-				`<@${id}>: ${birthday?.year}-${String(birthday?.month).padStart(2, "0")}-${String(birthday?.day).padStart(2, "0")}`,
-		)
+		.map((user) => {
+			const birthday = user.birthday as UserProfile["birthday"] | null;
+			return `<@${user.id}>: ${birthday?.year}-${String(birthday?.month).padStart(2, "0")}-${String(birthday?.day).padStart(2, "0")}`;
+		})
 		.join("\n");
 	await interaction.editReply({
 		content: formattedList,

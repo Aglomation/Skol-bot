@@ -46,7 +46,7 @@ async function startBot() {
         return;
     }
 
-    const sql = neon(process.env.DATABASE_URL!);
+    const sql = neon(process.env.DATABASE_URL);
     const _db = drizzle({ client: sql });
 
     // --- 1. Load Events ---

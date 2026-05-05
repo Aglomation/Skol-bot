@@ -9,6 +9,7 @@ import {
     GatewayIntentBits,
     REST,
     Routes,
+    type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord.js";
 import { drizzle } from "drizzle-orm/neon-http";
 
@@ -77,8 +78,8 @@ async function startBot() {
     const commandsPath = path.join(__dirname, "assets", "commands");
     const commandFiles = fs.readdirSync(commandsPath).filter(fileFilter);
 
-    // TODO: Don't use "any" gng
-    const commandsData: any[] = [];
+    // Hold command JSON payloads for registration
+    const commandsData: RESTPostAPIApplicationCommandsJSONBody[] = [];
 
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);

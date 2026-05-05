@@ -49,7 +49,7 @@ export default {
             .setColor(0x2b2d31)
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
             .setFooter({
-                text: `${await member.guild.members.fetch().then((m) => m.filter((mm) => !mm.user.bot).size)} Medlemmar ・ ${new Date().toLocaleString("sv-SE")}`,
+                text: `${member.guild.members.cache.filter((mm) => !mm.user.bot).size} Medlemmar ・ ${new Date().toLocaleString("sv-SE")}`,
             });
 
         channel.send({

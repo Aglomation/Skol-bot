@@ -1,22 +1,27 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, Client, MessageFlags } from 'discord.js';
+import {
+	SlashCommandBuilder,
+	type ChatInputCommandInteraction,
+	type Client,
+	MessageFlags,
+} from "discord.js";
 
 const command: Command = {
-    data: new SlashCommandBuilder()
-        .setName('ping')
-        .setDescription('Checks the bot latency'),
+	data: new SlashCommandBuilder()
+		.setName("ping")
+		.setDescription("Checks the bot latency"),
 
-    async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
-        const sent = await interaction.fetchReply()
+	async execute(interaction: ChatInputCommandInteraction, client: Client) {
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
-        const websocket = client.ws.ping;
+		const sent = await interaction.fetchReply();
 
-        await interaction.editReply({
-            content: `Pong!\nRoundtrip: \`${roundtrip}ms\`\nWebSocket: \`${websocket}ms\``
-        });
-    },
+		const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
+		const websocket = client.ws.ping;
+
+		await interaction.editReply({
+			content: `Pong!\nRoundtrip: \`${roundtrip}ms\`\nWebSocket: \`${websocket}ms\``,
+		});
+	},
 };
 
 export default command;

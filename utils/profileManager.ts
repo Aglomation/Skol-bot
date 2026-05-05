@@ -1,95 +1,58 @@
-import fs from 'fs';
+import { neon } from "@neondatabase/serverless";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/neon-http";
+import { userProfileTable } from "../db/schema.js";
 
-const PROFILE_FILE = "./storage/profiles.json";
+const sql = neon(process.env.DATABASE_URL || "");
+const db = drizzle({ client: sql });
 
-export type ProfileList = Record<string, UserProfile>;
+type UserProfile = typeof userProfileTable.$inferSelect;
+type UserProfileKey = keyof UserProfile;
 
-/**
- * Load all profiles from the JSON file
- */
-export const loadProfileList = (): ProfileList => {
-    try {
-        if (!fs.existsSync(PROFILE_FILE)) {
-            if (!fs.existsSync("./storage")) fs.mkdirSync("./storage");
-            return {};
-        }
-        const data = fs.readFileSync(PROFILE_FILE, 'utf-8');
-        return JSON.parse(data) as ProfileList;
-    } catch (error) {
-        console.error("Error loading profiles:", error);
-        return {};
-    }
-};
 
 /**
- * Save the entire profile list to the JSON file
+ * Update partial data in a user's profile
  */
-export const saveProfileList = (profiles: ProfileList): void => {
-    try {
-        fs.writeFileSync(PROFILE_FILE, JSON.stringify(profiles, null, 4));
-    } catch (error) {
-        console.error("Error saving profiles:", error);
-    }
-};
-
-/**
- * Update a specific key within a user's profile
- */
-export const updateProfileValue = <K extends keyof UserProfile>(
+export async function UpdateProfile(
     userId: string,
-    key: K,
-    value: UserProfile[K]
-): void => {
-    const profiles = loadProfileList();
-    
-    if (!profiles[userId]) {    
-        profiles[userId] = {} as UserProfile;
+    newData: Partial<UserProfile>,
+): Promise<void> {
+    try {
+        await db
+            .update(userProfileTable)
+            .set(newData)
+            .where(eq(userProfileTable.id, userId));
+    } catch (err) {
+        console.error("Error updating profile value1:", err);
     }
-    profiles[userId][key] = value;
-    saveProfileList(profiles);
-};
+}
+
+export async function FindByEmail(email: string): Promise<UserProfile | null> {
+    try {
+        const result = await db
+            .select()
+            .from(userProfileTable)
+            .where(eq(userProfileTable.email, email))
+            .limit(1);
+        return result.length > 0 ? result[0] : null;
+    } catch (error) {
+        console.error("Error finding user by email:", error);
+        return null;
+    }
+}
 
 /**
- * Comprehensive Search: Find a user by any property
- * @param key The profile property to search by (e.g., "email", "birthday")
- * @param value The value to match for the specified property
- * @returns The user ID of the first matching profile, or null if no match is found
+ * Find all users with birthday set
+ * @return An array of user profiles with birthday set
  */
-export const findUserByValue = <K extends keyof UserProfile>(
-    key: K,
-    value: UserProfile[K]
-): string | null => {
-    const profiles = loadProfileList();
-    return Object.keys(profiles).find(id => profiles[id][key] === value) || null;
-};
-
-/**
- * Find all users by a specific value
- * @param key The profile property to search by (e.g. "birthday")
- * @param value The value to match for the specified property
- * @returns An array of user IDs matching the specified value
- */
-export const findAllUsersByValue = <K extends keyof UserProfile>(
-    key: K,
-    value: UserProfile[K]
-): UserProfile[] => {
-    const profiles = loadProfileList();
-    return Object.keys(profiles).filter(id => profiles[id][key] === value).map(id => profiles[id]);
-};
-
-/**
- * Find all users for a specific key
- * @param key The profile property to search by (e.g. "birthday")
- * @returns An array of objects containing user IDs and their corresponding values for the specified key
- */
-export const findAllKeyUsers = <K extends keyof UserProfile>(
-    key: K
-): { userId: string; value: UserProfile[K] }[] => {
-    const profiles = loadProfileList();
-    return Object.keys(profiles).filter(userId => profiles[userId][key] !== undefined).map(userId => ({
-        userId,
-        value: profiles[userId][key]
-    }));
+export async function GetAllWithBirthday(): Promise<UserProfile[]> {
+    try {
+        const results = await db.select().from(userProfileTable).where(eq(userProfileTable.birthday, true));
+        return results;
+    } catch (error) {
+        console.error("Error finding all key users:", error);
+        return [];
+    }
 };
 
 /**
@@ -97,44 +60,30 @@ export const findAllKeyUsers = <K extends keyof UserProfile>(
  * @param userId The ID of the user whose profile to retrieve
  * @returns The user's profile object, or null if not found
  */
-export const getProfile = (userId: string): UserProfile | null => {
-    const profiles = loadProfileList();
-    return profiles[userId] || null;
-};
-
-/**
- * Get a specific value from a user's profile
- * @param userId The ID of the user whose value you want to get
- * @param key The key for said value
- * @returns The value of the specified key for the user, or null if not found
- */
-export const getValue = <K extends keyof UserProfile>(
-    userId: string,
-    key: K
-): UserProfile[K] | null => {
-    const profiles = loadProfileList();
-
-    const user = profiles[userId];
-    if (!user) {
+export async function GetProfile(userId: string): Promise<UserProfile | null> {
+    try {
+        const result = await db
+            .select()
+            .from(userProfileTable)
+            .where(eq(userProfileTable.id, userId))
+            .limit(1);
+        return result.length > 0 ? result[0] : null;
+    }
+    catch (error) {
+        console.error("Error getting profile:", error);
         return null;
     }
-
-    const value = user[key];
-    if (value === undefined) {
-        return null;
-    }
-
-    return value;
 };
-
 
 /**
  * Remove a profile
  */
-export const deleteProfile = (userId: string): void => {
-    const profiles = loadProfileList();
-    if (profiles[userId]) {
-        delete profiles[userId];
-        saveProfileList(profiles);
+export async function DeleteProfile(userId: string): Promise<void> {
+    try {
+        await db
+            .delete(userProfileTable)
+            .where(eq(userProfileTable.id, userId));
+    } catch (error) {
+        console.error("Error deleting profile:", error);
     }
 };

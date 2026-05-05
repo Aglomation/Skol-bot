@@ -17,7 +17,7 @@ const button: Button = {
 		customId: "verify",
 	},
 	async execute(interaction: ButtonInteraction, _client: Client) {
-		if (interaction.channel?.id !== "1498834244854878209") return;
+		if (interaction.channel?.id !== "1499407739292749955") return;
 
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 

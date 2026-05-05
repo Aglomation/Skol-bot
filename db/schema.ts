@@ -1,6 +1,6 @@
 import {
+    bigint,
     boolean,
-    integer,
     jsonb,
     pgTable,
     text,
@@ -9,9 +9,9 @@ import {
 
 export const userProfileTable = pgTable("user_profiles", {
     id: varchar("id", { length: 255 }).primaryKey().notNull(),
-    verifycode: varchar("verifycode", { length: 4 }).notNull(),
-    email: varchar("email", { length: 255 }).notNull().unique(),
-    timeout: integer("timeout"),
+    verifycode: varchar("verifycode", { length: 4 }),
+    email: varchar("email", { length: 255 }).unique(),
+    timeout: bigint({ mode: "number" }),
     banned: boolean("banned").notNull().default(false),
     banreason: text("banreason"),
     banduration: text("banduration"),

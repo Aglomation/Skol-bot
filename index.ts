@@ -161,7 +161,7 @@ async function loadRepeatingTasks() {
     }
 }
 
-client.once("ready", () => {
+client.once("clientReady", () => {
     loadRepeatingTasks();
 });
 

@@ -9,9 +9,8 @@ export default {
         if (getValue(member.id, "banned")) {
             // If the ban duration has expired, remove the user from the ban list
             const banDuration = getValue(member.id, "banduration");
-            console.log(banDuration);
-            console.log(new Date(banDuration!).getTime(), Date.now());
-            if (banDuration && new Date(banDuration).getTime() < Date.now()) {
+
+            if (banDuration && (parseInt(banDuration) < Date.now())) {
                 updateProfileValue(member.id, "banned", false);
                 updateProfileValue(member.id, "banreason", null);
                 updateProfileValue(member.id, "banduration", null);

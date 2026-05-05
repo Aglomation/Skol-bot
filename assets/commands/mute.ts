@@ -65,7 +65,7 @@ const command: Command = {
 
             const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;
             if (logChannel) {
-                await logChannel.send(`${interaction.user.tag} has muted <@${user.id}> for the reason: ${reason}`);
+                await logChannel.send(`${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : 'Indefinite'} for the reason: ${reason}`);
             }
         } catch (err) {
             console.error(err);

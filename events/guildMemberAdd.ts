@@ -32,7 +32,7 @@ export default {
             .setDescription(`Gå in i <id:customize> för att skaffa en custom färg.\n Gå in i <id:browse> för att se kanaler som är gömda by default.`)
             .setColor(0x2b2d31)
             .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
-            .setFooter({text: `${member.guild.members.fetch().then(m => m.filter(mm => !mm.user.bot).size)} Medlemmar : ${new Date().toLocaleString('sv-SE')}` })
+            .setFooter({text: `${await member.guild.members.fetch().then(m => m.filter(mm => !mm.user.bot).size)} Medlemmar ・ ${new Date().toLocaleString('sv-SE')}` })
 
         channel.send({ content: `Välkommen ${member} till ${member.guild.name}!`, embeds: [embed] });
     },

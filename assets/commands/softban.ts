@@ -54,11 +54,12 @@ const command: Command = {
             updateProfileValue(user.id, "banreason", reason);
             updateProfileValue(user.id, "banduration", String(Date.now() + date));
 
+            const expiresAt = Number.isFinite(date) ? Math.floor((Date.now() + date) / 1000) : null;
             await user.send(
                 `## You have been banned from ${interaction.guild?.name}\n` +
                 `For: ${reason}\n`+
-                `Duration: ${Number.isFinite(date) ? `<t:${Math.floor(date / 1000)}>` : 'Indefinite'}\n` +
-                `Expires: ${Number.isFinite(date) ? `<t:${Math.floor(date / 1000)}:R>` : 'Indefinite'}\n` +
+                `Duration: ${expiresAt? `<t:${expiresAt}>` : 'Indefinite'}\n` +
+                `Expires: ${expiresAt ? `<t:${expiresAt}:R>` : 'Indefinite'}\n` +
                 `Invite: https://discord.gg/dUYHv8Dv94`
             ).catch(() => {});
 
@@ -69,7 +70,7 @@ const command: Command = {
 
             const logChannel = client.channels.cache.get('1499149296203993169') as TextChannel | undefined;
             if (logChannel) {
-                await logChannel.send(`${interaction.user.tag} has softbanned <@${user.id}> for the reason: ${reason}`);
+                await logChannel.send(`${interaction.user.tag} has softbanned <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : 'Indefinite'} for the reason: ${reason}`);
             }
         } catch (err) {
             console.error(err);

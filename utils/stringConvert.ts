@@ -13,8 +13,8 @@ export function stringToDate(input: string): number | null {
     };
 
     let totalMs = 0;
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(cleaned)) !== null) {
+    let match: RegExpExecArray | null = re.exec(cleaned);
+    while (match !== null) {
         const value = parseInt(match[1], 10) || 0;
         const unit = match[2];
         if (!Number.isNaN(value) && multipliers[unit]) {

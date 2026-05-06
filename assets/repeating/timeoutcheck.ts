@@ -1,33 +1,49 @@
-import { Client } from 'discord.js';
-import 'dotenv/config';
-import { getProfile } from '../../utils/profileManager.js';
+import type { Client } from "discord.js";
+import "dotenv/config";
+import { GetProfile } from "../../utils/profileManager.js";
+
 const repeating = {
     repeating: true,
     time: 1 * 60 * 60 * 1000,
     immediate: true,
 
     async execute(client: Client) {
-        const guild = await client.guilds.fetch(process.env.GUILD_ID!)
+        if (!process.env.GUILD_ID) {
+            console.error("GUILD_ID is not set in environment variables.");
+            return;
+        }
+
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
         const members = await guild.members.fetch();
 
         if (!members) return;
 
-        const timedOutMembers = members.filter(member => member.isCommunicationDisabled());
+        const timedOutMembers = members.filter((member) =>
+            member.isCommunicationDisabled(),
+        );
 
         console.log(`Found ${timedOutMembers.size} users currently on timeout.`);
 
-        timedOutMembers.forEach(member => {
-            const timeLeft = getProfile(member.id)?.timeout;
-            console.log(timeLeft)
-            if (!timeLeft) return;
+        timedOutMembers.forEach(async (member) => {
+            const profile = await GetProfile(member.id);
+            if (!profile?.timeout) return;
 
-            console.log(`- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`);
+            console.log(
+                `- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`,
+            );
 
-            // Refreshes the timeout 
-            member.timeout(Math.min(timeLeft, 28 * 24 * 60 * 60 * 1000-1000), "Refreshing timeout")
-            .catch(err => {
-                console.error(`Failed to refresh timeout for ${member.user.tag}:`, err);
-            });
+            // Refreshes the timeout
+            member
+                .timeout(
+                    Math.min(profile?.timeout, 28 * 24 * 60 * 60 * 1000 - 1000),
+                    "Refreshing timeout",
+                )
+                .catch((err) => {
+                    console.error(
+                        `Failed to refresh timeout for ${member.user.tag}:`,
+                        err,
+                    );
+                });
         });
 
         return timedOutMembers;

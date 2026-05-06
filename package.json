@@ -1,22 +1,29 @@
 {
-  "name": "skol-bot",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx index.ts",
-    "build": "tsc",
-    "start": "node builds/index.js",
-    "watch": "nodemon --watch './**/*.ts' --exec 'bun run build && bun start'"
-  },
-  "dependencies": {
-    "axios": "^1.15.2",
-    "discord.js": "^14.26.3",
-    "dotenv": "^17.4.2"
-  },
-  "devDependencies": {
-    "@types/node": "^25.6.0",
-    "nodemon": "^3.1.14",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
-  }
+	"name": "skol-bot",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx index.ts",
+		"build": "tsc",
+		"start": "node builds/index.js",
+		"lint": "bunx --bun @biomejs/biome lint --write",
+		"lint:unsafe": "bunx --bun @biomejs/biome lint --write --unsafe",
+		"format": "bunx --bun @biomejs/biome format --write",
+		"watch": "nodemon --watch './**/*.ts' --exec 'bun run build && bun start'"
+	},
+	"dependencies": {
+		"@neondatabase/serverless": "^1.1.0",
+		"axios": "^1.16.0",
+		"discord.js": "^14.26.4",
+		"dotenv": "^17.4.2",
+		"drizzle-orm": "^0.45.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.14",
+		"@types/node": "^25.6.0",
+		"drizzle-kit": "^0.31.10",
+		"nodemon": "^3.1.14",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.3"
+	}
 }

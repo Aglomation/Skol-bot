@@ -1,4 +1,6 @@
-import { type ButtonInteraction, type Client, GuildMember, MessageFlags } from "discord.js";
+import type { ButtonInteraction, Client, GuildMember } from "discord.js";
+import { MessageFlags } from "discord.js";
+
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
 function generateRandomString(length: number) {
@@ -35,11 +37,14 @@ const button: Button = {
 		if (profile?.email) {
 			const member = interaction.member as GuildMember;
 			if (!member) return;
+			const role = interaction.guild?.roles.cache.get("1498832228145168514");
 
-			const role = await interaction.guild?.roles
-				.fetch("1498832228145168514")
-				.catch(() => null);
-			if (!role) return;
+			if (!role){
+				await interaction.editReply({
+					content: `An error occurred while assigning the role, please contact an administrator.`,
+				});
+				return;
+			}
 
 			await member.roles.add(role);
 			return;

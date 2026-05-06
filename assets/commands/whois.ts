@@ -1,10 +1,10 @@
+import type { ChatInputCommandInteraction, Client } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
 	MessageFlags,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 } from "discord.js";
+
 import { FindByEmail, GetProfile } from "../../utils/profileManager.js";
 
 const command: Command = {

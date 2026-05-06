@@ -1,38 +1,9 @@
+import type { Client, GuildTextBasedChannel, Message, TextChannel } from "discord.js";
 import {
-	type Client,
 	Events,
-	type GuildTextBasedChannel,
-	type Message,
-	SnowflakeUtil,
-	type TextChannel,
 } from "discord.js";
 import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
-
-async function purgeScamMessages(
-	channel: GuildTextBasedChannel,
-	targetUserId: string,
-): Promise<number> {
-	try {
-		const fetchedMessages = await channel.messages.fetch({ limit: 20 });
-
-		// Filter for the users messages from the past hour
-		const messagesToDelete = fetchedMessages.filter(
-			(msg) =>
-				msg.author.id === targetUserId &&
-				msg.createdTimestamp >= Date.now() - 60 * 60 * 1000,
-		);
-
-		// Delete messages if found
-		if (messagesToDelete.size > 0) {
-			await channel.bulkDelete(messagesToDelete, true);
-		}
-
-		return messagesToDelete.size;
-	} catch (error) {
-		console.error(`Failed to purge messages in channel ${channel.id}:`, error);
-		return 0;
-	}
-}
+import { purgeChannels } from "../utils/purgeMessages.js";
 
 export default {
 	name: Events.MessageCreate,
@@ -68,25 +39,9 @@ export default {
 				c.isTextBased(),
 			);
 
-			// Map channels to an array of promises
-			const purgePromises = channels.map(async (channel) => {
-				const textChannel = channel as GuildTextBasedChannel;
+			const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
 
-				// Skip inactive channels
-				if (textChannel.lastMessageId) {
-					const lastMessageTime = SnowflakeUtil.timestampFrom(
-						textChannel.lastMessageId,
-					);
-					if (lastMessageTime < Date.now() - 10 * 60 * 1000) {
-						return 0;
-					}
-				}
-
-				return await purgeScamMessages(textChannel, compromisedUserId);
-			});
-
-			// deletes in parrallel
-			const results = await Promise.all(purgePromises);
+			const results = await purgeChannels(channelsArray, compromisedUserId);
 
 			const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
 			if (logChannel)
@@ -115,25 +70,27 @@ export default {
 				await UpdateProfile(message.author.id, { email });
 
 				// Fetch member
-				const member = await message.guild?.members
+				let member = message.guild?.members.cache.get(message.author.id) || null;
+				if (!member){
+					console.error(`Failed to fetch member for user ID ${message.author.id} from cache, attempting to fetch from API.`);
+					member = await message.guild?.members
 					.fetch(message.author.id)
 					.catch(() => null);
-				if (!member) return;
+				}
+				if (!member) {
+					console.error(`Failed to fetch member for user ID ${message.author.id} from API.`);
+					return;
+				}
 
 				// Add verified role to the user
-				const verifiedRole = await message.guild?.roles
-					.fetch("1498832228145168514")
-					.catch(() => null);
+				const verifiedRole = message.guild?.roles.cache.get("1498832228145168514");
 				if (verifiedRole) {
 					await member.roles.add(verifiedRole);
 				}
 
 				// Give teacher role if email doesn't end with @elev.ga.lbs.se
 				if (!email.endsWith("@elev.ga.lbs.se")) {
-					const teacherRole = await message.guild?.roles
-						.fetch("1497140069872435217")
-						.catch(() => null);
-
+					const teacherRole = message.guild?.roles.cache.get("1497140069872435217");
 					if (teacherRole) {
 						await member.roles.add(teacherRole);
 					}

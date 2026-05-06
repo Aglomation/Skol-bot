@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import { userProfileTable } from "../db/schema.js";
 
@@ -47,7 +47,7 @@ export async function FindByEmail(email: string): Promise<UserProfile | null> {
  */
 export async function GetAllWithBirthday(): Promise<UserProfile[]> {
     try {
-        const results = await db.select().from(userProfileTable).where(eq(userProfileTable.birthday, true));
+        const results = await db.select().from(userProfileTable).where(isNotNull(userProfileTable.birthday));
         return results;
     } catch (error) {
         console.error("Error finding all key users:", error);

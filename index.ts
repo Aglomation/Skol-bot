@@ -3,15 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { neon } from "@neondatabase/serverless";
+import type { RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
 import {
     Client,
     Collection,
     GatewayIntentBits,
     REST,
     Routes,
-    type RESTPostAPIApplicationCommandsJSONBody,
 } from "discord.js";
 import { drizzle } from "drizzle-orm/neon-http";
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

@@ -1,13 +1,13 @@
+import type { ChatInputCommandInteraction, Client } from "discord.js";
 import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    type ChatInputCommandInteraction,
-    type Client,
     MessageFlags,
     PermissionFlagsBits,
     SlashCommandBuilder,
 } from "discord.js";
+
 import button from "../buttons/verify.js";
 
 const command: Command = {

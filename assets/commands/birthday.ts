@@ -1,12 +1,79 @@
+import type { ChatInputCommandInteraction, Client, Guild } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
-	MessageFlags,
+	ActionRowBuilder,
+	ButtonBuilder,
+	ButtonStyle,
+	EmbedBuilder,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 } from "discord.js";
+
 import { GetAllWithBirthday, GetProfile, UpdateProfile } from "../../utils/profileManager.js";
-import birthday from "../repeating/birthday.js";
+import { numToMonth } from "../../utils/stringConvert.js";
+
+const sortedList = async () => {
+	const users = await GetAllWithBirthday();
+
+    if (users.length === 0) return null;
+
+    const formattedList = users
+        .map((user) => {
+            const birthday = user.birthday as UserProfile["birthday"] | null;
+            return { user, birthday };
+        })
+        .sort((a, b) => {
+            if (!a.birthday || !b.birthday) return 0;
+            if (a.birthday.month !== b.birthday.month) {
+                return a.birthday.month - b.birthday.month;
+            }
+            return a.birthday.day - b.birthday.day;
+        });
+	return formattedList
+}
+
+export const generateBirthdayPage = async (page: number, guild: Guild | null): Promise<{ embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] } | null> => {
+    const formattedList = await sortedList();
+
+	if (!formattedList || formattedList.length === 0) return null;
+
+	const pageSize = 12;
+    const maxPage = Math.ceil(formattedList.length / pageSize) || 1;
+    
+    const currentPage = Math.max(1, Math.min(page, maxPage));
+
+    const embed = new EmbedBuilder()
+        .setTitle(`Birthdays (Page ${currentPage}/${maxPage}) [${formattedList.length}]`)
+        .setThumbnail(guild?.iconURL() || null)
+        .setColor("Aqua")
+		.setFooter({ text: `${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, formattedList.length)} ・ Use /birthday set to set your birthday!` })
+        .setDescription(
+            formattedList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                .map(({ user, birthday }) =>
+                    `__**${numToMonth(birthday?.month || 0)} ${birthday?.day}**__ ・ <@${user.id}>, ${birthday ? `${new Date().getFullYear() - birthday.year} years old` : "No birthday set"}\n`
+                )
+                .join("\n")
+        );
+
+    const prev = new ButtonBuilder()
+        .setLabel('Previous')
+        .setStyle(ButtonStyle.Primary)
+        .setCustomId(`birthdaychangepage:${currentPage - 1}`)
+        .setDisabled(currentPage <= 1);
+
+    const next = new ButtonBuilder()
+        .setLabel('Next')
+        .setStyle(ButtonStyle.Primary)
+        .setCustomId(`birthdaychangepage:${currentPage + 1}`)
+        .setDisabled(currentPage >= maxPage);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(prev, next);
+
+    return {
+        embeds: [embed],
+        components: [row]
+    };
+};
+
 
 const set = async (
 	interaction: ChatInputCommandInteraction,
@@ -61,23 +128,62 @@ const get = async (
 	});
 };
 
+
+
 const list = async (
+    interaction: ChatInputCommandInteraction,
+    _client: Client,
+    page: number = 1,
+) => {
+    const pageData = await generateBirthdayPage(page, interaction.guild);
+
+    if (!pageData) {
+        // Handle empty list gracefully
+        return interaction.editReply({ content: "No birthdays have been set yet!" });
+    }
+
+    await interaction.editReply(pageData);
+};
+
+const next = async (
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) => {
-	const users = await GetAllWithBirthday();
-	if (users.length === 0) {
-		await interaction.editReply({ content: "No birthdays have been set yet." });
+	const formattedList = await sortedList();
+
+	if (!formattedList || formattedList.length === 0) {
+		await interaction.editReply({ content: "No birthdays have been set yet!" });
 		return;
 	}
-	const formattedList = users
-		.map((user) => {
-			const birthday = user.birthday as UserProfile["birthday"] | null;
-			return `<@${user.id}>: ${birthday?.year}-${String(birthday?.month).padStart(2, "0")}-${String(birthday?.day).padStart(2, "0")}`;
+	const today = new Date();
+	const upcoming = formattedList
+		.map(({ user, birthday }) => {
+			if (!birthday) return null;
+			return birthday.month > today.getMonth() + 1 ||
+				(birthday.month === today.getMonth() + 1 && birthday.day >= today.getDate())
+				? { user, birthday }
+				: null;
 		})
-		.join("\n");
+		.filter((entry) => entry !== null)
+
+	if (upcoming.length === 0) {
+		await interaction.editReply({ content: "No upcoming birthdays found until next year!" });
+		return;
+	}
+
+	const nextBirthday = upcoming[0];
+
+	const embed = new EmbedBuilder()
+		.setTitle(`Next Birthday: ${numToMonth(nextBirthday.birthday?.month || 0)} ${nextBirthday.birthday?.day}`)
+		.setThumbnail(interaction.guild?.members.cache.get(nextBirthday?.user.id)?.displayAvatarURL() || null)
+		.setColor("Aqua")
+		.setFooter({ text: `Use /birthday set to set your birthday!` })
+		.setDescription(
+			`The next birthday is <@${nextBirthday?.user.id}>'s who turns ${new Date().getFullYear() - nextBirthday.birthday.year} years old <t:${Math.floor(new Date(today.getFullYear(), (nextBirthday.birthday?.month || 1) - 1, nextBirthday.birthday?.day || 1).getTime() / 1000)}:R>`
+		);
+	
 	await interaction.editReply({
-		content: formattedList,
+		embeds: [embed],
 		allowedMentions: { users: [] },
 	});
 };
@@ -86,6 +192,7 @@ const subcommands = {
 	set,
 	get,
 	list,
+	next,
 } as const;
 
 const command: Command = {
@@ -123,10 +230,14 @@ const command: Command = {
 
 		.addSubcommand((subcommand) =>
 			subcommand.setName("list").setDescription("Lists all birthdays"),
+		)
+		.addSubcommand((subcommand) =>
+			subcommand.setName("next").setDescription("Shows the next birthday"),
 		),
 
+
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		await interaction.deferReply({  });
 
 		const subcommand = interaction.options.getSubcommand();
 		const handler = subcommands[subcommand as keyof typeof subcommands];

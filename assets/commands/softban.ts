@@ -1,15 +1,14 @@
+import type { ChatInputCommandInteraction, Client, GuildMember, GuildTextBasedChannel, TextChannel } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
-	type GuildMember,
 	MessageFlags,
 	PermissionFlagsBits,
 	PermissionsBitField,
 	SlashCommandBuilder,
-	type TextChannel,
 } from "discord.js";
+
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 import { stringToDate } from "../../utils/stringConvert.js";
+import { purgeChannels } from "../../utils/purgeMessages.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -33,6 +32,19 @@ const command: Command = {
 				.setName("duration")
 				.setDescription("Duration of the ban (s, m, h, d, mo, y, inf)")
 				.setRequired(true),
+		)
+		.addStringOption((option) =>
+			option
+				.setName("deletemessages")
+				.setDescription("Whether to delete the user's messages")
+				.setRequired(true)
+				.setChoices(
+					{ name: "1 Hour", value: "1h" },
+					{ name: "6 Hours", value: "6h" },
+					{ name: "12 Hours", value: "12h" },
+					{ name: "24 Hours", value: "24h" },
+					{ name: "None", value: "0h" },
+				),
 		),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
@@ -45,12 +57,32 @@ const command: Command = {
 			await interaction.editReply("You don't have permission to use this.");
 			return;
 		}
-
 		const user = interaction.options.getUser("user", true);
 		const member = interaction.options.getMember("user") as GuildMember | null;
 		const reason = interaction.options.getString("reason", true);
-		const date = stringToDate(interaction.options.getString("duration") || "");
+		const date = stringToDate(interaction.options.getString("duration") || "a");
+		const deleteMessagesDuration = stringToDate(interaction.options.getString("deletemessages", true) || "");
 
+		// const channels = message.guild.channels.cache.filter((c) =>
+		// 	c.isTextBased(),
+		// );
+
+		// const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
+
+		// const results = await purgeChannels(channelsArray, compromisedUserId);
+
+		// const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
+		// if (logChannel)
+		// 	await logChannel.send(
+		// 		`Honeypot wipe complete. Wiped ${totalDeleted} messages from <@${compromisedUserId}>.`,
+		// 	);
+		// return;
+		const logChannel = client.channels.cache.get("1499149296203993169") as
+			| TextChannel
+			| undefined;
+
+
+		
 		const profile = await GetProfile(user.id);
 		if (profile?.banned) {
 			await interaction.editReply("User is already on the ban list.");
@@ -84,14 +116,28 @@ const command: Command = {
 			if (member) await member.kick(reason);
 
 			await interaction.editReply(`**${user.tag}** has been banned.`);
-
-			const logChannel = client.channels.cache.get("1499149296203993169") as
-				| TextChannel
-				| undefined;
+			
 			if (logChannel) {
 				await logChannel.send(
 					`${interaction.user.tag} has softbanned <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : 'Indefinite'} for the reason: ${reason}`,
 				);
+			}
+
+			// Purge messages if option is set
+			if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
+				await interaction.editReply(`Deleting messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`);
+				const channels = member.guild.channels.cache.filter(
+					(ch): ch is TextChannel =>
+						ch.isTextBased() && ch.permissionsFor(member).has("ViewChannel"),
+				);
+				const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
+
+				const results = await purgeChannels(channelsArray, user.id, deleteMessagesDuration);
+				if (logChannel)
+					await logChannel.send(
+						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the softban.`,
+					);
+				await interaction.editReply(`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`);
 			}
 		} catch (err) {
 			console.error(err);

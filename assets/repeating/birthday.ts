@@ -1,4 +1,6 @@
-import { type Client, EmbedBuilder, type TextChannel } from "discord.js";
+import type { Client, TextChannel } from "discord.js";
+import { EmbedBuilder } from "discord.js";
+
 import { GetAllWithBirthday } from "../../utils/profileManager.js";
 
 const repeating = {

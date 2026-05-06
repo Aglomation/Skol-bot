@@ -1,4 +1,5 @@
-import { type Interaction, type Client, Events } from "discord.js";
+import type { Client, Interaction } from "discord.js";
+import { Events } from "discord.js";
 
 export default {
 	name: Events.InteractionCreate,
@@ -25,7 +26,7 @@ export default {
 				console.error(error);
 			}
 		} else if (interaction.isButton()) {
-			const buttonCommand = client.buttons.get(interaction.customId);
+			const buttonCommand = client.buttons.get(interaction.customId.split(":")[0]);
 			if (!buttonCommand) return;
 
 			try {

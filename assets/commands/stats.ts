@@ -1,7 +1,6 @@
 import fs from "node:fs";
+import type { ChatInputCommandInteraction, Client } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
 	EmbedBuilder,
 	MessageFlags,
 	SlashCommandBuilder,

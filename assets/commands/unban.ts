@@ -1,13 +1,11 @@
+import type { ChatInputCommandInteraction, Client, GuildMember, TextChannel } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
-	type GuildMember,
 	MessageFlags,
 	PermissionFlagsBits,
 	PermissionsBitField,
 	SlashCommandBuilder,
-	type TextChannel,
 } from "discord.js";
+
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
 const command: Command = {

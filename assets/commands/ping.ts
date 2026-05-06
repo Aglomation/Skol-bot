@@ -1,6 +1,5 @@
+import type { ChatInputCommandInteraction, Client } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
 	MessageFlags,
 	SlashCommandBuilder,
 } from "discord.js";

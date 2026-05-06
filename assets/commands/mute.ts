@@ -1,14 +1,13 @@
+import type { ChatInputCommandInteraction, Client, GuildMember, GuildTextBasedChannel, TextChannel } from "discord.js";
 import {
-	type ChatInputCommandInteraction,
-	type Client,
-	type GuildMember,
 	MessageFlags,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
-	type TextChannel,
 } from "discord.js";
-import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
+
+import { UpdateProfile } from "../../utils/profileManager.js";
 import { stringToDate } from "../../utils/stringConvert.js";
+import { purgeChannels } from "../../utils/purgeMessages.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -31,6 +30,19 @@ const command: Command = {
 					"Duration of the mute (s, m, h, d, mo, y, inf) [mutes >28d gets refreshed until <28d]",
 				)
 				.setRequired(true),
+		)
+		.addStringOption((option) =>
+			option
+				.setName("deletemessages")
+				.setDescription("Whether to delete the user's messages")
+				.setRequired(true)
+				.setChoices(
+					{ name: "1 Hour", value: "1h" },
+					{ name: "6 Hours", value: "6h" },
+					{ name: "12 Hours", value: "12h" },
+					{ name: "24 Hours", value: "24h" },
+					{ name: "None", value: "0h" },
+				),
 		),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
@@ -48,6 +60,7 @@ const command: Command = {
 		const member = interaction.options.getMember("user") as GuildMember | null;
 		const reason = interaction.options.getString("reason", true);
 		const date = stringToDate(interaction.options.getString("duration") || "");
+		const deleteMessagesDuration = stringToDate(interaction.options.getString("deletemessages", true) || "");
 
 		if (!member) {
 			await interaction.editReply("User is not in this server.");
@@ -89,6 +102,23 @@ const command: Command = {
 				await logChannel.send(
 					`${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : 'Indefinite'} for the reason: ${reason}`,
 				);
+			}
+
+			// Purge messages if option is set
+			if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
+				await interaction.editReply(`Deleting messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the mute.`);
+				const channels = member.guild.channels.cache.filter(
+					(ch): ch is TextChannel =>
+						ch.isTextBased() && ch.permissionsFor(member).has("ViewChannel"),
+				);
+				const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
+
+				const results = await purgeChannels(channelsArray, user.id, deleteMessagesDuration);
+				if (logChannel)
+					await logChannel.send(
+						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the mute.`,
+					);
+				await interaction.editReply(`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the mute.`);
 			}
 		} catch (err) {
 			console.error(err);

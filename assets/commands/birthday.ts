@@ -4,6 +4,7 @@ import {
 	ButtonBuilder,
 	ButtonStyle,
 	EmbedBuilder,
+	MessageFlags,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -79,6 +80,7 @@ const set = async (
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) => {
+	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 	const date = interaction.options.getString("date", true);
 
 	const [year, month, day] = date
@@ -117,14 +119,13 @@ const get = async (
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) => {
+	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 	const profile = await GetProfile(interaction.user.id);
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
 	if (!birthday) return await interaction.editReply({ content: "You haven't set your birthday yet." });
 
 	await interaction.editReply({
-		content: birthday
-			? `Your birthday is set to ${birthday.year}-${String(birthday.month).padStart(2, "0")}-${String(birthday.day).padStart(2, "0")}`
-			: "You haven't set your birthday yet.",
+		content: `Your birthday is set to ${birthday.year}-${String(birthday.month).padStart(2, "0")}-${String(birthday.day).padStart(2, "0")}`
 	});
 };
 
@@ -135,6 +136,7 @@ const list = async (
     _client: Client,
     page: number = 1,
 ) => {
+	await interaction.deferReply({});
     const pageData = await generateBirthdayPage(page, interaction.guild);
 
     if (!pageData) {
@@ -149,6 +151,7 @@ const next = async (
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) => {
+	await interaction.deferReply({});
 	const formattedList = await sortedList();
 
 	if (!formattedList || formattedList.length === 0) {
@@ -160,7 +163,7 @@ const next = async (
 		.map(({ user, birthday }) => {
 			if (!birthday) return null;
 			return birthday.month > today.getMonth() + 1 ||
-				(birthday.month === today.getMonth() + 1 && birthday.day >= today.getDate())
+				(birthday.month === today.getMonth() + 1 && birthday.day > today.getDate())
 				? { user, birthday }
 				: null;
 		})
@@ -220,12 +223,6 @@ const command: Command = {
 			subcommand
 				.setName("get")
 				.setDescription("Gets your birthday")
-				.addStringOption((option) =>
-					option
-						.setName("date")
-						.setDescription("Your birthday (YYYY-MM-DD)")
-						.setRequired(true),
-				),
 		)
 
 		.addSubcommand((subcommand) =>
@@ -237,8 +234,6 @@ const command: Command = {
 
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
-		await interaction.deferReply({  });
-
 		const subcommand = interaction.options.getSubcommand();
 		const handler = subcommands[subcommand as keyof typeof subcommands];
 

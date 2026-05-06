@@ -23,10 +23,10 @@ const button: Button = {
 
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-		// Incase the autoban failed, check an extra time
+		// In case the autoban failed, check an extra time
 		const profile = await GetProfile(interaction.user.id);
 		if (profile?.banned === true) {
-			const member = interaction.member as GuildMember
+			const member = interaction.member as GuildMember;
 			if (!member) return;
 
 			await member.kick();
@@ -47,11 +47,14 @@ const button: Button = {
 			}
 
 			await member.roles.add(role);
+			await interaction.editReply({
+				content: `You have been verified successfully!`,
+			});
 			return;
 		}
 
-		// Generates random code and adds it to users profile
-		const verificationCode = generateRandomString(4);
+		const verificationCode = profile?.verifycode ? profile.verifycode : generateRandomString(4);
+
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });
 
 		await interaction.editReply({

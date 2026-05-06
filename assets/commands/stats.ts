@@ -37,7 +37,7 @@ const command = {
 
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-		await interaction.guild.members.fetch();
+		//await interaction.guild.members.fetch();
 
 		const fields: { name: string; value: string; inline?: boolean }[] = [];
 		const finalSchoolData: FinalSchoolData[] = [];

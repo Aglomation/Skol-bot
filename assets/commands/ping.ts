@@ -1,8 +1,8 @@
 import {
-	SlashCommandBuilder,
 	type ChatInputCommandInteraction,
 	type Client,
 	MessageFlags,
+	SlashCommandBuilder,
 } from "discord.js";
 
 const command: Command = {

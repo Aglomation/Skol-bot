@@ -5,7 +5,7 @@ import { GetProfile } from "../../utils/profileManager.js";
 const repeating = {
     repeating: true,
     time: 1 * 60 * 60 * 1000,
-    immediate: true,
+    immediate: false,
 
     async execute(client: Client) {
         if (!process.env.GUILD_ID) {
@@ -14,7 +14,7 @@ const repeating = {
         }
 
         const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        const members = await guild.members.fetch();
+        const members = await guild.members.cache;
 
         if (!members) return;
 

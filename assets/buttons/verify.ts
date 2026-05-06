@@ -1,4 +1,4 @@
-import { type ButtonInteraction, type Client, MessageFlags } from "discord.js";
+import { type ButtonInteraction, type Client, GuildMember, MessageFlags } from "discord.js";
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
 function generateRandomString(length: number) {
@@ -21,11 +21,10 @@ const button: Button = {
 
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+		// Incase the autoban failed, check an extra time
 		const profile = await GetProfile(interaction.user.id);
 		if (profile?.banned === true) {
-			const member = await interaction.guild?.members
-				.fetch(interaction.user.id)
-				.catch(() => null);
+			const member = interaction.member as GuildMember
 			if (!member) return;
 
 			await member.kick();
@@ -34,9 +33,7 @@ const button: Button = {
 
 		// Give verified role immediately if the user already has an email connected
 		if (profile?.email) {
-			const member = await interaction.guild?.members
-				.fetch(interaction.user.id)
-				.catch(() => null);
+			const member = interaction.member as GuildMember;
 			if (!member) return;
 
 			const role = await interaction.guild?.roles

@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, Guild } from "discord.js";
+import type { ChatInputCommandInteraction, Client, Guild, GuildMember } from "discord.js";
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -64,18 +64,21 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
 			continue;
 		}
 		const age = today.getFullYear() - birthday.year;
+		const name = guild?.members.cache.get(user.id)?.nickname || 
+		guild?.members.cache.get(user.id)?.user.displayName || 
+		guild?.members.cache.get(user.id)?.user.username;
 
 		if (
 			i > 0 && 
 			pageItems[i - 1].birthday?.month === birthday.month && 
 			pageItems[i - 1].birthday?.day === birthday.day
 		){
-			descLines.push(`↳ ・ <@${user.id}>, ${age} years old`);
+			descLines.push(`↳ ・ ${name}, ${age} years old`);
 		}else{
 			// December now knows about January's existence
 			const nextMonthNormalized = nextBirthday?.birthday ? (((nextBirthday.birthday.month - 1) % 12) + 1) : null;
 			const isNextUp = !!nextBirthday?.birthday && nextMonthNormalized === birthday.month && nextBirthday.birthday.day === birthday.day;
-			descLines.push(`__**${numToMonth(birthday.month)} ${birthday.day}**__${isNextUp ? " **(Next up)**" : ""}\n↳ ・ <@${user.id}>, ${age} years old`);
+			descLines.push(`__**${numToMonth(birthday.month)} ${birthday.day}**__${isNextUp ? " **(Next up)**" : ""}\n↳ ・ ${name}, ${age} years old`);
 		}
 		
 		const next = pageItems[i + 1];
@@ -147,6 +150,24 @@ const set = async (
 		});
 		return;
 	}
+
+	// Date goes to the next month if the day is invalid for the month, check if the month rolled over.
+	if (numToMonth(new Date(year, month-1, day).getMonth() + 1) !== numToMonth(month)){
+		await interaction.editReply({
+			content: "Invalid date. Please check the day and month combination.",
+		});
+		return;
+	}
+
+	// Check if the user is a teacher, then expand the valid age range
+	const isTeacher = (interaction.member as GuildMember).roles.cache.has("1497140069872435217");
+	if (year < new Date().getFullYear()-30 || year > new Date().getFullYear()-13 || isTeacher) {
+		await interaction.editReply({
+			content: `Invalid year.`,
+		});
+		return;
+	}
+
 	if (
 		interaction.options.getUser("user")?.id &&
 		!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)

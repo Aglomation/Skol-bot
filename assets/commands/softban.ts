@@ -63,25 +63,9 @@ const command: Command = {
 		const date = stringToDate(interaction.options.getString("duration") || "a");
 		const deleteMessagesDuration = stringToDate(interaction.options.getString("deletemessages", true) || "");
 
-		// const channels = message.guild.channels.cache.filter((c) =>
-		// 	c.isTextBased(),
-		// );
-
-		// const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
-
-		// const results = await purgeChannels(channelsArray, compromisedUserId);
-
-		// const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
-		// if (logChannel)
-		// 	await logChannel.send(
-		// 		`Honeypot wipe complete. Wiped ${totalDeleted} messages from <@${compromisedUserId}>.`,
-		// 	);
-		// return;
 		const logChannel = client.channels.cache.get("1499149296203993169") as
 			| TextChannel
 			| undefined;
-
-
 		
 		const profile = await GetProfile(user.id);
 		if (profile?.banned) {

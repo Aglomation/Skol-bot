@@ -1,7 +1,7 @@
 import type { Client, TextChannel } from "discord.js";
 import { EmbedBuilder } from "discord.js";
 
-import { GetAllWithBirthday } from "../../utils/profileManager.js";
+import { FindAllNonNullKeys } from "../../utils/profileManager.js";
 
 const repeating = {
 	repeating: true,
@@ -13,7 +13,7 @@ const repeating = {
 		if (!birthdayChannel) return;
 		const date = new Date();
 
-		const birthdayMembers = await GetAllWithBirthday();
+		const birthdayMembers = await FindAllNonNullKeys("birthday");
 		const filteredMembers = birthdayMembers.filter((member) => {
             const birthday = (member.birthday as UserProfile["birthday"] | null);
 			if (!birthday) return false;

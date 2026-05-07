@@ -6,6 +6,7 @@ import type {
 	Collection,
 	SlashCommandBuilder,
 } from "discord.js";
+import { userProfileTable } from "../db/schema.js";
 
 // 1. Define the structures for your commands and components
 declare global {
@@ -26,16 +27,22 @@ declare global {
 			interaction: AutocompleteInteraction,
 			client: Client,
 		) => Promise<void>;
+
 	}
-	interface UserProfile {
-		verifycode: string;
-		email: string;
-		timeout: number | null;
-		banned: boolean;
-		banreason: string | null;
-		banduration: string | null;
-		birthday: { year: number; month: number; day: number } | null;
+	interface Repeating {
+		data: { 
+			time: number | null,
+			immediate: boolean,
+			repeating: boolean,
+			exactTime: string | null,
+		};
+		execute: (
+			interaction: AutocompleteInteraction,
+			client: Client,
+		) => Promise<void>;
 	}
+	type UserProfile = typeof userProfileTable.$inferSelect;
+	type UserProfileKey = keyof UserProfile;
 }
 
 // 2. Extend the base Discord.js Client

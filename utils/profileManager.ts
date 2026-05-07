@@ -47,20 +47,12 @@ export async function CreateProfile(
     }
 }
 
-export async function FindByEmail(email: string): Promise<UserProfile | null> {
-    try {
-        const result = await db
-            .select()
-            .from(userProfileTable)
-            .where(eq(userProfileTable.email, email))
-            .limit(1);
-        return result.length > 0 ? result[0] : null;
-    } catch (error) {
-        console.error("Error finding user by email:", error);
-        return null;
-    }
-}
-
+/**
+ * Find a user by a specific profile field
+ * @param key The profile field to search by
+ * @param value The value to search for
+ * @returns The user profile matching the search
+ */
 export async function FindByValue(key: UserProfileKey, value: string | null): Promise<UserProfile | null> {
     try {
         const result = await db
@@ -75,20 +67,45 @@ export async function FindByValue(key: UserProfileKey, value: string | null): Pr
     }
 }
 
-
 /**
- * Find all users with birthday set
- * @return An array of user profiles with birthday set
+ * Find all users by a specific profile field
+ * @param key The profile field to search by
+ * @param value The value to search for
+ * @returns An array of user profiles matching the search
  */
-export async function GetAllWithBirthday(): Promise<UserProfile[]> {
+export async function FindAllByValue(key: UserProfileKey, value: string | null): Promise<UserProfile[]> {
     try {
-        const results = await db.select().from(userProfileTable).where(isNotNull(userProfileTable.birthday));
-        return results;
+        const result = await db
+            .select()
+            .from(userProfileTable)
+            .where(eq(userProfileTable[key], value))
+        return result.length > 0 ? result : [];
     } catch (error) {
-        console.error("Error finding all key users:", error);
+        console.error("Error finding user by value:", error);
         return [];
     }
-};
+}
+
+/**
+ * Find all users by a specific profile field
+ * @param key The profile field to search by
+ * @param value The value to search for
+ * @returns An array of user profiles matching the search criteria
+ */
+export async function FindAllNonNullKeys(key: UserProfileKey): Promise<UserProfile[]> {
+    try {
+        const result = await db
+            .select()
+            .from(userProfileTable)
+            .where(isNotNull(userProfileTable[key]));
+        return result.length > 0 ? result : [];
+    } catch (error) {
+        console.error("Error finding all non-null keys:", error);
+        return [];
+    }
+}
+
+
 
 /**
  * Get a single profile

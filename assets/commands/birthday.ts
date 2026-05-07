@@ -9,11 +9,11 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 
-import { GetAllWithBirthday, GetProfile, UpdateProfile } from "../../utils/profileManager.js";
+import { FindAllNonNullKeys, GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 import { numToMonth } from "../../utils/stringConvert.js";
 
 const sortedList = async () => {
-	const users = await GetAllWithBirthday();
+	const users = await FindAllNonNullKeys("birthday") as (UserProfile)[];
 
     if (users.length === 0) return null;
 
@@ -87,7 +87,7 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
 			if (isNextUp){
 				descLines.push(`**__↑ ${today.getFullYear()+1} ↑\n↓ ${today.getFullYear()} ↓__**`)
 			}
-			descLines.push(`__**${numToMonth(birthday.month)}**__ ${birthday.day}\n↳ ・ ${name} ・ (${age-1} → ${age})`);
+			descLines.push(`__**${numToMonth(birthday.month)} ${birthday.day}**__\n↳ ・ ${name} ・ (${age-1} → ${age})`);
 		}
 		
 		const next = pageItems[i + 1];

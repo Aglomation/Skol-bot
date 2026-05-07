@@ -53,9 +53,11 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
 			(birthday.month === today.getMonth() + 1 && birthday.day > today.getDate())
 			? { user, birthday }
 			: { user, birthday: { ...birthday, month: birthday.month + 12 } };
+	}).sort((a, b) => {
+		if (!a || !b) return 0;
+		return a.birthday.month - b.birthday.month || a.birthday.day - b.birthday.day;
 	}).filter((entry) => entry !== null)[0];
-	console.log(nextBirthday)
-	
+
 	for (let i = 0; i < pageItems.length; i++) {
 		const { user, birthday } = pageItems[i];
 		if (!birthday) {
@@ -78,7 +80,7 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
 		
 		const next = pageItems[i + 1];
 
-		if (next && next.birthday) {
+		if (next?.birthday) {
 			if (next.birthday.month !== birthday.month) {
 				descLines.push("");
 			}

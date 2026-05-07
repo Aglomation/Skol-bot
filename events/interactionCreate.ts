@@ -26,10 +26,8 @@ export default {
 				console.error(error);
 			}
 		} else if (interaction.isButton()) {
-			console.log(interaction.customId)
 			const buttonCommand = client.buttons.get(interaction.customId.includes(":") ? interaction.customId.split(":")[0] : interaction.customId);
 			if (!buttonCommand) return;
-			console.log(buttonCommand)
 			try {
 				await buttonCommand.execute(interaction, client);
 			} catch (error) {

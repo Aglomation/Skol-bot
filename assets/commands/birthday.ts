@@ -42,32 +42,83 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
     
     const currentPage = Math.max(1, Math.min(page, maxPage));
 
-    const embed = new EmbedBuilder()
-        .setTitle(`Birthdays (Page ${currentPage}/${maxPage}) [${formattedList.length}]`)
-        .setThumbnail(guild?.iconURL() || null)
-        .setColor("Aqua")
-		.setFooter({ text: `${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, formattedList.length)} ・ Use /birthday set to set your birthday!` })
-        .setDescription(
-            formattedList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                .map(({ user, birthday }) =>
-                    `__**${numToMonth(birthday?.month || 0)} ${birthday?.day}**__ ・ <@${user.id}>, ${birthday ? `${new Date().getFullYear() - birthday.year} years old` : "No birthday set"}\n`
-                )
-                .join("\n")
-        );
+	const pageItems = formattedList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+	const descLines: string[] = [];
+	const today = new Date();
+
+	// Bad way to get the next birthday, it works ig
+	const nextBirthday = formattedList.map(({ user, birthday }) => {
+		if (!birthday) return null;
+		return birthday.month > today.getMonth() + 1 ||
+			(birthday.month === today.getMonth() + 1 && birthday.day > today.getDate())
+			? { user, birthday }
+			: { user, birthday: { ...birthday, month: birthday.month + 12 } };
+	}).filter((entry) => entry !== null)[0];
+	console.log(nextBirthday)
+	
+	for (let i = 0; i < pageItems.length; i++) {
+		const { user, birthday } = pageItems[i];
+		if (!birthday) {
+			continue;
+		}
+		const age = today.getFullYear() - birthday.year;
+
+		if (
+			i > 0 && 
+			pageItems[i - 1].birthday?.month == birthday.month && 
+			pageItems[i - 1].birthday?.day == birthday.day
+		){
+			descLines.push(`↳ ・ <@${user.id}>, ${age} years old`);
+		}else{
+			// December now knows about January's existence
+			const nextMonthNormalized = nextBirthday?.birthday ? (((nextBirthday.birthday.month - 1) % 12) + 1) : null;
+			const isNextUp = !!nextBirthday?.birthday && nextMonthNormalized === birthday.month && nextBirthday.birthday.day === birthday.day;
+			descLines.push(`__**${numToMonth(birthday.month)} ${birthday.day}**__${isNextUp ? " **(Next up)**" : ""}\n↳ ・ <@${user.id}>, ${age} years old`);
+		}
+		
+		const next = pageItems[i + 1];
+
+		if (next && next.birthday) {
+			if (next.birthday.month !== birthday.month) {
+				descLines.push("");
+			}
+		}
+	}
+	const description = descLines.join("\n");
+
+	const embed = new EmbedBuilder()
+		.setTitle(`Birthdays | Page ${currentPage}/${maxPage} [${formattedList.length}]`)
+		.setThumbnail(guild?.iconURL() || null)
+		.setColor("Aqua")
+		.setFooter({ text: `Total (${formattedList.length}) ・ ${pageSize} per page [Showing: ${((currentPage - 1) * pageSize) + 1}-${Math.min(currentPage * pageSize, formattedList.length)}] ・ Use /birthday set to set your birthday!` })
+		.setDescription(description);
+
+	const first = new ButtonBuilder()
+        .setEmoji('⏮️')
+        .setStyle(ButtonStyle.Secondary)
+        .setCustomId(`birthdaychangepage:0a`)
+        .setDisabled(currentPage <= 1);
 
     const prev = new ButtonBuilder()
-        .setLabel('Previous')
+        .setEmoji('◀️')
         .setStyle(ButtonStyle.Primary)
         .setCustomId(`birthdaychangepage:${currentPage - 1}`)
         .setDisabled(currentPage <= 1);
 
     const next = new ButtonBuilder()
-        .setLabel('Next')
+        .setEmoji('▶️')
         .setStyle(ButtonStyle.Primary)
         .setCustomId(`birthdaychangepage:${currentPage + 1}`)
         .setDisabled(currentPage >= maxPage);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(prev, next);
+	const last = new ButtonBuilder()
+        .setEmoji('⏭️')
+        .setStyle(ButtonStyle.Secondary)
+        .setCustomId(`birthdaychangepage:${maxPage}a`)
+        .setDisabled(currentPage >= maxPage);
+
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(first, prev, next, last);
 
     return {
         embeds: [embed],
@@ -162,10 +213,11 @@ const next = async (
 	const upcoming = formattedList
 		.map(({ user, birthday }) => {
 			if (!birthday) return null;
+
 			return birthday.month > today.getMonth() + 1 ||
 				(birthday.month === today.getMonth() + 1 && birthday.day > today.getDate())
 				? { user, birthday }
-				: null;
+				: { user, birthday: { ...birthday, month: birthday.month + 12 } };
 		})
 		.filter((entry) => entry !== null)
 

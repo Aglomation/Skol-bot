@@ -33,12 +33,12 @@ export function stringToDate(input: string): number | null {
 	return totalMs ? totalMs : null;
 }
 /**
- * Converts a month number (1-12) to its corresponding month name.
+ * Converts a month number (1-12) to its corresponding month name. Overflow rolls over (13 -> January)
  * @param input The input month number (1-12)
  * @returns The corresponding month name or "Unknown" if invalid
  */
 export function numToMonth(input: number): string {
-	switch(input){
+	switch(((input- 1) % 12) + 1){
 		case 1:
 			return "January"
 		case 2:

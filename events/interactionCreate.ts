@@ -26,7 +26,7 @@ export default {
 				console.error(error);
 			}
 		} else if (interaction.isButton()) {
-			const buttonCommand = client.buttons.get(interaction.customId.split(":")[0]);
+			const buttonCommand = client.buttons.get(interaction.customId.includes(":") ? interaction.customId.split(":")[0] : interaction.customId);
 			if (!buttonCommand) return;
 
 			try {

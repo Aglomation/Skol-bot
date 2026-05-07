@@ -19,7 +19,7 @@ const button: Button = {
 		customId: "verify",
 	},
 	async execute(interaction: ButtonInteraction, _client: Client) {
-		if (interaction.channel?.id !== "1498834244854878209") return;
+		// if (interaction.channel?.id !== "1498834244854878209") return;
 
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -53,8 +53,10 @@ const button: Button = {
 			return;
 		}
 
+		// Generate a random 4 character verification code
 		const verificationCode = profile?.verifycode ? profile.verifycode : generateRandomString(4);
 
+		// Store the verification code in the user's profile
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });
 
 		await interaction.editReply({

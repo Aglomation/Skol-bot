@@ -18,12 +18,32 @@ export async function UpdateProfile(
     newData: Partial<UserProfile>,
 ): Promise<void> {
     try {
+        if (await GetProfile(userId) === null) {
+            await CreateProfile(userId, newData);
+            return;
+        }
         await db
             .update(userProfileTable)
             .set(newData)
             .where(eq(userProfileTable.id, userId));
     } catch (err) {
         console.error("Error updating profile value1:", err);
+    }
+}
+
+/**
+ * Create a user's profile
+ */
+export async function CreateProfile(
+    userId: string,
+    newData: Partial<UserProfile>,
+): Promise<void> {
+    try {
+        await db
+            .insert(userProfileTable)
+            .values({ ...newData, id: userId });
+    } catch (err) {
+        console.error("Error creating profile:", err);
     }
 }
 

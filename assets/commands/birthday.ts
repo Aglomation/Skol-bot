@@ -63,22 +63,31 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
 		if (!birthday) {
 			continue;
 		}
-		const age = today.getFullYear() - birthday.year;
-		const name = guild?.members.cache.get(user.id)?.nickname || 
-		guild?.members.cache.get(user.id)?.user.displayName || 
-		guild?.members.cache.get(user.id)?.user.username;
+		const age = (today.getMonth() > birthday.month - 1 || (today.getMonth() === birthday.month - 1 && today.getDate() >= birthday.day))
+			? today.getFullYear() - birthday.year + 1
+			: today.getFullYear() - birthday.year;
+		const name = (
+			guild?.members.cache.get(user.id)?.nickname || 
+			guild?.members.cache.get(user.id)?.user.displayName || 
+			guild?.members.cache.get(user.id)?.user.username
+		)
+		?.slice(0, 20) || "Unknown User";
 
 		if (
 			i > 0 && 
 			pageItems[i - 1].birthday?.month === birthday.month && 
 			pageItems[i - 1].birthday?.day === birthday.day
 		){
-			descLines.push(`↳ ・ ${name}, ${age} years old`);
+			descLines.push(`↳ ・ ${name} ・ (${age-1} → ${age})`);
 		}else{
 			// December now knows about January's existence
 			const nextMonthNormalized = nextBirthday?.birthday ? (((nextBirthday.birthday.month - 1) % 12) + 1) : null;
 			const isNextUp = !!nextBirthday?.birthday && nextMonthNormalized === birthday.month && nextBirthday.birthday.day === birthday.day;
-			descLines.push(`__**${numToMonth(birthday.month)} ${birthday.day}**__${isNextUp ? " **(Next up)**" : ""}\n↳ ・ ${name}, ${age} years old`);
+			
+			if (isNextUp){
+				descLines.push(`**__↑ ${today.getFullYear()+1} ↑\n↓ ${today.getFullYear()} ↓__**`)
+			}
+			descLines.push(`__**${numToMonth(birthday.month)}**__ ${birthday.day}\n↳ ・ ${name} ・ (${age-1} → ${age})`);
 		}
 		
 		const next = pageItems[i + 1];
@@ -152,7 +161,7 @@ const set = async (
 	}
 
 	// Date goes to the next month if the day is invalid for the month, check if the month rolled over.
-	if (numToMonth(new Date(year, month-1, day).getMonth() + 1) !== numToMonth(month)){
+	if (new Date(year, month-1, day).getMonth() !== month-1) {
 		await interaction.editReply({
 			content: "Invalid date. Please check the day and month combination.",
 		});

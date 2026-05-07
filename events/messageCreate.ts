@@ -2,7 +2,7 @@ import type { Client, GuildTextBasedChannel, Message, TextChannel } from "discor
 import {
 	Events,
 } from "discord.js";
-import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
+import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
 
 export default {
@@ -64,21 +64,24 @@ export default {
 				if (!email.endsWith("lbs.se")) return;
 				if (email.includes("+")) return;
 
-				const profile = await GetProfile(message.author.id);
+				const profile = await FindByValue("verifycode", verify);
 				if (!profile) return; // exit if profile is invalid
 
-				await UpdateProfile(message.author.id, { email });
+				const userId = profile.id;
+				if (!userId) return;
+
+				await UpdateProfile(userId, { email });
 
 				// Fetch member
-				let member = message.guild?.members.cache.get(message.author.id) || null;
+				let member = message.guild?.members.cache.get(userId) || null;
 				if (!member){
-					console.error(`Failed to fetch member for user ID ${message.author.id} from cache, attempting to fetch from API.`);
+					console.error(`Failed to fetch member for user ID ${userId} from cache, attempting to fetch from API.`);
 					member = await message.guild?.members
-					.fetch(message.author.id)
+					.fetch(userId)
 					.catch(() => null);
 				}
 				if (!member) {
-					console.error(`Failed to fetch member for user ID ${message.author.id} from API.`);
+					console.error(`Failed to fetch member for user ID ${userId} from API.`);
 					return;
 				}
 

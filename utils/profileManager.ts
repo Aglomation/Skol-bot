@@ -61,6 +61,21 @@ export async function FindByEmail(email: string): Promise<UserProfile | null> {
     }
 }
 
+export async function FindByValue(key: UserProfileKey, value: string): Promise<UserProfile | null> {
+    try {
+        const result = await db
+            .select()
+            .from(userProfileTable)
+            .where(eq(userProfileTable[key], value))
+            .limit(1);
+        return result.length > 0 ? result[0] : null;
+    } catch (error) {
+        console.error("Error finding user by value:", error);
+        return null;
+    }
+}
+
+
 /**
  * Find all users with birthday set
  * @return An array of user profiles with birthday set

@@ -65,8 +65,8 @@ export const generateBirthdayPage = async (page: number, guild: Guild | null): P
 
 		if (
 			i > 0 && 
-			pageItems[i - 1].birthday?.month == birthday.month && 
-			pageItems[i - 1].birthday?.day == birthday.day
+			pageItems[i - 1].birthday?.month === birthday.month && 
+			pageItems[i - 1].birthday?.day === birthday.day
 		){
 			descLines.push(`↳ ・ <@${user.id}>, ${age} years old`);
 		}else{

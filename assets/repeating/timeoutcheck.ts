@@ -14,7 +14,7 @@ const repeating = {
         }
 
         const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        const members = await guild.members.cache;
+        const members = guild.members.cache;
 
         if (!members) return;
 

@@ -6,8 +6,8 @@ import { userProfileTable } from "../db/schema.js";
 const sql = neon(process.env.DATABASE_URL || "");
 const db = drizzle({ client: sql });
 
-type UserProfile = typeof userProfileTable.$inferSelect;
-type UserProfileKey = keyof UserProfile;
+export type UserProfile = typeof userProfileTable.$inferSelect;
+export type UserProfileKey = keyof UserProfile;
 
 
 /**
@@ -61,7 +61,7 @@ export async function FindByEmail(email: string): Promise<UserProfile | null> {
     }
 }
 
-export async function FindByValue(key: UserProfileKey, value: string): Promise<UserProfile | null> {
+export async function FindByValue(key: UserProfileKey, value: string | null): Promise<UserProfile | null> {
     try {
         const result = await db
             .select()

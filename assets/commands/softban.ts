@@ -45,11 +45,13 @@ const command: Command = {
 				.setDescription("Whether to delete the user's messages")
 				.setRequired(true)
 				.setChoices(
+					{ name: "None", value: "0h" },
 					{ name: "1 Hour", value: "1h" },
+					{ name: "3 Hours", value: "3h" },
 					{ name: "6 Hours", value: "6h" },
 					{ name: "12 Hours", value: "12h" },
-					{ name: "24 Hours", value: "24h" },
-					{ name: "None", value: "0h" },
+					{ name: "1 Day", value: "24h" },
+					{ name: "2 Days", value: "48h" },
 				),
 		),
 

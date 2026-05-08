@@ -52,7 +52,7 @@ export const generateBirthdayPage = async (
 
 	if (!formattedList || formattedList.length === 0) return null;
 
-	const pageSize = 12;
+	const pageSize = 30;
 	const maxPage = Math.ceil(formattedList.length / pageSize) || 1;
 
 	const currentPage = Math.max(1, Math.min(page, maxPage));
@@ -91,21 +91,21 @@ export const generateBirthdayPage = async (
 			today.getMonth() > birthday.month - 1 ||
 			(today.getMonth() === birthday.month - 1 &&
 				today.getDate() >= birthday.day)
-				? today.getFullYear() - birthday.year + 1
-				: today.getFullYear() - birthday.year;
+				? today.getFullYear() - birthday.year
+				: today.getFullYear() - birthday.year - 1;
 		const name =
 			(
 				guild?.members.cache.get(user.id)?.nickname ||
 				guild?.members.cache.get(user.id)?.user.displayName ||
 				guild?.members.cache.get(user.id)?.user.username
-			)?.slice(0, 20) || "Unknown User";
+			)?.slice(0, 26) || "Unknown User";
 
 		if (
 			i > 0 &&
 			pageItems[i - 1].birthday?.month === birthday.month &&
 			pageItems[i - 1].birthday?.day === birthday.day
 		) {
-			descLines.push(`↳ ・ ${name} ・ (${age - 1} → ${age})`);
+			descLines.push(`↳ (${age}) ${name}`);
 		} else {
 			// December now knows about January's existence
 			const nextMonthNormalized = nextBirthday?.birthday
@@ -118,11 +118,11 @@ export const generateBirthdayPage = async (
 
 			if (isNextUp) {
 				descLines.push(
-					`**__↑ ${today.getFullYear() + 1} ↑\n↓ ${today.getFullYear()} ↓__**`,
+					`\n**__${today.getFullYear() + 1} ↑\n ${today.getFullYear()} ↓__**\n`,
 				);
 			}
 			descLines.push(
-				`__**${numToMonth(birthday.month)} ${birthday.day}**__\n↳ ・ ${name} ・ (${age - 1} → ${age})`,
+				`__**${numToMonth(birthday.month)} ${birthday.day}**__\n↳ (${age}) ${name}`,
 			);
 		}
 
@@ -140,12 +140,20 @@ export const generateBirthdayPage = async (
 		.setTitle(
 			`Birthdays | Page ${currentPage}/${maxPage} [${formattedList.length}]`,
 		)
-		.setThumbnail(guild?.iconURL() || null)
+		.setAuthor({ name: guild?.name || "", iconURL: guild?.iconURL() || "" })
 		.setColor("Aqua")
 		.setFooter({
 			text: `Total (${formattedList.length}) ・ ${pageSize} per page [Showing: ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, formattedList.length)}] ・ Use /birthday set to set your birthday!`,
 		})
-		.setDescription(description);
+		.setDescription(description)
+		.setFields([
+			{
+				name: "Next Birthday",
+				value: nextBirthday
+					? `${guild?.members.cache.get(nextBirthday.user.id)?.displayName} - <t:${new Date(`${today.getFullYear()}-${nextBirthday.birthday.month}-${nextBirthday.birthday.day}`).getTime()/1000}:R>`
+					: "No upcoming birthdays",
+			},
+		]);
 
 	const first = new ButtonBuilder()
 		.setEmoji("⏮️")
@@ -216,9 +224,9 @@ const set = async (
 		"1497140069872435217",
 	);
 	if (
-		year < new Date().getFullYear() - 30 ||
-		year > new Date().getFullYear() - 13 ||
-		isTeacher
+		(year < new Date().getFullYear() - 30 ||
+			year > new Date().getFullYear() - 13) &&
+		!isTeacher
 	) {
 		await interaction.editReply({
 			content: `Invalid year.`,
@@ -314,7 +322,14 @@ const next = async (
 	}
 
 	const nextBirthday = upcoming[0];
-
+	const nextBirthdayAge = new Date().getFullYear() - nextBirthday.birthday.year;
+	const nextBirthdayTimestamp = Math.floor(
+		new Date(
+			today.getFullYear(),
+			(nextBirthday.birthday?.month || 1) - 1,
+			nextBirthday.birthday?.day || 1,
+		).getTime() / 1000
+	);
 	const embed = new EmbedBuilder()
 		.setTitle(
 			`Next Birthday: ${numToMonth(nextBirthday.birthday?.month || 0)} ${nextBirthday.birthday?.day}`,
@@ -327,7 +342,7 @@ const next = async (
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` })
 		.setDescription(
-			`The next birthday is <@${nextBirthday?.user.id}>'s who turns ${new Date().getFullYear() - nextBirthday.birthday.year} years old <t:${Math.floor(new Date(today.getFullYear(), (nextBirthday.birthday?.month || 1) - 1, nextBirthday.birthday?.day || 1).getTime() / 1000)}:R>`,
+			`The next birthday is <@${nextBirthday?.user.id}>'s who turns ${nextBirthdayAge} years old <t:${nextBirthdayTimestamp}:R>`,
 		);
 
 	await interaction.editReply({

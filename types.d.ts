@@ -11,7 +11,9 @@ import { userProfileTable } from "../db/schema.js";
 // 1. Define the structures for your commands and components
 declare global {
 	interface Command {
-		data: SlashCommandBuilder | { name: string; toJSON: () => any };
+		data:
+			| SlashCommandBuilder
+			| { name: string; toJSON: () => RESTPostAPIApplicationCommandsJSONBody };
 		execute: (
 			interaction: ChatInputCommandInteraction,
 			client: Client,
@@ -27,14 +29,13 @@ declare global {
 			interaction: AutocompleteInteraction,
 			client: Client,
 		) => Promise<void>;
-
 	}
 	interface Repeating {
-		data: { 
-			time: number | null,
-			immediate: boolean,
-			repeating: boolean,
-			exactTime: string | null,
+		data: {
+			time: number | null;
+			immediate: boolean;
+			repeating: boolean;
+			exactTime: string | null;
 		};
 		execute: (
 			interaction: AutocompleteInteraction,

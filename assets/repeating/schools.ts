@@ -95,7 +95,7 @@ const SchoolList: Schools[] = [
 
 const repeating = {
 	repeating: true,
-	time: 24 *  60 * 60 * 1000,
+	time: 24 * 60 * 60 * 1000,
 	immediate: false,
 
 	async execute(_client: Client) {

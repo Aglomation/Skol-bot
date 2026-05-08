@@ -39,7 +39,7 @@ const button: Button = {
 			if (!member) return;
 			const role = interaction.guild?.roles.cache.get("1498832228145168514");
 
-			if (!role){
+			if (!role) {
 				await interaction.editReply({
 					content: `An error occurred while assigning the role, please contact an administrator.`,
 				});
@@ -54,7 +54,9 @@ const button: Button = {
 		}
 
 		// Generate a random 4 character verification code
-		const verificationCode = profile?.verifycode ? profile.verifycode : generateRandomString(4);
+		const verificationCode = profile?.verifycode
+			? profile.verifycode
+			: generateRandomString(4);
 
 		// Store the verification code in the user's profile
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });

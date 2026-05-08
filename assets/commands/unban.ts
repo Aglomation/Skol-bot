@@ -1,4 +1,9 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, TextChannel } from "discord.js";
+import type {
+	ChatInputCommandInteraction,
+	Client,
+	GuildMember,
+	TextChannel,
+} from "discord.js";
 import {
 	MessageFlags,
 	PermissionFlagsBits,

@@ -1,4 +1,10 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, GuildTextBasedChannel, TextChannel } from "discord.js";
+import type {
+	ChatInputCommandInteraction,
+	Client,
+	GuildMember,
+	GuildTextBasedChannel,
+	TextChannel,
+} from "discord.js";
 import {
 	MessageFlags,
 	PermissionFlagsBits,
@@ -61,12 +67,14 @@ const command: Command = {
 		const member = interaction.options.getMember("user") as GuildMember | null;
 		const reason = interaction.options.getString("reason", true);
 		const date = stringToDate(interaction.options.getString("duration") || "a");
-		const deleteMessagesDuration = stringToDate(interaction.options.getString("deletemessages", true) || "");
+		const deleteMessagesDuration = stringToDate(
+			interaction.options.getString("deletemessages", true) || "",
+		);
 
 		const logChannel = client.channels.cache.get("1499149296203993169") as
 			| TextChannel
 			| undefined;
-		
+
 		const profile = await GetProfile(user.id);
 		if (profile?.banned) {
 			await interaction.editReply("User is already on the ban list.");
@@ -85,43 +93,53 @@ const command: Command = {
 				banduration: String(Date.now() + date),
 			});
 
-			const expiresAt = Number.isFinite(date) ? Math.floor((Date.now() + date) / 1000) : null;
+			const expiresAt = Number.isFinite(date)
+				? Math.floor((Date.now() + date) / 1000)
+				: null;
 			await user
 				.send(
 					`## You have been banned from ${interaction.guild?.name}\n` +
-					`For: ${reason}\n` +
-					`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
-					`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
-					`Invite: https://discord.gg/dUYHv8Dv94`,
+						`For: ${reason}\n` +
+						`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
+						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
+						`Invite: https://discord.gg/dUYHv8Dv94`,
 				)
-				.catch(() => { });
+				.catch(() => {});
 
 			// Kicks instead of banning to avoid IP-ban
 			if (member) await member.kick(reason);
 
 			await interaction.editReply(`**${user.tag}** has been banned.`);
-			
+
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has softbanned <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : 'Indefinite'} for the reason: ${reason}`,
+					`${interaction.user.tag} has softbanned <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason}`,
 				);
 			}
 
 			// Purge messages if option is set
 			if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
-				await interaction.editReply(`Deleting messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`);
+				await interaction.editReply(
+					`Deleting messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
+				);
 				const channels = member.guild.channels.cache.filter(
 					(ch): ch is TextChannel =>
 						ch.isTextBased() && ch.permissionsFor(member).has("ViewChannel"),
 				);
 				const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
 
-				const results = await purgeChannels(channelsArray, user.id, deleteMessagesDuration);
+				const results = await purgeChannels(
+					channelsArray,
+					user.id,
+					deleteMessagesDuration,
+				);
 				if (logChannel)
 					await logChannel.send(
 						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the softban.`,
 					);
-				await interaction.editReply(`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`);
+				await interaction.editReply(
+					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
+				);
 			}
 		} catch (err) {
 			console.error(err);

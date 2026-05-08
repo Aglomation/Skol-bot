@@ -15,32 +15,32 @@ const repeating = {
 
 		const birthdayMembers = await FindAllNonNullKeys("birthday");
 		const filteredMembers = birthdayMembers.filter((member) => {
-            const birthday = (member.birthday as UserProfile["birthday"] | null);
+			const birthday = member.birthday as UserProfile["birthday"] | null;
 			if (!birthday) return false;
 			return (
-				(birthday).month === date.getMonth() + 1 && (birthday).day === date.getDate()
+				birthday.month === date.getMonth() + 1 &&
+				birthday.day === date.getDate()
 			);
 		});
 
 		if (filteredMembers.length === 0) return;
 
 		console.log(filteredMembers);
-		const sortedMembers = filteredMembers.sort(
-			(a, b) => {
-				return ((b.birthday as UserProfile["birthday"])?.year || 0) - ((a.birthday as UserProfile["birthday"])?.year || 0);
-			},
-		);
+		const sortedMembers = filteredMembers.sort((a, b) => {
+			return (
+				((b.birthday as UserProfile["birthday"])?.year || 0) -
+				((a.birthday as UserProfile["birthday"])?.year || 0)
+			);
+		});
 
 		const embed = new EmbedBuilder()
 			.setTitle("Happy Birthday!")
 			.setDescription(
 				sortedMembers
-					.map(
-						({ id, birthday }) => {
-							const birthdayDate = birthday as UserProfile["birthday"] | null;
-							return `<@${id}> - ${date.getFullYear() - (birthdayDate?.year || 0)} Years old`;
-						},
-					)
+					.map(({ id, birthday }) => {
+						const birthdayDate = birthday as UserProfile["birthday"] | null;
+						return `<@${id}> - ${date.getFullYear() - (birthdayDate?.year || 0)} Years old`;
+					})
 					.join("\n"),
 			)
 			.setColor(0xff0000);

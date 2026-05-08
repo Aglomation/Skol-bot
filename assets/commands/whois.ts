@@ -9,7 +9,6 @@ import {
 import type { UserProfileKey } from "../../utils/profileManager.js";
 import { FindByValue } from "../../utils/profileManager.js";
 
-
 const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("lookup")
@@ -41,8 +40,11 @@ const command: Command = {
 	async execute(interaction: ChatInputCommandInteraction, _client: Client) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-		const lookup = interaction.options.getString("lookup", true) as UserProfileKey;
-		const value = interaction.options.getString("string", false)
+		const lookup = interaction.options.getString(
+			"lookup",
+			true,
+		) as UserProfileKey;
+		const value = interaction.options.getString("string", false);
 
 		const result = await FindByValue(lookup, value);
 
@@ -56,12 +58,19 @@ const command: Command = {
 		const embed = new EmbedBuilder()
 			.setTitle("User Found")
 			.setDescription(`Result ID: <@${result.id}> (${result.id})`)
-			.setThumbnail(interaction.guild?.members.cache.get(result.id)?.user.displayAvatarURL() || "")
-			.setAuthor({ name: `Lookup for key:"${lookup}" with value:"${value}"`, iconURL: interaction.user.displayAvatarURL() })
+			.setThumbnail(
+				interaction.guild?.members.cache
+					.get(result.id)
+					?.user.displayAvatarURL() || "",
+			)
+			.setAuthor({
+				name: `Lookup for key:"${lookup}" with value:"${value}"`,
+				iconURL: interaction.user.displayAvatarURL(),
+			})
 			.setColor("DarkNavy");
 
 		for (const [key, val] of Object.entries(result)) {
-			const displayValue = 
+			const displayValue =
 				typeof val === "object" && val !== null
 					? JSON.stringify(val, null, 2)
 					: String(val);

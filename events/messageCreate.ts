@@ -1,7 +1,10 @@
-import type { Client, GuildTextBasedChannel, Message, TextChannel } from "discord.js";
-import {
-	Events,
+import type {
+	Client,
+	GuildTextBasedChannel,
+	Message,
+	TextChannel,
 } from "discord.js";
+import { Events } from "discord.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
 
@@ -74,26 +77,32 @@ export default {
 
 				// Fetch member
 				let member = message.guild?.members.cache.get(userId) || null;
-				if (!member){
-					console.error(`Failed to fetch member for user ID ${userId} from cache, attempting to fetch from API.`);
-					member = await message.guild?.members
-					.fetch(userId)
-					.catch(() => null);
+				if (!member) {
+					console.error(
+						`Failed to fetch member for user ID ${userId} from cache, attempting to fetch from API.`,
+					);
+					member = await message.guild?.members.fetch(userId).catch(() => null);
 				}
 				if (!member) {
-					console.error(`Failed to fetch member for user ID ${userId} from API.`);
+					console.error(
+						`Failed to fetch member for user ID ${userId} from API.`,
+					);
 					return;
 				}
 
 				// Add verified role to the user
-				const verifiedRole = message.guild?.roles.cache.get("1498832228145168514");
+				const verifiedRole = message.guild?.roles.cache.get(
+					"1498832228145168514",
+				);
 				if (verifiedRole) {
 					await member.roles.add(verifiedRole);
 				}
 
 				// Give teacher role if email doesn't end with @elev.ga.lbs.se
 				if (!email.endsWith("@elev.ga.lbs.se")) {
-					const teacherRole = message.guild?.roles.cache.get("1497140069872435217");
+					const teacherRole = message.guild?.roles.cache.get(
+						"1497140069872435217",
+					);
 					if (teacherRole) {
 						await member.roles.add(teacherRole);
 					}

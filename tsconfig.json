@@ -1,14 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "./builds" /* This sends .js files to /builds */,
-    "rootDir": "./" /* This ensures the folder structure stays the same */,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "strict": true
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"outDir": "./builds" /* This sends .js files to /builds */,
+		"rootDir": "./" /* This ensures the folder structure stays the same */,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"strict": true
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules"]
 }

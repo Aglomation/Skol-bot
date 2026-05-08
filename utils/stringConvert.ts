@@ -1,6 +1,6 @@
 /**
  * Converts a string like "1d 2h 30m" into milliseconds.
- * @param input The input string to convert 
+ * @param input The input string to convert
  * @returns Number of milliseconds or null if invalid
  */
 export function stringToDate(input: string): number | null {
@@ -19,7 +19,7 @@ export function stringToDate(input: string): number | null {
 	};
 
 	let totalMs = 0;
-	let match: RegExpExecArray | null
+	let match: RegExpExecArray | null;
 	match = re.exec(cleaned);
 	while (match !== null) {
 		const value = parseInt(match[1], 10) || 0;
@@ -38,32 +38,32 @@ export function stringToDate(input: string): number | null {
  * @returns The corresponding month name or "Unknown" if invalid
  */
 export function numToMonth(input: number): string {
-	switch(((input- 1) % 12) + 1){
+	switch (((input - 1) % 12) + 1) {
 		case 1:
-			return "January"
+			return "January";
 		case 2:
-			return "February"
+			return "February";
 		case 3:
-			return "March"
+			return "March";
 		case 4:
-			return "April"
+			return "April";
 		case 5:
-			return "May"
+			return "May";
 		case 6:
-			return "June"
+			return "June";
 		case 7:
-			return "July"
+			return "July";
 		case 8:
-			return "August"
+			return "August";
 		case 9:
-			return "September"
+			return "September";
 		case 10:
-			return "October"
+			return "October";
 		case 11:
-			return "November"
+			return "November";
 		case 12:
-			return "December"
+			return "December";
 		default:
-			return "Unknown"
+			return "Unknown";
 	}
 }

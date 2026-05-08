@@ -1,62 +1,62 @@
 {
-    "Borås": {
-        "id": "1497160597220098148",
-        "studentCount": 140
-    },
-    "Göteborg": {
-        "id": "1497160590647623690",
-        "studentCount": 700
-    },
-    "Halmstad": {
-        "id": "1497142973668917248",
-        "studentCount": 110
-    },
-    "Helsingborg": {
-        "id": "1497142972477734962",
-        "studentCount": 200
-    },
-    "Jönköping": {
-        "id": "1497142974889332836",
-        "studentCount": 200
-    },
-    "Kungsbacka": {
-        "id": "1497142971643072545",
-        "studentCount": 140
-    },
-    "Linköping": {
-        "id": "1497142969726271538",
-        "studentCount": 160
-    },
-    "Lund": {
-        "id": "1497149407169089536",
-        "studentCount": 370
-    },
-    "Malmö": {
-        "id": "1497142975552290888",
-        "studentCount": 260
-    },
-    "Nyköping": {
-        "id": "1497140788864225360",
-        "studentCount": 210
-    },
-    "Stockholm Norra": {
-        "id": "1497160592056647750",
-        "studentCount": 270
-    },
-    "Stockholm Södra": {
-        "id": "1497142976835747840",
-        "studentCount": 580
-    },
-    "Trollhättan": {
-        "id": "1497160595823263804",
-        "studentCount": 150
-    },
-    "Växjö": {
-        "id": "1497160595085066340",
-        "studentCount": 120
-    },
-    "Örebro": {
-        "id": "1497160592866283631",
-        "studentCount": 180
-    }
+	"Borås": {
+		"id": "1497160597220098148",
+		"studentCount": 140
+	},
+	"Göteborg": {
+		"id": "1497160590647623690",
+		"studentCount": 700
+	},
+	"Halmstad": {
+		"id": "1497142973668917248",
+		"studentCount": 110
+	},
+	"Helsingborg": {
+		"id": "1497142972477734962",
+		"studentCount": 200
+	},
+	"Jönköping": {
+		"id": "1497142974889332836",
+		"studentCount": 200
+	},
+	"Kungsbacka": {
+		"id": "1497142971643072545",
+		"studentCount": 140
+	},
+	"Linköping": {
+		"id": "1497142969726271538",
+		"studentCount": 160
+	},
+	"Lund": {
+		"id": "1497149407169089536",
+		"studentCount": 370
+	},
+	"Malmö": {
+		"id": "1497142975552290888",
+		"studentCount": 260
+	},
+	"Nyköping": {
+		"id": "1497140788864225360",
+		"studentCount": 210
+	},
+	"Stockholm Norra": {
+		"id": "1497160592056647750",
+		"studentCount": 270
+	},
+	"Stockholm Södra": {
+		"id": "1497142976835747840",
+		"studentCount": 580
+	},
+	"Trollhättan": {
+		"id": "1497160595823263804",
+		"studentCount": 150
+	},
+	"Växjö": {
+		"id": "1497160595085066340",
+		"studentCount": 120
+	},
+	"Örebro": {
+		"id": "1497160592866283631",
+		"studentCount": 180
+	}
 }

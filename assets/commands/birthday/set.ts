@@ -11,7 +11,25 @@ export default async function set(
 	_client: Client,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	const date = interaction.options.getString("date", true);
+	const date = interaction.options.getString("date", false);
+	const user =
+		interaction.options.getUser("user")?.id &&
+		interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
+			? interaction.options.getUser("user")?.id
+			: interaction.user.id;
+
+	if (!user) {
+		await interaction.editReply({ content: "User not found." });
+		return;
+	}
+
+	if (!date) {
+		UpdateProfile(user, { birthday: null });
+		await interaction.editReply({
+			content: "Cleared birthday.",
+		});
+		return;
+	}
 
 	const [year, month, day] = date
 		.match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
@@ -48,22 +66,7 @@ export default async function set(
 		return;
 	}
 
-	if (
-		interaction.options.getUser("user")?.id &&
-		!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
-	) {
-		await interaction.editReply({
-			content: "You don't have permission to set birthdays for other users.",
-		});
-		return;
-	}
-
-	const userId = interaction.options.getUser("user")?.id || interaction.user.id;
-	if (!userId) {
-		await interaction.editReply({ content: "User not found." });
-		return;
-	}
-	await UpdateProfile(userId, { birthday: { year, month, day } });
+	await UpdateProfile(user, { birthday: { year, month, day } });
 	await interaction.editReply({
 		content: `Birthday has been set to ${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
 	});

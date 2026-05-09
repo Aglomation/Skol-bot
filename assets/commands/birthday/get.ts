@@ -7,14 +7,17 @@ export default async function get(
 	_client: Client,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	const profile = await GetProfile(interaction.user.id);
+
+	const profile = await GetProfile(interaction.options.getUser("user")?.id || interaction.user.id);
+
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
+
 	if (!birthday)
 		return await interaction.editReply({
-			content: "You haven't set your birthday yet.",
+			content: "User haven't set their birthday yet.",
 		});
 
 	await interaction.editReply({
-		content: `Your birthday is set to ${birthday.year}-${String(birthday.month).padStart(2, "0")}-${String(birthday.day).padStart(2, "0")}`,
+		content: `User's birthday is set to ${birthday.year}-${String(birthday.month).padStart(2, "0")}-${String(birthday.day).padStart(2, "0")}`,
 	});
 }

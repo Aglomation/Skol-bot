@@ -46,7 +46,7 @@ const command: Command = {
 						.setDescriptionLocalizations({
 							"sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
 						})
-						.setRequired(true),
+						.setRequired(false),
 				)
 				.addUserOption((option) =>
 					option
@@ -54,20 +54,8 @@ const command: Command = {
 						.setDescription(
 							"(Moderator option) to set birthday for another user",
 						)
-						.setDescriptionLocalizations({
-							"sv-SE":
-								"(Moderator kommando) för att ställa in födelsedag för en annan användare",
-						})
 						.setRequired(false),
 				),
-		)
-		.addSubcommand((subcommands) =>
-			subcommands
-				.setName("clear")
-				.setDescription("Clears your birthday")
-				.setDescriptionLocalizations({
-					"sv-SE": "Tar bort din födelsedag",
-				}),
 		)
 		.addSubcommand((subcommand) =>
 			subcommand
@@ -75,7 +63,15 @@ const command: Command = {
 				.setDescription("Gets your birthday")
 				.setDescriptionLocalizations({
 					"sv-SE": "Hämtar din födelsedag",
-				}),
+				})
+				.addUserOption((option) =>
+					option
+						.setName("user")
+						.setDescription(
+							"Get birthday for another user",
+						)
+						.setRequired(false),
+				),
 		)
 		.addSubcommand((subcommand) =>
 			subcommand

@@ -1,5 +1,11 @@
 import type { ButtonInteraction, Client, GuildMember } from "discord.js";
-import { MessageFlags } from "discord.js";
+import {
+	MessageFlags,
+	ButtonBuilder,
+	ActionRowBuilder,
+	ButtonStyle,
+	EmbedBuilder,
+} from "discord.js";
 
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
@@ -60,9 +66,23 @@ const button: Button = {
 
 		// Store the verification code in the user's profile
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });
+		const embed = new EmbedBuilder()
+			.setTitle("READ FIRST ⚠️")
+			.setDescription(
+				`Make sure your browser is logged into your **school account**!\nThe email option in the form **has to** end with an @lbs.se mail!\nThe verification will be blocked if you don't follow these instructions.\nYour code is: \`${verificationCode}\``,
+			)
+			.setColor("#f2ff0f");
+
+		const button = new ButtonBuilder()
+			.setLabel("Verify School Mail")
+			.setStyle(ButtonStyle.Link)
+			.setURL(
+				`https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=${verificationCode}`,
+			);
 
 		await interaction.editReply({
-			content: `Your code is: \`${verificationCode}\`\nMake sure you use your school mail!\nPlease enter the code in the form below\nhttps://forms.gle/b6UgMMjASMrhhRZ3A`,
+			embeds: [embed],
+			components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)],
 		});
 	},
 };

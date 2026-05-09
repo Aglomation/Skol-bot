@@ -65,27 +65,31 @@ async function startBot() {
 		}
 	}
 
-	// TODO
-	// Make it so folders in commands turns into subcommands of the main.ts file
-	// - ./commands/birthday/main.ts (name: birthday, description: lorem ipsum)
-	// - ./commands/birthday/set.ts
-	// - ./commands/birthday/list.ts
-	//
-	// -> /birthday set
-	// -> /birthday list
-
 	// --- 2. Load Commands and Components ---
 	const commandsPath = path.join(__dirname, "assets", "commands");
-	const commandFiles = fs.readdirSync(commandsPath).filter(fileFilter);
-
-	// Hold command JSON payloads for registration
+	const commandEntries = fs.readdirSync(commandsPath);
 	const commandsData: RESTPostAPIApplicationCommandsJSONBody[] = [];
 
-	for (const file of commandFiles) {
-		const filePath = path.join(commandsPath, file);
-		const { default: command } = await import(pathToFileURL(filePath).href);
-		client.commands.set(command.data.name, command);
-		commandsData.push(command.data.toJSON());
+	for (const entry of commandEntries) {
+		const entryPath = path.join(commandsPath, entry);
+		const stat = fs.statSync(entryPath);
+
+		if (stat.isDirectory()) {
+			const files = fs.readdirSync(entryPath).filter(fileFilter);
+			const mainFile = files.find((f) => f.match(/^(main)\.(ts|js)$/));
+			if (!mainFile) continue;
+			const { default: command } = await import(
+				pathToFileURL(path.join(entryPath, mainFile)).href
+			);
+			client.commands.set(command.data.name, command);
+			commandsData.push(command.data.toJSON());
+			continue;
+		}
+		if (fileFilter(entry)) {
+			const { default: command } = await import(pathToFileURL(entryPath).href);
+			client.commands.set(command.data.name, command);
+			commandsData.push(command.data.toJSON());
+		}
 	}
 
 	const buttonsPath = path.join(__dirname, "assets", "buttons");

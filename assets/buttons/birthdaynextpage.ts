@@ -1,5 +1,5 @@
 import type { ButtonInteraction, Client } from "discord.js";
-import { generateBirthdayPage } from "../commands/birthday.js";
+import { generateBirthdayPage } from "../commands/birthday/list.js";
 
 const button: Button = {
 	data: {

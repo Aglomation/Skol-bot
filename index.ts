@@ -145,7 +145,7 @@ async function loadRepeatingTasks() {
 				const now = new Date();
 				const nextRun = new Date();
 				nextRun.setHours(hours, minutes, 0, 0);
-				console.log(now, nextRun);
+
 				if (nextRun <= now) {
 					nextRun.setDate(nextRun.getDate() + 1);
 				}
@@ -159,7 +159,9 @@ async function loadRepeatingTasks() {
 
 			scheduleDaily();
 		}
-
+		if (repeating.repeating && repeating.time) {
+			setInterval(() => repeating.execute(client), repeating.time);
+		}
 		if (repeating.immediate) {
 			await repeating.execute(client);
 		}

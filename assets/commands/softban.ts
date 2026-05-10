@@ -20,7 +20,6 @@ const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("softban")
 		.setDescription("Bans a user from the server (Softban)")
-		.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
 		.addUserOption((option) =>
 			option
 				.setName("user")
@@ -65,8 +64,8 @@ const command: Command = {
 			await interaction.editReply("You don't have permission to use this.");
 			return;
 		}
-		const user = interaction.options.getUser("user", true);
-		const member = interaction.options.getMember("user") as GuildMember | null;
+		const targetUser = interaction.options.getUser("user", true);
+		const targetMember = interaction.options.getMember("user") as GuildMember | null;
 		const reason = interaction.options.getString("reason", true);
 		const date = stringToDate(interaction.options.getString("duration") || "a");
 		const deleteMessagesDuration = stringToDate(
@@ -77,19 +76,30 @@ const command: Command = {
 			| TextChannel
 			| undefined;
 
-		const profile = await GetProfile(user.id);
-		if (profile?.banned) {
-			await interaction.editReply("User is already on the ban list.");
-			return;
-		}
+		const profile = await GetProfile(targetUser.id);
+
 
 		if (!date) {
 			await interaction.editReply("Invalid duration format.");
 			return;
 		}
 
+		if (profile?.banned) {
+			await interaction.editReply("User is already on the ban list. Editing their ban instead.");
+			await UpdateProfile(targetUser.id, {
+				banned: true,
+				banreason: reason,
+				banduration: String(Date.now() + date),
+			});
+			return;
+		}
+
+		if (!targetMember?.kickable) {
+            await interaction.editReply("I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.");
+			return;
+        }
 		try {
-			await UpdateProfile(user.id, {
+			await UpdateProfile(targetUser.id, {
 				banned: true,
 				banreason: reason,
 				banduration: String(Date.now() + date),
@@ -98,7 +108,7 @@ const command: Command = {
 			const expiresAt = Number.isFinite(date)
 				? Math.floor((Date.now() + date) / 1000)
 				: null;
-			await user
+			await targetUser
 				.send(
 					`## You have been banned from ${interaction.guild?.name}\n` +
 						`For: ${reason}\n` +
@@ -109,44 +119,44 @@ const command: Command = {
 				.catch(() => {});
 
 			// Kicks instead of banning to avoid IP-ban
-			if (member) await member.kick(reason);
+			if (targetMember) await targetMember.kick(reason);
 
-			await interaction.editReply(`**${user.tag}** has been banned.`);
+			await interaction.editReply(`**${targetUser.tag}** has been banned.`);
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has softbanned <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason}`,
+					`${interaction.user.tag} has softbanned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason}`,
 				);
 			}
 
 			// Purge messages if option is set
-			if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
+			if (deleteMessagesDuration && deleteMessagesDuration > 0 && targetMember) {
 				await interaction.editReply(
-					`Deleting messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
+					`Deleting messages from **${targetUser.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
 				);
-				const channels = member.guild.channels.cache.filter(
+				const channels = targetMember.guild.channels.cache.filter(
 					(ch): ch is TextChannel =>
-						ch.isTextBased() && ch.permissionsFor(member).has("ViewChannel"),
+						ch.isTextBased() && ch.permissionsFor(targetMember).has("ViewChannel"),
 				);
 				const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
 
 				const results = await purgeChannels(
 					channelsArray,
-					user.id,
+					targetUser.id,
 					deleteMessagesDuration,
 				);
 				if (logChannel)
 					await logChannel.send(
-						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the softban.`,
+						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${targetUser.id}> as part of the softban.`,
 					);
 				await interaction.editReply(
-					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
+					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${targetUser.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
 				);
 			}
 		} catch (err) {
 			console.error(err);
 			await interaction.editReply(
-				"I can't kick that user. They might have a higher role than me.",
+				`An error occurred while trying to softban the user. Please ensure I have the appropriate permissions and try again.\nError: ${err instanceof Error ? err.message : String(err)}`,
 			);
 		}
 	},

@@ -8,7 +8,9 @@ export default async function get(
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	const profile = await GetProfile(interaction.options.getUser("user")?.id || interaction.user.id);
+	const profile = await GetProfile(
+		interaction.options.getUser("user")?.id || interaction.user.id,
+	);
 
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
 

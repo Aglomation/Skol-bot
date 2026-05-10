@@ -7,7 +7,6 @@ import type {
 } from "discord.js";
 import {
 	MessageFlags,
-	PermissionFlagsBits,
 	PermissionsBitField,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -65,7 +64,9 @@ const command: Command = {
 			return;
 		}
 		const targetUser = interaction.options.getUser("user", true);
-		const targetMember = interaction.options.getMember("user") as GuildMember | null;
+		const targetMember = interaction.options.getMember(
+			"user",
+		) as GuildMember | null;
 		const reason = interaction.options.getString("reason", true);
 		const date = stringToDate(interaction.options.getString("duration") || "a");
 		const deleteMessagesDuration = stringToDate(
@@ -78,14 +79,15 @@ const command: Command = {
 
 		const profile = await GetProfile(targetUser.id);
 
-
 		if (!date) {
 			await interaction.editReply("Invalid duration format.");
 			return;
 		}
 
 		if (profile?.banned) {
-			await interaction.editReply("User is already on the ban list. Editing their ban instead.");
+			await interaction.editReply(
+				"User is already on the ban list. Editing their ban instead.",
+			);
 			await UpdateProfile(targetUser.id, {
 				banned: true,
 				banreason: reason,
@@ -95,9 +97,11 @@ const command: Command = {
 		}
 
 		if (!targetMember?.kickable) {
-            await interaction.editReply("I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.");
+			await interaction.editReply(
+				"I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.",
+			);
 			return;
-        }
+		}
 		try {
 			await UpdateProfile(targetUser.id, {
 				banned: true,
@@ -116,7 +120,12 @@ const command: Command = {
 						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
 						`Invite: https://discord.gg/dUYHv8Dv94`,
 				)
-				.catch(() => {});
+				.catch(() => {
+					console.warn(
+						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their softban.`,
+					);
+					return;
+				});
 
 			// Kicks instead of banning to avoid IP-ban
 			if (targetMember) await targetMember.kick(reason);
@@ -130,13 +139,18 @@ const command: Command = {
 			}
 
 			// Purge messages if option is set
-			if (deleteMessagesDuration && deleteMessagesDuration > 0 && targetMember) {
+			if (
+				deleteMessagesDuration &&
+				deleteMessagesDuration > 0 &&
+				targetMember
+			) {
 				await interaction.editReply(
 					`Deleting messages from **${targetUser.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
 				);
 				const channels = targetMember.guild.channels.cache.filter(
 					(ch): ch is TextChannel =>
-						ch.isTextBased() && ch.permissionsFor(targetMember).has("ViewChannel"),
+						ch.isTextBased() &&
+						ch.permissionsFor(targetMember).has("ViewChannel"),
 				);
 				const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
 

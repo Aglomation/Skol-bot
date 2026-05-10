@@ -67,9 +67,7 @@ const command: Command = {
 				.addUserOption((option) =>
 					option
 						.setName("user")
-						.setDescription(
-							"Get birthday for another user",
-						)
+						.setDescription("Get birthday for another user")
 						.setRequired(false),
 				),
 		)

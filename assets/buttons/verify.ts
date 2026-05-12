@@ -25,8 +25,6 @@ const button: Button = {
 		customId: "verify",
 	},
 	async execute(interaction: ButtonInteraction, _client: Client) {
-		// if (interaction.channel?.id !== "1498834244854878209") return;
-
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		// In case the autoban failed, check an extra time

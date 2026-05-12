@@ -62,16 +62,31 @@ export default {
 			try {
 				// Removes all whitespace before splitting
 				const [email, verify] = message.content.replace(/\s+/g, "").split("$$");
-				if (!email || !verify) return;
-
-				if (!email.endsWith("lbs.se")) return;
-				if (email.includes("+")) return;
+				if (!email || !verify){
+					await message.reply("Invalid formatting, didn't include two parts split by $$").catch(() => null);
+					return;
+				}
+				if (!email.endsWith("lbs.se")){
+					await message.reply("Email must end with lbs.se").catch(() => null);
+					return;
+				}
+				if (email.includes("+")){
+					// Google should've patched being able to use plus addressed mails on school accounts, but i don't trust them.
+					await message.reply("Attempt to use a plus addressed mail").catch(() => null);
+					return;
+				}
 
 				const profile = await FindByValue("verifycode", verify);
-				if (!profile) return; // exit if profile is invalid
+				if (!profile){
+					await message.reply("Invalid verification code.").catch(() => null);
+					return;
+				}
 
 				const userId = profile.id;
-				if (!userId) return;
+				if (!userId){
+					await message.reply("Verification code found but no ID was tied to it").catch(() => null);
+					return;
+				}
 
 				await UpdateProfile(userId, { email });
 
@@ -87,6 +102,7 @@ export default {
 					console.error(
 						`Failed to fetch member for user ID ${userId} from API.`,
 					);
+					await message.reply("Verification succeeded but failed to fetch member data.").catch(() => null);
 					return;
 				}
 

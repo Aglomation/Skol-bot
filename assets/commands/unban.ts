@@ -6,7 +6,6 @@ import type {
 } from "discord.js";
 import {
 	MessageFlags,
-	PermissionFlagsBits,
 	PermissionsBitField,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -17,7 +16,6 @@ const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("unban")
 		.setDescription("Removes a user from the softban list")
-		.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
 		.addUserOption((option) =>
 			option.setName("user").setDescription("User to unban").setRequired(true),
 		)

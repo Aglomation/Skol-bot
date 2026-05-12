@@ -51,10 +51,20 @@ const command: Command = {
 					{ name: "1 Day", value: "24h" },
 					{ name: "2 Days", value: "48h" },
 				),
+		)
+		.addBooleanOption((option) =>
+			option 
+				.setName("announce")
+				.setDescription("Whether to send the ban command publicly or not")
+				.setRequired(false)
 		),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		if (interaction.options.getBoolean("announce")) {
+			await interaction.deferReply();
+		} else {
+			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		}
 
 		// Ensure interaction.member is treated as a GuildMember to access permissions
 		const executor = interaction.member as GuildMember;
@@ -68,7 +78,7 @@ const command: Command = {
 			"user",
 		) as GuildMember | null;
 		const reason = interaction.options.getString("reason", true);
-		const date = stringToDate(interaction.options.getString("duration") || "a");
+		const date = stringToDate(interaction.options.getString("duration") || "");
 		const deleteMessagesDuration = stringToDate(
 			interaction.options.getString("deletemessages", true) || "",
 		);

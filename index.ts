@@ -1,4 +1,4 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -14,6 +14,8 @@ import {
 import { drizzle } from "drizzle-orm/neon-http";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Ensure environment variables exist
 if (!process.env.TOKEN || !process.env.CLIENT_ID || !process.env.DATABASE_URL) {

@@ -18,7 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Ensure environment variables exist
 if (!process.env.TOKEN || !process.env.CLIENT_ID || !process.env.DATABASE_URL) {
 	throw new Error(
-		"Missing environment variables: TOKEN, CLIENT_ID or DATABASE_URL",
+		`Missing environment variables: TOKEN, CLIENT_ID or DATABASE_URL ${!!process.env.TOKEN} ${!!process.env.CLIENT_ID} ${!!process.env.DATABASE_URL}`,
 	);
 }
 

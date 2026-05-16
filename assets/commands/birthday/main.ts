@@ -1,9 +1,14 @@
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
 import { FindAllNonNullKeys } from "../../../utils/profileManager.js";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { builder as getBuilder } from "./get.js";
+import { builder as listBuilder } from "./list.js";
+import { builder as nextBuilder } from "./next.js";
+import { builder as setBuilder } from "./set.js";
 
 export const sortedList = async () => {
 	const users = (await FindAllNonNullKeys("birthday")) as UserProfile[];
@@ -32,63 +37,17 @@ const command: Command = {
 		.setDescriptionLocalizations({
 			"sv-SE": "Hantera din födelsedag",
 		})
-		.addSubcommand((subcommand) =>
-			subcommand
-				.setName("set")
-				.setDescription("Sets your birthday")
-				.setDescriptionLocalizations({
-					"sv-SE": "Ändrar din födelsedag",
-				})
-				.addStringOption((option) =>
-					option
-						.setName("date")
-						.setDescription("Your birthday (YYYY-MM-DD)")
-						.setDescriptionLocalizations({
-							"sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
-						})
-						.setRequired(false),
-				)
-				.addUserOption((option) =>
-					option
-						.setName("user")
-						.setDescription(
-							"(Moderator option) to set birthday for another user",
-						)
-						.setRequired(false),
-				),
-		)
-		.addSubcommand((subcommand) =>
-			subcommand
-				.setName("get")
-				.setDescription("Gets your birthday")
-				.setDescriptionLocalizations({
-					"sv-SE": "Hämtar din födelsedag",
-				})
-				.addUserOption((option) =>
-					option
-						.setName("user")
-						.setDescription("Get birthday for another user")
-						.setRequired(false),
-				),
-		)
-		.addSubcommand((subcommand) =>
-			subcommand
-				.setName("list")
-				.setDescription("Shows all birthdays")
-				.setDescriptionLocalizations({
-					"sv-SE": "Visar alla födelsedagar",
-				}),
-		)
-		.addSubcommand((subcommand) =>
-			subcommand
-				.setName("next")
-				.setDescription("Shows the next birthday")
-				.setDescriptionLocalizations({
-					"sv-SE": "Visar nästa födelsedag",
-				}),
-		),
+		.addSubcommand(setBuilder)
+		.addSubcommand(getBuilder)
+		.addSubcommand(listBuilder)
+		.addSubcommand(nextBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
+		if (!interaction.guild) {
+			await interaction.reply("This command can only be used in a server.");
+			return;
+		}
+		
 		const subcommand = interaction.options.getSubcommand();
 
 		const __dirname = path.dirname(fileURLToPath(import.meta.url));

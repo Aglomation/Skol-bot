@@ -1,6 +1,21 @@
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { GetProfile } from "../../../utils/profileManager.js";
+
+export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
+    subcommand
+		.setName("get")
+		.setDescription("Gets your birthday")
+		.setDescriptionLocalizations({
+			"sv-SE": "Hämtar din födelsedag",
+		})
+		.addUserOption((option) =>
+			option
+				.setName("user")
+				.setDescription("Get birthday for another user")
+				.setRequired(false),
+		);
+
 
 export default async function get(
 	interaction: ChatInputCommandInteraction,

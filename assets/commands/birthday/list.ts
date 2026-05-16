@@ -1,13 +1,35 @@
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction, Client, Guild, SlashCommandSubcommandBuilder } from "discord.js";
 import {
-	type Guild,
-	EmbedBuilder,
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
+	EmbedBuilder,
+	MessageFlags,
 } from "discord.js";
-import { sortedList } from "./main.js";
+import { getDisplayName } from "../../../utils/memberUtils.js";
 import { numToMonth } from "../../../utils/stringConvert.js";
+import { sortedList } from "./main.js";
+
+
+export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
+    subcommand
+		.setName("list")
+		.setDescription("Shows all birthdays")
+		.setDescriptionLocalizations({
+			"sv-SE": "Visar alla födelsedagar",
+		});
+
+const calculateAge = (
+    birthday: { month: number; day: number; year: number },
+    currentMonth: number,
+    currentDay: number,
+    currentYear: number
+): number => {
+    const hasHadBirthday =
+        currentMonth > birthday.month ||
+        (currentMonth === birthday.month && currentDay >= birthday.day);
+    return hasHadBirthday ? currentYear - birthday.year : currentYear - birthday.year - 1;
+};
 
 export const generateBirthdayPage = async (
 	page: number,
@@ -16,6 +38,7 @@ export const generateBirthdayPage = async (
 	embeds: EmbedBuilder[];
 	components: ActionRowBuilder<ButtonBuilder>[];
 } | null> => {
+	if (!guild) return null;
 	const formattedList = await sortedList();
 
 	if (!formattedList || formattedList.length === 0) return null;
@@ -45,63 +68,49 @@ export const generateBirthdayPage = async (
 		}) || formattedList.find((entry) => !!entry.birthday);
 
 	const descLines: string[] = [];
-
 	let hasInsertedYearSeparator = false;
 
 	for (let i = 0; i < pageItems.length; i++) {
-		const { user, birthday } = pageItems[i];
-		if (!birthday) continue;
+        const currentItem = pageItems[i];
+        if (!currentItem.birthday) continue;
 
-		const age =
-			currentMonth > birthday.month ||
-			(currentMonth === birthday.month && currentDay >= birthday.day)
-				? currentYear - birthday.year
-				: currentYear - birthday.year - 1;
+        const { user, birthday } = currentItem;
+        const age = calculateAge(birthday, currentMonth, currentDay, currentYear);
+        const name = getDisplayName(guild, user.id) || "User has left";
 
-		const member = guild?.members.cache.get(user.id);
-		const name =
-			(member?.nickname || member?.displayName || member?.user.username)?.slice(
-				0,
-				26,
-			) || "Unknown User";
+        const prevItem = pageItems[i - 1];
+        // const nextItem = pageItems[i + 1];
 
-		const prev = pageItems[i - 1];
-		const next = pageItems[i + 1];
+        const isFirstOfMonth = !prevItem || prevItem.birthday?.month !== birthday.month;
+        // const isLastOfMonth = !nextItem || nextItem.birthday?.month !== birthday.month;
+        
+        const isNextUp =
+            !!nextBirthday?.birthday &&
+            nextBirthday.birthday.month === birthday.month &&
+            nextBirthday.birthday.day === birthday.day;
 
-		const firstofmonth = !prev || prev.birthday?.month !== birthday.month;
-		const lastofmonth = !next || next.birthday?.month !== birthday.month;
+        if (isNextUp && !hasInsertedYearSeparator) {
+            descLines.push(`-# | (${currentDay}) Today's date \n`);
+            hasInsertedYearSeparator = true;
+        }
 
-		const isNextUp =
-			!!nextBirthday?.birthday &&
-			nextBirthday.birthday.month === birthday.month &&
-			nextBirthday.birthday.day === birthday.day;
+        if (isFirstOfMonth) {
+            descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
+        }
 
-		if (isNextUp && !hasInsertedYearSeparator) {
-			descLines.push(`-# | ​ (${currentDay}) Today's date \n`);
-			hasInsertedYearSeparator = true;
-		}
-
-		if (firstofmonth) {
-			descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
-		}
-
-		descLines.push(
-			`${!lastofmonth ? "| ​" : "↳"} (${birthday.day}) ${name} [${age}]\n`,
-		);
-	}
+        // const listPrefix = isLastOfMonth ? "↳" : "| ​";
+        descLines.push(`| (${birthday.day}) ${name} [${age}]\n`);
+    }
 
 	let nextBirthdayValue = "No upcoming birthdays";
 	if (nextBirthday?.birthday) {
-		const nextBirthdayMember = guild?.members.cache.get(nextBirthday.user.id);
-		const displayName =
-			nextBirthdayMember?.displayName ||
-			nextBirthdayMember?.user.username ||
-			"Unknown User";
+		const displayName = getDisplayName(guild, nextBirthday.user.id);
 
 		const displayYear =
 			nextBirthday.birthday.month < currentMonth
 				? currentYear + 1
 				: currentYear;
+
 		const nextBdayTime = Math.floor(
 			new Date(
 				displayYear,
@@ -172,7 +181,7 @@ export default async function list(
 	_client: Client,
 	page: number = 1,
 ) {
-	await interaction.deferReply();
+	await interaction.deferReply({ flags: MessageFlags.Ephemeral});
 	const pageData = await generateBirthdayPage(page, interaction.guild);
 
 	if (!pageData) {

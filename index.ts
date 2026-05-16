@@ -139,9 +139,10 @@ async function loadRepeatingTasks() {
 	for (const file of repeatingFiles) {
 		const filePath = path.join(repeatingPath, file);
 		const { default: repeating } = await import(pathToFileURL(filePath).href);
-
-		if (repeating.exactTime) {
-			const [hours, minutes] = repeating.exactTime.split(":").map(Number);
+		const options = repeating.data;
+		
+		if (options.clockTime) {
+			const [hours, minutes] = options.clockTime.split(":").map(Number);
 
 			const scheduleDaily = () => {
 				const now = new Date();
@@ -161,10 +162,10 @@ async function loadRepeatingTasks() {
 
 			scheduleDaily();
 		}
-		if (repeating.repeating && repeating.time) {
-			setInterval(() => repeating.execute(client), repeating.time);
+		if (options.repeating && options.time) {
+			setInterval(() => repeating.execute(client), options.time);
 		}
-		if (repeating.immediate) {
+		if (options.immediate) {
 			await repeating.execute(client);
 		}
 	}

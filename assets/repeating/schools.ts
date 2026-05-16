@@ -94,10 +94,12 @@ const SchoolList: Schools[] = [
 ];
 
 const repeating = {
-	repeating: true,
-	time: 24 * 60 * 60 * 1000,
-	immediate: false,
-
+	data: {
+		immediate: false,
+		repeating: true,
+		time: 24 * 60 * 60 * 1000,
+		clockTime: null,
+	},
 	async execute(_client: Client) {
 		getAllSchoolData().then((schoolData) => {
 			fs.writeFileSync(

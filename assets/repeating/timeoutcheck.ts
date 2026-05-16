@@ -3,9 +3,12 @@ import "dotenv/config";
 import { GetProfile } from "../../utils/profileManager.js";
 
 const repeating = {
-	repeating: true,
-	time: 1 * 60 * 60 * 1000,
-	immediate: false,
+	data : {
+		immediate: false,
+		repeating: true,
+		time: 1 * 60 * 60 * 1000,
+		clockTime: null,
+	},
 
 	async execute(client: Client) {
 		if (!process.env.GUILD_ID) {

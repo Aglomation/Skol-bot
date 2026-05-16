@@ -1,49 +1,78 @@
-import type { Client, TextChannel } from "discord.js";
+import type { Client, Guild, TextChannel } from "discord.js";
 import { EmbedBuilder } from "discord.js";
 
+import { getDisplayName } from "../../utils/memberUtils.js";
 import { FindAllNonNullKeys } from "../../utils/profileManager.js";
 
-const repeating = {
-	repeating: true,
-	exactTime: "00:00",
+const formatBirthdayLine = (
+    guild: Guild | null, 
+    member: UserProfile, 
+    currentYear: number
+): string => {
+    const name = getDisplayName(guild, member.id);
+    const age = currentYear - (member.birthday?.year || 0); 
+    
+    return `${name} (<@${member.id}>) - ${age} Years old`;
+};
+
+const repeating: Repeating = {
+	data: {
+		immediate: false,
+		repeating: true,
+		time: null,
+		clockTime: "00:00",
+	},
 	async execute(client: Client) {
-		const birthdayChannel = client.channels.cache.get("1497140071659212845") as
+
+		// We should change this to be changeable by the server owner
+		const GUILD_ID = "1497140069746741338";
+        const BIRTHDAY_CHANNEL_ID = "1497140071659212845";
+
+		const guild = client.guilds.cache.get(GUILD_ID) || null;
+		const birthdayChannel = client.channels.cache.get(BIRTHDAY_CHANNEL_ID) as
 			| TextChannel
 			| undefined;
 		if (!birthdayChannel) return;
-		const date = new Date();
+
+		const today = new Date();
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+        const currentYear = today.getFullYear();
 
 		const birthdayMembers = await FindAllNonNullKeys("birthday");
-		const filteredMembers = birthdayMembers.filter((member) => {
+
+		const todaysBirthdays = birthdayMembers.filter((member) => {
 			const birthday = member.birthday as UserProfile["birthday"] | null;
-			if (!birthday) return false;
 			return (
-				birthday.month === date.getMonth() + 1 &&
-				birthday.day === date.getDate()
+				birthday &&
+				birthday.month === currentMonth &&
+				birthday.day === currentDay
 			);
 		});
 
-		if (filteredMembers.length === 0) return;
+		if (todaysBirthdays.length === 0) return;
 
-		console.log(filteredMembers);
-		const sortedMembers = filteredMembers.sort((a, b) => {
+		todaysBirthdays.sort((a, b) => {
 			return (
 				((b.birthday as UserProfile["birthday"])?.year || 0) -
 				((a.birthday as UserProfile["birthday"])?.year || 0)
 			);
 		});
 
+		const descriptionLines = todaysBirthdays.map(member => 
+			formatBirthdayLine(guild, member, currentYear)
+		);
+
 		const embed = new EmbedBuilder()
-			.setTitle("Happy Birthday!")
+			.setTitle("🎉 Happy Birthday! 🎉")
 			.setDescription(
-				sortedMembers
-					.map(({ id, birthday }) => {
-						const birthdayDate = birthday as UserProfile["birthday"] | null;
-						return `<@${id}> - ${date.getFullYear() - (birthdayDate?.year || 0)} Years old`;
-					})
-					.join("\n"),
+				descriptionLines.join("\n")
 			)
+			.setFooter({
+				text: `Use /birthday set to set your birthday!`,
+			})
 			.setColor(0xff0000);
+			
 
 		const response = await birthdayChannel.send({
 			embeds: [embed],

@@ -2,9 +2,34 @@ import type {
 	ChatInputCommandInteraction,
 	Client,
 	GuildMember,
+	SlashCommandSubcommandBuilder,
 } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { UpdateProfile } from "../../../utils/profileManager.js";
+
+export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
+    subcommand
+        .setName("set")
+        .setDescription("Sets your birthday")
+        .setDescriptionLocalizations({
+            "sv-SE": "Ändrar din födelsedag",
+        })
+        .addStringOption((option) =>
+            option
+                .setName("date")
+                .setDescription("Your birthday (YYYY-MM-DD)")
+                .setDescriptionLocalizations({
+                    "sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
+                })
+                .setRequired(false),
+        )
+        .addUserOption((option) =>
+            option
+                .setName("user")
+                .setDescription("(Moderator option) to set birthday for another user")
+                .setRequired(false),
+        );
+
 
 export default async function set(
 	interaction: ChatInputCommandInteraction,

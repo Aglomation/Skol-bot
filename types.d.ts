@@ -6,7 +6,7 @@ import type {
 	Collection,
 	SlashCommandBuilder,
 } from "discord.js";
-import { userProfileTable } from "../db/schema.js";
+import type { userProfileTable } from "../db/schema.js";
 
 // 1. Define the structures for your commands and components
 declare global {
@@ -35,10 +35,9 @@ declare global {
 			time: number | null;
 			immediate: boolean;
 			repeating: boolean;
-			exactTime: string | null;
+			clockTime: string | null;
 		};
 		execute: (
-			interaction: AutocompleteInteraction,
 			client: Client,
 		) => Promise<void>;
 	}

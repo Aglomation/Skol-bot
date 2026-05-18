@@ -6,7 +6,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 
-module.exports = {
+const command: Command = {
     data: new SlashCommandBuilder()
         .setName('rulesmessage')
         .setDescription('Posts the server rules embed into the current channel.')
@@ -91,3 +91,5 @@ module.exports = {
         await interaction.deleteReply();
     },
 };
+
+export default command;

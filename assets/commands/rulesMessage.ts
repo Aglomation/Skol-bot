@@ -14,7 +14,15 @@ const command: Command = {
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
         await interaction.deferReply({ ephemeral: true });
-        
+        if (
+			interaction.user.id !== "754965470888722484" &&
+			interaction.user.id !== "586643628990922752"
+		) {
+			await interaction.editReply({
+				content: "You are not authorized to use this command.",
+			});
+			return;
+		}
         const rulesEmbed = new EmbedBuilder()
             .setAuthor({ name: 'Rules & Guidelines', iconURL: interaction.guild?.iconURL() || '' })
             .setDescription(

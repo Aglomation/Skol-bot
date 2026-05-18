@@ -13,7 +13,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {
-        console.log("a")
+        await interaction.deferReply({ ephemeral: true });
         
         const rulesEmbed = new EmbedBuilder()
             .setAuthor({ name: 'Rules & Guidelines', iconURL: interaction.guild?.iconURL() || '' })
@@ -88,7 +88,6 @@ module.exports = {
         await channel.send({ embeds: [rulesEmbed] });
         await channel.send("**Channels mentioned in the rules:**\n§2.2: <#1497140071391039520>\n§3.4: <#1497140071864864769>\nFooter: <#1499885683995840683>");
 
-        // 2. Responds to the slash command ephemerally so the interaction succeeds without public clutter
-        await interaction.reply({ content: '✅ Rules embed has been successfully posted to this channel!', ephemeral: true });
+        await interaction.deleteReply();
     },
 };

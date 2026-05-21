@@ -61,9 +61,8 @@ const command: Command = {
 		}
 
 		try {
-			// Hittar ingen untimeout, så sätter timeout på 1s
 			await member.timeout(
-				1000,
+				null,
 				`Unmuted by ${interaction.user.tag} for the reason: ${reason}`,
 			);
 

@@ -98,11 +98,6 @@ const command: Command = {
 			return;
 		}
 
-		if (!deleteMessagesDuration) {
-			await interaction.editReply("Invalid delete messages duration format. Contact admin these should autofill with valid options.");
-			return;
-		}
-
 		if (profile?.banned) {
 			await interaction.editReply(
 				"User is already on the ban list. Editing their ban instead.",

@@ -95,11 +95,6 @@ const command: Command = {
 			return;
 		}
 
-		if (!deleteMessagesDuration) {
-			await interaction.editReply("Invalid delete messages duration format. Contact admin these should autofill with valid options.");
-			return;
-		}
-
 		try {
 			// If the duration is longer than 28 days it needs to be refreshed later.
 			await member.timeout(

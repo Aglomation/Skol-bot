@@ -2,6 +2,7 @@ import type { ChatInputCommandInteraction, Client, TextChannel } from "discord.j
 import {
     Colors,
     EmbedBuilder,
+	InteractionContextType,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -10,6 +11,7 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName('rulesmessage')
         .setDescription('Posts the server rules embed into the current channel.')
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction: ChatInputCommandInteraction, client: Client) {

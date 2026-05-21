@@ -5,7 +5,9 @@ import type {
 	TextChannel,
 } from "discord.js";
 import {
+    InteractionContextType,
 	MessageFlags,
+	PermissionFlagsBits,
 	PermissionsBitField,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -31,7 +33,9 @@ const command: Command = {
 				.setName("announce")
 				.setDescription("Whether to send the warning publicly or not")
 				.setRequired(false)
-		),
+		)
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
 		if (interaction.options.getBoolean("announce")) {

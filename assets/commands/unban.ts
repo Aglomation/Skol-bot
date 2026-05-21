@@ -5,7 +5,9 @@ import type {
 	TextChannel,
 } from "discord.js";
 import {
+	InteractionContextType,
 	MessageFlags,
+	PermissionFlagsBits,
 	PermissionsBitField,
 	SlashCommandBuilder,
 } from "discord.js";
@@ -24,7 +26,9 @@ const command: Command = {
 				.setName("reason")
 				.setDescription("Reason for the ban")
 				.setRequired(true),
-		),
+		)
+		.setContexts(InteractionContextType.Guild)
+		.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });

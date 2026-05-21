@@ -6,6 +6,7 @@ import type {
 	TextChannel,
 } from "discord.js";
 import {
+	InteractionContextType,
 	MessageFlags,
 	PermissionFlagsBits,
 	SlashCommandBuilder,
@@ -57,7 +58,9 @@ const command: Command = {
 				.setName("announce")
 				.setDescription("Whether to send the ban command publicly or not")
 				.setRequired(false)
-		),
+		)
+		.setContexts(InteractionContextType.Guild)
+		.setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
 		if (interaction.options.getBoolean("announce")) {
@@ -88,7 +91,12 @@ const command: Command = {
 		}
 
 		if (!date) {
-			await interaction.editReply("Invalid duration format.");
+			await interaction.editReply("Invalid duration format. Make sure to follow the format!\nExample: `1h` for 1 hour, `30m` for 30 minutes, `inf` for indefinite.");
+			return;
+		}
+
+		if (!deleteMessagesDuration) {
+			await interaction.editReply("Invalid delete messages duration format. Contact admin these should autofill with valid options.");
 			return;
 		}
 

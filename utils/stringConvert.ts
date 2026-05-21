@@ -5,8 +5,14 @@
  */
 export function stringToDate(input: string): number | null {
 	if (!input) return null;
+
 	const cleaned = String(input).replace(/[()\s]/g, "");
+
+	const validFormat = /^(?:inf|\d+(?:ms|s|m|h|d|mo|y))+$/.test(cleaned);
+	if (!validFormat) return null;
+
 	const re = /(\d*)(inf|y|mo|ms|d|h|m|s)/g;
+
 	const multipliers: Record<string, number> = {
 		ms: 1,
 		s: 1000,
@@ -20,10 +26,14 @@ export function stringToDate(input: string): number | null {
 
 	let totalMs = 0;
 	let match: RegExpExecArray | null;
+	
 	match = re.exec(cleaned);
 	while (match !== null) {
-		const value = match[1] ? parseInt(match[1], 10) : 1;
 		const unit = match[2];
+		if (unit === "inf") return Infinity;
+
+		const value = match[1] ? parseInt(match[1], 10) : 1;
+		
 		if (!Number.isNaN(value) && multipliers[unit]) {
 			totalMs += value * multipliers[unit];
 		}

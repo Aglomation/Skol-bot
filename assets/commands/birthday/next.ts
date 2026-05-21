@@ -77,7 +77,7 @@ export default async function next(
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` })
 		.setDescription(
-			`The next birthday is ${getDisplayName(interaction.guild, nextBirthday?.user.id)} who turns ${nextBirthdayAge} years old <t:${nextBirthdayTimestamp}:R>`,
+			`The next birthday is ${getDisplayName(interaction.guild, nextBirthday?.user.id)} who turns ${nextBirthdayAge+1} years old <t:${nextBirthdayTimestamp}:R>`,
 		);
 
 	await interaction.editReply({

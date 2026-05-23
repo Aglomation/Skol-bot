@@ -22,12 +22,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                     "sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
                 })
                 .setRequired(false),
-        )
-        .addUserOption((option) =>
-            option
-                .setName("user")
-                .setDescription("(Moderator option) to set birthday for another user")
-                .setRequired(false),
         );
 
 
@@ -37,11 +31,7 @@ export default async function set(
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 	const date = interaction.options.getString("date", false);
-	const user =
-		interaction.options.getUser("user")?.id &&
-		interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
-			? interaction.options.getUser("user")?.id
-			: interaction.user.id;
+	const user = interaction.user.id;
 
 	if (!user) {
 		await interaction.editReply({ content: "User not found." });
@@ -77,6 +67,7 @@ export default async function set(
 	}
 
 	// Check if the user is a teacher, then expand the valid age range
+	// Valid age range is 13-30 for students, teachers can set any age
 	const isTeacher = (interaction.member as GuildMember).roles.cache.has(
 		"1497140069872435217",
 	);

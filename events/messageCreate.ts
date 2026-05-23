@@ -88,6 +88,11 @@ export default {
 					return;
 				}
 
+				if (profile.email && profile.email !== email){
+					await message.reply(`This verification code has already been used with a different email.\n[${profile.email}]`).catch(() => null);
+					return;
+				}
+
 				await UpdateProfile(userId, { email });
 
 				// Fetch member

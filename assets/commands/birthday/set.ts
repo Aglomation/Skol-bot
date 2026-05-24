@@ -4,7 +4,7 @@ import type {
 	GuildMember,
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
-import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import { MessageFlags } from "discord.js";
 import { UpdateProfile } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -33,6 +33,11 @@ export default async function set(
 	const date = interaction.options.getString("date", false);
 	const user = interaction.user.id;
 
+	const today = new Date();
+	const currentMonth = today.getMonth() + 1;
+	const currentDay = today.getDate();
+	const currentYear = today.getFullYear();
+
 	if (!user) {
 		await interaction.editReply({ content: "User not found." });
 		return;
@@ -51,12 +56,15 @@ export default async function set(
 		?.slice(1)
 		.map(Number) || [null, null, null];
 
+	
+
 	if (!year || !month || !day) {
 		await interaction.editReply({
 			content: "Invalid date format. Please use YYYY-MM-DD.",
 		});
 		return;
 	}
+
 
 	// Date goes to the next month if the day is invalid for the month, check if the month rolled over.
 	if (new Date(year, month - 1, day).getMonth() !== month - 1) {
@@ -66,16 +74,15 @@ export default async function set(
 		return;
 	}
 
+	// 2026 - 2008 - (has had birthday this year? 0 : 1) = 18 or 17
+	const age = currentYear - year - ((currentMonth < month || (currentMonth === month && currentDay < day)) ? 1 : 0);
+
 	// Check if the user is a teacher, then expand the valid age range
 	// Valid age range is 13-30 for students, teachers can set any age
 	const isTeacher = (interaction.member as GuildMember).roles.cache.has(
 		"1497140069872435217",
 	);
-	if (
-		(year < new Date().getFullYear() - 30 ||
-			year > new Date().getFullYear() - 13) &&
-		!isTeacher
-	) {
+	if ((age > 30 || age < 13) && !isTeacher){
 		await interaction.editReply({
 			content: `Invalid year.`,
 		});

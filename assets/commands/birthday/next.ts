@@ -12,18 +12,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			"sv-SE": "Visar nästa födelsedag",
 		});
 
-const calculateAge = (
-	birthday: { month: number; day: number; year: number },
-	currentMonth: number,
-	currentDay: number,
-	currentYear: number
-): number => {
-	const hasHadBirthday =
-		currentMonth > birthday.month ||
-		(currentMonth === birthday.month && currentDay >= birthday.day);
-	return hasHadBirthday ? currentYear - birthday.year : currentYear - birthday.year - 1;
-};
-
 export default async function next(
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
@@ -41,33 +29,44 @@ export default async function next(
 	const currentYear = today.getFullYear();
 
 	// Finds the next upcoming birthday, if none are upcoming get the first one next year
-	const nextBirthday = 
-	formattedList.find(({ birthday }) => {
-		if (!birthday) return false;
-		return (
-			birthday.month > currentMonth ||
-			(birthday.month === currentMonth && birthday.day > currentDay)
-		);
-	}) || formattedList.find((entry) => !!entry.birthday) || null;
+	const nextBirthday =
+		formattedList.find(({ birthday }) => {
+			if (!birthday) return false;
+			return (
+				birthday.month > currentMonth ||
+				(birthday.month === currentMonth && birthday.day > currentDay)
+			);
+		}) || formattedList.find((entry) => !!entry.birthday);
 
-	if (!nextBirthday) {
-		await interaction.editReply({
-			content: "No upcoming birthdays found until next year!",
-		});
+	const nextBirthdayGroup = nextBirthday?.birthday
+		? formattedList.filter(({ birthday }) =>
+			!!birthday &&
+			birthday.month === nextBirthday.birthday.month &&
+			birthday.day === nextBirthday.birthday.day,
+		)
+		: [];
+	if (!nextBirthday?.birthday) {
+		await interaction.editReply({ content: "No birthdays have been set yet!" });
 		return;
 	}
-
-	const nextBirthdayAge = calculateAge(nextBirthday.birthday, currentMonth, currentDay, currentYear);
+	const displayNames = nextBirthdayGroup
+		.map((entry) => getDisplayName(interaction.guild, entry.user.id) ?? `<@${entry.user.id}>`)
+		.filter((name): name is string => Boolean(name));
+	const birthdayYear =
+		nextBirthday.birthday.month < currentMonth ||
+		(nextBirthday.birthday.month === currentMonth && nextBirthday.birthday.day < currentDay)
+			? currentYear + 1
+			: currentYear;
 	const nextBirthdayTimestamp = Math.floor(
 		new Date(
-			currentYear,
+			birthdayYear,
 			(nextBirthday.birthday?.month || 1) - 1,
 			nextBirthday.birthday?.day || 1,
 		).getTime() / 1000,
 	);
 	const embed = new EmbedBuilder()
 		.setTitle(
-			`Next Birthday: ${numToMonth(nextBirthday.birthday?.month || 0)} ${nextBirthday.birthday?.day}`,
+			`Next Birthday${nextBirthdayGroup.length > 1 ? "s" : ""}: ${numToMonth(nextBirthday.birthday?.month || 0)} ${nextBirthday.birthday?.day}`,
 		)
 		.setThumbnail(
 			interaction.guild?.members.cache
@@ -77,7 +76,7 @@ export default async function next(
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` })
 		.setDescription(
-			`The next birthday is ${getDisplayName(interaction.guild, nextBirthday?.user.id)} who turns ${nextBirthdayAge+1} years old <t:${nextBirthdayTimestamp}:R>`,
+			`The next birthday${nextBirthdayGroup.length > 1 ? "s" : ""} is ${nextBirthdayGroup.length > 1 ? `shared by: \n**${displayNames.join(", ")}**\n` : `**${getDisplayName(interaction.guild, nextBirthday?.user.id)}**`} and will be on <t:${nextBirthdayTimestamp}:D> <t:${nextBirthdayTimestamp}:R>`,
 		);
 
 	await interaction.editReply({

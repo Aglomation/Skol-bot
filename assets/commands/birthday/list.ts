@@ -67,9 +67,25 @@ export const generateBirthdayPage = async (
 			);
 		}) || formattedList.find((entry) => !!entry.birthday);
 
+	const nextBirthdayGroup = nextBirthday?.birthday
+		? formattedList.filter(({ birthday }) =>
+			!!birthday &&
+			birthday.month === nextBirthday.birthday.month &&
+			birthday.day === nextBirthday.birthday.day,
+		)
+		: [];
+
 	const descLines: string[] = [];
 	let hasInsertedYearSeparator = false;
-
+	const getSuffix = (day: number) => {
+        if (day >= 11 && day <= 13) return "th";
+        switch (day % 10) {
+            case 1: return "st";
+            case 2: return "nd";
+            case 3: return "rd";
+            default: return "th";
+        }
+    };
 	for (let i = 0; i < pageItems.length; i++) {
         const currentItem = pageItems[i];
         if (!currentItem.birthday) continue;
@@ -90,7 +106,7 @@ export const generateBirthdayPage = async (
             nextBirthday.birthday.day === birthday.day;
 
         if (isNextUp && !hasInsertedYearSeparator) {
-            descLines.push(`-# | (${currentDay}) Today's date \n`);
+            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
             hasInsertedYearSeparator = true;
         }
 
@@ -98,20 +114,29 @@ export const generateBirthdayPage = async (
             descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
         }
 
-        // const listPrefix = isLastOfMonth ? "↳" : "| ​";
-        descLines.push(`| (${birthday.day}) ${name} [${age}]\n`);
+		const isToday = birthday.month === currentMonth && birthday.day === currentDay;
+        const daySuffix = getSuffix(birthday.day);
+
+        if (isToday) {
+            descLines.push(`🎉 **${birthday.day}${daySuffix}** - **${name}** (Turns ${age} today! 🎂)\n`);
+        } else {
+            descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name} \`${age}\`\n`);
+        }
     }
 
 	let nextBirthdayValue = "No upcoming birthdays";
+	let nextBdayTime: number | null = null;
 	if (nextBirthday?.birthday) {
-		const displayName = getDisplayName(guild, nextBirthday.user.id);
+		const displayNames = nextBirthdayGroup
+			.map((entry) => getDisplayName(guild, entry.user.id))
+			.filter((name): name is string => Boolean(name));
 
 		const displayYear =
 			nextBirthday.birthday.month < currentMonth
 				? currentYear + 1
 				: currentYear;
 
-		const nextBdayTime = Math.floor(
+		nextBdayTime = Math.floor(
 			new Date(
 				displayYear,
 				nextBirthday?.birthday.month - 1,
@@ -119,7 +144,7 @@ export const generateBirthdayPage = async (
 			).getTime() / 1000,
 		);
 
-		nextBirthdayValue = `${displayName} - <t:${nextBdayTime}:R>`;
+		nextBirthdayValue = displayNames.map(name => `• ${name}`).join(`\n`);
 	}
 
 	const embed = new EmbedBuilder()
@@ -134,9 +159,9 @@ export const generateBirthdayPage = async (
 		.setDescription(descLines.join(""))
 		.setFields([
 			{
-				name: "Next Birthday",
-				value: nextBirthdayValue,
-			},
+                name: `Next Upcoming Birthday (<t:${nextBdayTime}:R>)`,
+                value: nextBirthdayValue,
+            },
 		]);
 
 	const first = new ButtonBuilder()

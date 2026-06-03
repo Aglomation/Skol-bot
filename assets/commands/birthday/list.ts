@@ -31,6 +31,15 @@ const calculateAge = (
     return hasHadBirthday ? currentYear - birthday.year : currentYear - birthday.year - 1;
 };
 
+const getSuffix = (day: number) => {
+	if (day >= 11 && day <= 13) return "th";
+	switch (day % 10) {
+		case 1: return "st";
+		case 2: return "nd";
+		case 3: return "rd";
+		default: return "th";
+	}
+};
 export const generateBirthdayPage = async (
 	page: number,
 	guild: Guild | null,
@@ -77,15 +86,7 @@ export const generateBirthdayPage = async (
 
 	const descLines: string[] = [];
 	let hasInsertedYearSeparator = false;
-	const getSuffix = (day: number) => {
-        if (day >= 11 && day <= 13) return "th";
-        switch (day % 10) {
-            case 1: return "st";
-            case 2: return "nd";
-            case 3: return "rd";
-            default: return "th";
-        }
-    };
+
 	for (let i = 0; i < pageItems.length; i++) {
         const currentItem = pageItems[i];
         if (!currentItem.birthday) continue;
@@ -105,11 +106,6 @@ export const generateBirthdayPage = async (
             nextBirthday.birthday.month === birthday.month &&
             nextBirthday.birthday.day === birthday.day;
 
-        if (isNextUp && !hasInsertedYearSeparator) {
-            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
-            hasInsertedYearSeparator = true;
-        }
-
         if (isFirstOfMonth) {
             descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
         }
@@ -118,9 +114,14 @@ export const generateBirthdayPage = async (
         const daySuffix = getSuffix(birthday.day);
 
         if (isToday) {
-            descLines.push(`🎉 **${birthday.day}${daySuffix}** - **${name}** (Turns ${age} today! 🎂)\n`);
+            descLines.push(`▫️ **${birthday.day}${daySuffix}** - **${name}** (Turns ${age} today! 🎂)\n`);
         } else {
             descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name} \`${age}\`\n`);
+        }
+
+		if (isNextUp && !hasInsertedYearSeparator) {
+            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
+            hasInsertedYearSeparator = true;
         }
     }
 

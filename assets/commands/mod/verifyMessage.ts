@@ -1,12 +1,10 @@
-import type { ChatInputCommandInteraction, Client, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
-	Colors,
 	EmbedBuilder,
 	MessageFlags,
-	SlashCommandSubcommandBuilder,
 } from "discord.js";
 
 import button from "../../buttons/verify.js";

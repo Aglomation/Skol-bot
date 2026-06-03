@@ -7,6 +7,7 @@ export default {
 	name: Events.GuildMemberAdd,
 	once: false,
 	async execute(member: GuildMember, client: Client) {
+		if (client.user?.id !== "1410803606180986911") return;
 		// Check if the user is on the ban list
 		var profile = await GetProfile(member.id);
 		if (profile?.banned) {

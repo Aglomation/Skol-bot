@@ -1,7 +1,6 @@
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder } from "discord.js";
 import {
 	MessageFlags,
-	SlashCommandSubcommandBuilder,
 } from "discord.js";
 
 import { UpdateProfile } from "../../../utils/profileManager.js";

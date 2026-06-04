@@ -113,17 +113,17 @@ export const generateBirthdayPage = async (
 		const isToday = birthday.month === currentMonth && birthday.day === currentDay;
         const daySuffix = getSuffix(birthday.day);
 
+		if ((isToday || isNextUp) && !hasInsertedYearSeparator) {
+            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
+            hasInsertedYearSeparator = true;
+        }
+
         if (isToday) {
             descLines.push(`▫️ **${birthday.day}${daySuffix}** - **${name}** (Turns ${age} today! 🎂)\n`);
         } else {
             descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name} \`${age}\`\n`);
         }
-
-		if (isNextUp && !hasInsertedYearSeparator) {
-            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
-            hasInsertedYearSeparator = true;
-        }
-    }
+	}
 
 	let nextBirthdayValue = "No upcoming birthdays";
 	let nextBdayTime: number | null = null;

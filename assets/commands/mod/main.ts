@@ -3,9 +3,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
-import { builder as clearVerifyBuilder } from "./clearVerify.js";
-import { builder as rulesBuilder } from "./rulesMessage.js";
-import { builder as verifyBuilder } from "./verifyMessage.js";
+import { builder as clearVerifyBuilder } from "./clearverify.js";
+import { builder as rulesBuilder } from "./rulesmessage.js";
+import { builder as verifyBuilder } from "./verifymessage.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()

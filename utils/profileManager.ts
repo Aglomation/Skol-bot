@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq, isNotNull, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import { userProfileTable } from "../db/schema.js";
 
@@ -55,11 +55,10 @@ export async function FindByValue(
 	value: string | null,
 ): Promise<UserProfile | null> {
 	try {
-		const result = await db
-			.select()
-			.from(userProfileTable)
-			.where(eq(userProfileTable[key], value))
-			.limit(1);
+		const query = db.select().from(userProfileTable).limit(1);
+		const result = await (value === null
+			? query.where(isNull(userProfileTable[key]))
+			: query.where(eq(userProfileTable[key], value)));
 		return result.length > 0 ? result[0] : null;
 	} catch (error) {
 		console.error("Error finding user by value:", error);
@@ -78,10 +77,10 @@ export async function FindAllByValue(
 	value: string | null,
 ): Promise<UserProfile[]> {
 	try {
-		const result = await db
-			.select()
-			.from(userProfileTable)
-			.where(eq(userProfileTable[key], value));
+		const query = db.select().from(userProfileTable);
+		const result = await (value === null
+			? query.where(isNull(userProfileTable[key]))
+			: query.where(eq(userProfileTable[key], value)));
 		return result.length > 0 ? result : [];
 	} catch (error) {
 		console.error("Error finding user by value:", error);

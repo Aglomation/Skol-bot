@@ -1,7 +1,6 @@
 import {
 	bigint,
 	boolean,
-	jsonb,
 	pgTable,
 	text,
 	varchar,
@@ -15,5 +14,5 @@ export const userProfileTable = pgTable("user_profiles", {
 	banned: boolean("banned").notNull().default(false),
 	banreason: text("banreason"),
 	banduration: text("banduration"),
-	birthday: jsonb("birthday"),
+	birthday: bigint({ mode: "number" }),
 });

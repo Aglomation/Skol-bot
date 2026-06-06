@@ -18,7 +18,11 @@ export const sortedList = async () => {
 	const formattedList = users
 		.map((user) => {
 			const birthday = user.birthday as UserProfile["birthday"] | null;
-			return { user, birthday };
+
+			const birthdayDate = new Date(birthday*1000).getDate();
+			const birthdayMonth = new Date(birthday*1000).getMonth() + 1;
+			const birthdayYear = new Date(birthday*1000).getFullYear();
+			return { user, birthday: { day: birthdayDate, month: birthdayMonth, year: birthdayYear } };
 		})
 		.sort((a, b) => {
 			if (!a.birthday || !b.birthday) return 0;

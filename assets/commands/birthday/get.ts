@@ -1,6 +1,7 @@
-import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder } from "discord.js";
-import { MessageFlags } from "discord.js";
+import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder, User } from "discord.js";
+import { EmbedBuilder, MessageFlags } from "discord.js";
 import { GetProfile } from "../../../utils/profileManager.js";
+import { getDisplayName } from "../../../utils/memberUtils.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -22,11 +23,11 @@ export default async function get(
 	_client: Client,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
+	const user = interaction.options.getUser("user") || interaction.user as User;
 	const profile = await GetProfile(
-		interaction.options.getUser("user")?.id || interaction.user.id,
+		user.id,
 	);
-
+	console.log(profile);
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
 
 	if (!birthday)
@@ -34,7 +35,14 @@ export default async function get(
 			content: "User haven't set their birthday yet.",
 		});
 
+	const embed = new EmbedBuilder()
+		.setTitle(`${getDisplayName(interaction.guild, user.id)}'s Birthday`)
+		.setDescription(`${getDisplayName(interaction.guild, user.id)}'s birthday is set to <t:${birthday}:D>`)
+		.setThumbnail(user.displayAvatarURL())
+		.setColor("Aqua")
+		.setFooter({ text: `Use /birthday set to set your birthday!` });
+
 	await interaction.editReply({
-		content: `User's birthday is set to ${birthday.year}-${String(birthday.month).padStart(2, "0")}-${String(birthday.day).padStart(2, "0")}`,
+		embeds: [embed]
 	});
 }

@@ -11,8 +11,29 @@ const button: Button = {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const userid = interaction.customId.split(":")[1] || "1";
+
+        if (userid === "everyone" || userid === "here") {
+            await interaction.editReply({
+                content: `You cannot ping @everyone or @here.`,
+            });
+            return;
+        }
+
         if (userid.startsWith("&")) {
-            if (interaction.guild?.roles.cache.get(userid.slice(1))?.members.size || Infinity > 30) {
+            // Attempt to avoid a @everyone exploit
+
+            const nonNumber = /[^0-9@&<>]/;
+            if (userid.match(nonNumber)) {
+                await interaction.editReply({
+                    content: `Invalid user ID.`,
+                });
+                return;
+            }
+
+            const role = interaction.guild?.roles.cache.get(userid.slice(1));
+            const memberCount = role?.members.size ?? Infinity;
+
+            if (memberCount > 30) {
                 await interaction.editReply({
                     content: `This role has too many members, please contact an administrator.`,
                 });
@@ -24,7 +45,9 @@ const button: Button = {
         if (!channel) return;
         
         // Hopefully this wont be used for an @everyone exploit :P
-        await channel.send(`User has requested your help <@${userid}>`);
+        // await channel.send(`${interaction.user.username} has requested your help <@${userid}>`);
+        await channel.send({ content: `<@${interaction.user.id}> has requested your help <@${userid}>`, allowedMentions: { users: [userid], roles: [userid] } });
+        
         interaction.deleteReply();
 	},
 };

@@ -34,6 +34,7 @@ export default async function command(
     const user = interaction.options.getUser("user", true);
 
     await UpdateProfile(user.id, { email: null });
+    
     // removes the verify role
     const member = interaction.guild?.members.cache.get(user.id);
     if (member) {

@@ -4,6 +4,7 @@ import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
 import { builder as clearVerifyBuilder } from "./clearverify.js";
+import { builder as manualVerifyBuilder } from "./manualverify.js";
 import { builder as rulesBuilder } from "./rulesmessage.js";
 import { builder as verifyBuilder } from "./verifymessage.js";
 
@@ -14,6 +15,7 @@ const command: Command = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
         .addSubcommand(clearVerifyBuilder)
+		.addSubcommand(manualVerifyBuilder)
 		.addSubcommand(rulesBuilder)
 		.addSubcommand(verifyBuilder),
 

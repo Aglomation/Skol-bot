@@ -64,12 +64,16 @@ const button: Button = {
 
 		// Store the verification code in the user's profile
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });
+		
 		const embed = new EmbedBuilder()
 			.setTitle("READ FIRST ⚠️")
 			.setDescription(
-				`Make sure your browser is logged into your **school account**!\nThe email option in the form **has to** end with an @lbs.se mail!\nThe verification will be blocked if you don't follow these instructions.\nYour code is: \`${verificationCode}\``,
+				`Make sure your browser is logged into your **school account**!\n` +
+				`The email option in the form **has to** end with an @lbs.se mail!\n` +
+				`The verification will be blocked if you don't follow these instructions.\n` +
+				`Your code is: \`${verificationCode}\``,
 			)
-			.setColor("#f2ff0f");
+			.setColor("#f2ff00");
 
 		const button = new ButtonBuilder()
 			.setLabel("Verify School Mail")

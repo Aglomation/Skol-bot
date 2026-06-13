@@ -12,7 +12,18 @@ export default {
 	name: Events.MessageCreate,
 	once: false,
 	async execute(message: Message, client: Client) {
-		if (!message.guild) return;
+		if (!message.guild){
+			const logChannel = client.channels.cache.get("1499149296203993169") as
+			| TextChannel
+			| undefined;
+			if (logChannel) {
+				await logChannel.send(
+					`DM received from ${message.author.tag} (${message.author.id}):\n${message.content}`,
+				);
+			}
+			return;
+		}
+
 		if (
 			message.channel.id === "1498834244854878209" &&
 			!message.member?.permissions.has("Administrator")

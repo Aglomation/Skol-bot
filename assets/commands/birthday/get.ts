@@ -1,7 +1,8 @@
 import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder, User } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import { GetProfile } from "../../../utils/profileManager.js";
 import { getDisplayName } from "../../../utils/memberUtils.js";
+import { GetProfile } from "../../../utils/profileManager.js";
+
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand

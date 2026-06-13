@@ -14,8 +14,8 @@ import {
 } from "discord.js";
 
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
-import { stringToDate } from "../../utils/stringConvert.js";
 import { purgeChannels } from "../../utils/purgeMessages.js";
+import { stringToDate } from "../../utils/stringConvert.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -36,16 +36,15 @@ const command: Command = {
 		.addStringOption((option) =>
 			option
 				.setName("duration")
-				.setDescription("Duration of the ban (s, m, h, d, mo, y, inf)")
+				.setDescription("Duration of the ban (s, m, h, d, w, mo, y, inf)")
 				.setRequired(true),
 		)
 		.addStringOption((option) =>
 			option
 				.setName("deletemessages")
 				.setDescription("Whether to delete the user's messages")
-				.setRequired(true)
+				.setRequired(false)
 				.setChoices(
-					{ name: "None", value: "0h" },
 					{ name: "1 Hour", value: "1h" },
 					{ name: "3 Hours", value: "3h" },
 					{ name: "6 Hours", value: "6h" },
@@ -84,7 +83,7 @@ const command: Command = {
 		const reason = interaction.options.getString("reason", true);
 		const date = stringToDate(interaction.options.getString("duration") || "");
 		const deleteMessagesDuration = stringToDate(
-			interaction.options.getString("deletemessages", true) || "",
+			interaction.options.getString("deletemessages", false) || "",
 		);
 
 		const logChannel = client.channels.cache.get("1499149296203993169") as
@@ -132,6 +131,7 @@ const command: Command = {
 						`For: ${reason}\n` +
 						`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
 						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
+						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.` +
 						`Invite: https://discord.gg/dUYHv8Dv94`,
 				)
 				.catch(() => {
@@ -158,9 +158,6 @@ const command: Command = {
 				deleteMessagesDuration > 0 &&
 				targetMember
 			) {
-				await interaction.editReply(
-					`Deleting messages from **${targetUser.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
-				);
 				const channels = targetMember.guild.channels.cache.filter(
 					(ch): ch is TextChannel =>
 						ch.isTextBased() &&
@@ -173,13 +170,11 @@ const command: Command = {
 					targetUser.id,
 					deleteMessagesDuration,
 				);
+
 				if (logChannel)
 					await logChannel.send(
 						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${targetUser.id}> as part of the softban.`,
 					);
-				await interaction.editReply(
-					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${targetUser.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the softban.`,
-				);
 			}
 		} catch (err) {
 			console.error(err);

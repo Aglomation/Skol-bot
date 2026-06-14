@@ -43,10 +43,11 @@ const repeating: Repeating = {
 
 		const todaysBirthdays = birthdayMembers.filter((member) => {
 			const birthday = member.birthday as UserProfile["birthday"] | null;
+			const birthdayDate = birthday ? new Date(birthday * 1000) : null;
 			return (
-				birthday &&
-				birthday.month === currentMonth &&
-				birthday.day === currentDay
+				birthdayDate &&
+				birthdayDate.getMonth() + 1 === currentMonth &&
+				birthdayDate.getDate() === currentDay
 			);
 		});
 

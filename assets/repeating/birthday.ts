@@ -10,9 +10,12 @@ const formatBirthdayLine = (
     currentYear: number
 ): string => {
     const name = getDisplayName(guild, member.id);
-    const age = currentYear - (member.birthday?.year || 0); 
+	const birthday = member.birthday as UserProfile["birthday"] | null;
+	const birthdayDate = birthday ? new Date(birthday * 1000) : null;
+	
+    const age = currentYear - (birthdayDate?.getFullYear() || 0); 
     
-    return `${name} (<@${member.id}>) - ${age} Years old`;
+    return `${name || `<@${member.id}>`} - ${age} Years old`;
 };
 
 const repeating: Repeating = {
@@ -55,8 +58,8 @@ const repeating: Repeating = {
 
 		todaysBirthdays.sort((a, b) => {
 			return (
-				((b.birthday as UserProfile["birthday"])?.year || 0) -
-				((a.birthday as UserProfile["birthday"])?.year || 0)
+				((new Date(b.birthday || 0).getFullYear() as UserProfile["birthday"])) -
+				((new Date(a.birthday || 0).getFullYear() as UserProfile["birthday"]))
 			);
 		});
 
@@ -65,7 +68,7 @@ const repeating: Repeating = {
 		);
 
 		const embed = new EmbedBuilder()
-			.setTitle("🎉 Happy Birthday! 🎉")
+			.setTitle("🎉 Happy Birthday! 🎂")
 			.setDescription(
 				descriptionLines.join("\n")
 			)

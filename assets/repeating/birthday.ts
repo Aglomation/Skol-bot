@@ -11,19 +11,21 @@ const formatBirthdayLine = (
 ): string => {
     const name = getDisplayName(guild, member.id);
     const mention = `(<@${member.id}>)`;
+    if (!member.birthday) return `${name} ${mention}`; 
 
-    if (!member.birthday?.year) return `${name} ${mention}`; 
-
-	const age = currentYear - member.birthday.year;
+    const birthdayDate = new Date((member.birthday as number) * 1000);
+    const age = currentYear - birthdayDate.getFullYear();
 	return `${name} ${mention} - ${age} Years old`;
 };
 
-const isBirthdayToday = (birthday: NonNullable<UserProfile["birthday"]>, date: Date): boolean => {
+const isBirthdayToday = (birthday: Date | null, date: Date): boolean => {
+    if (!birthday) return false;
+
     const currentMonth = date.getMonth() + 1;
     const currentDay = date.getDate();
     
     // Standard birthday
-    if (birthday.month === currentMonth && birthday.day === currentDay) {
+    if (birthday.getMonth() + 1 === currentMonth && birthday.getDate() === currentDay) {
         return true;
     }
 
@@ -31,7 +33,7 @@ const isBirthdayToday = (birthday: NonNullable<UserProfile["birthday"]>, date: D
     const yesterday = new Date(date);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    if (birthday.month === 2 && birthday.day === 29 && currentMonth === 3 && currentDay === 1 && yesterday.getDate() !== 29) {
+    if (birthday.getMonth() + 1 === 2 && birthday.getDate() === 29 && currentMonth === 3 && currentDay === 1 && yesterday.getDate() !== 29) {
         return true;
     }
 
@@ -62,15 +64,19 @@ const repeating: Repeating = {
 		const birthdayMembers = await FindAllNonNullKeys("birthday");
 
         const todaysBirthdays = birthdayMembers.filter((member) => {
-            if (!member.birthday) return false;
-            return isBirthdayToday(member.birthday, today);
+            const birthday = member.birthday as UserProfile["birthday"] | null;
+			const birthdayDate = birthday ? new Date(birthday * 1000) : null;
+
+            if (!birthdayDate) return false;
+
+            return isBirthdayToday(birthdayDate, today);
         });
 
 		if (todaysBirthdays.length === 0) return;
 
 		todaysBirthdays.sort((a, b) => {
-            const yearA = (a.birthday as UserProfile["birthday"])?.year || 0;
-            const yearB = (b.birthday as UserProfile["birthday"])?.year || 0;
+            const yearA = new Date((a.birthday as number) * 1000)?.getFullYear() || 0;
+            const yearB = new Date((b.birthday as number) * 1000)?.getFullYear() || 0;
             return yearB - yearA; 
         });
 

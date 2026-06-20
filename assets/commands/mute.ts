@@ -13,8 +13,8 @@ import {
 } from "discord.js";
 
 import { UpdateProfile } from "../../utils/profileManager.js";
-import { stringToDate } from "../../utils/stringConvert.js";
 import { purgeChannels } from "../../utils/purgeMessages.js";
+import { stringToDate } from "../../utils/stringConvert.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -34,7 +34,7 @@ const command: Command = {
 			option
 				.setName("duration")
 				.setDescription(
-					"Duration of the mute (s, m, h, d, mo, y, inf) [mutes >28d gets refreshed until <28d]",
+					"Duration of the mute (s, m, h, d, w, mo, y, inf) [mutes >28d gets refreshed until <28d]",
 				)
 				.setRequired(true),
 		)
@@ -42,9 +42,8 @@ const command: Command = {
 			option
 				.setName("deletemessages")
 				.setDescription("Whether to delete the user's messages")
-				.setRequired(true)
+				.setRequired(false)
 				.setChoices(
-					{ name: "None", value: "0h" },
 					{ name: "1 Hour", value: "1h" },
 					{ name: "3 Hours", value: "3h" },
 					{ name: "6 Hours", value: "6h" },
@@ -82,7 +81,7 @@ const command: Command = {
 		const reason = interaction.options.getString("reason", true);
 		const date = stringToDate(interaction.options.getString("duration") || "");
 		const deleteMessagesDuration = stringToDate(
-			interaction.options.getString("deletemessages", true) || "",
+			interaction.options.getString("deletemessages", false) || "",
 		);
 
 		if (!member) {
@@ -112,7 +111,8 @@ const command: Command = {
 					`## You have been muted from ${interaction.guild?.name}\n` +
 						`For: ${reason}\n` +
 						`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
-						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n`,
+						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
+						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.`,
 				)
 				.catch(() => {});
 
@@ -129,9 +129,6 @@ const command: Command = {
 
 			// Purge messages if option is set
 			if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
-				await interaction.editReply(
-					`Deleting messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the mute.`,
-				);
 				const channels = member.guild.channels.cache.filter(
 					(ch): ch is TextChannel =>
 						ch.isTextBased() && ch.permissionsFor(member).has("ViewChannel"),
@@ -143,13 +140,11 @@ const command: Command = {
 					user.id,
 					deleteMessagesDuration,
 				);
+
 				if (logChannel)
 					await logChannel.send(
 						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the mute.`,
 					);
-				await interaction.editReply(
-					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from **${user.tag}** for the past ${interaction.options.getString("deletemessages", true)} as part of the mute.`,
-				);
 			}
 		} catch (err) {
 			console.error(err);

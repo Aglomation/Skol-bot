@@ -4,7 +4,7 @@ import type {
 	GuildMember,
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
-import { MessageFlags } from "discord.js";
+import { EmbedBuilder, MessageFlags } from "discord.js";
 import { UpdateProfile } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -23,7 +23,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 })
                 .setRequired(false),
         );
-
 
 export default async function set(
 	interaction: ChatInputCommandInteraction,
@@ -44,7 +43,7 @@ export default async function set(
 	}
 
 	if (!date) {
-		UpdateProfile(user, { birthday: null });
+		await UpdateProfile(user, { birthday: null });
 		await interaction.editReply({
 			content: "Cleared birthday.",
 		});
@@ -55,6 +54,7 @@ export default async function set(
 		.match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
 		?.slice(1)
 		.map(Number) || [null, null, null];
+	
 
 	
 
@@ -76,7 +76,8 @@ export default async function set(
 
 	// 2026 - 2008 - (has had birthday this year? 0 : 1) = 18 or 17
 	const age = currentYear - year - ((currentMonth < month || (currentMonth === month && currentDay < day)) ? 1 : 0);
-
+	const timestamp = new Date(year, month - 1, day).getTime();
+	
 	// Check if the user is a teacher, then expand the valid age range
 	// Valid age range is 13-30 for students, teachers can set any age
 	const isTeacher = (interaction.member as GuildMember).roles.cache.has(
@@ -89,8 +90,16 @@ export default async function set(
 		return;
 	}
 
-	await UpdateProfile(user, { birthday: { year, month, day } });
+	await UpdateProfile(user, { birthday: Math.floor(timestamp / 1000) });
+
+	const embed = new EmbedBuilder()
+		.setTitle("Birthday Set!")
+		.setDescription(`Your birthday has been set to <t:${Math.floor(timestamp / 1000)}:D>.\nYou will turn ${age+1} on your next birthday!`)
+		.setThumbnail(interaction.user.displayAvatarURL())
+		.setFooter({ text: `Use /birthday set without a date to clear your birthday.` })
+		.setColor("Aqua");
+
 	await interaction.editReply({
-		content: `Birthday has been set to ${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+		embeds: [embed]
 	});
 }

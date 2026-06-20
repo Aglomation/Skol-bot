@@ -8,10 +8,10 @@ export function stringToDate(input: string): number | null {
 
 	const cleaned = String(input).replace(/[()\s]/g, "");
 
-	const validFormat = /^(?:inf|\d+(?:ms|s|m|h|d|mo|y))+$/.test(cleaned);
+	const validFormat = /^(?:inf|\d+(?:ms|s|m|h|d|w|mo|y))+$/.test(cleaned);
 	if (!validFormat) return null;
 
-	const re = /(\d*)(inf|y|mo|ms|d|h|m|s)/g;
+	const re = /(\d*)(inf|y|mo|ms|d|h|m|s|w)/g;
 
 	const multipliers: Record<string, number> = {
 		ms: 1,
@@ -19,6 +19,7 @@ export function stringToDate(input: string): number | null {
 		m: 60 * 1000,
 		h: 60 * 60 * 1000,
 		d: 24 * 60 * 60 * 1000,
+		w: 7 * 24 * 60 * 60 * 1000,
 		mo: 30 * 24 * 60 * 60 * 1000,
 		y: 365 * 24 * 60 * 60 * 1000,
 		inf: Infinity,

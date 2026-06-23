@@ -10,12 +10,34 @@ const formatBirthdayLine = (
     currentYear: number
 ): string => {
     const name = getDisplayName(guild, member.id);
-	const birthday = member.birthday as UserProfile["birthday"] | null;
-	const birthdayDate = birthday ? new Date(birthday * 1000) : null;
-	
-    const age = currentYear - (birthdayDate?.getFullYear() || 0); 
+    const mention = `(<@${member.id}>)`;
+    if (!member.birthday) return `${name} ${mention}`; 
+
+    const birthdayDate = new Date((member.birthday as number) * 1000);
+    const age = currentYear - birthdayDate.getFullYear();
+	return `${name} ${mention} - ${age} Years old`;
+};
+
+const isBirthdayToday = (birthday: Date | null, date: Date): boolean => {
+    if (!birthday) return false;
+
+    const currentMonth = date.getMonth() + 1;
+    const currentDay = date.getDate();
     
-    return `${name || `<@${member.id}>`} - ${age} Years old`;
+    // Standard birthday
+    if (birthday.getMonth() + 1 === currentMonth && birthday.getDate() === currentDay) {
+        return true;
+    }
+
+    // Leap year stuff
+    const yesterday = new Date(date);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (birthday.getMonth() + 1 === 2 && birthday.getDate() === 29 && currentMonth === 3 && currentDay === 1 && yesterday.getDate() !== 29) {
+        return true;
+    }
+
+    return false;
 };
 
 const repeating: Repeating = {
@@ -28,6 +50,7 @@ const repeating: Repeating = {
 	async execute(client: Client) {
 
 		// We should change this to be changeable by the server owner
+		// this bot is private but might still be smart to not hardcode stuff :3
 		const GUILD_ID = "1497140069746741338";
         const BIRTHDAY_CHANNEL_ID = "1497140071659212845";
 
@@ -38,43 +61,33 @@ const repeating: Repeating = {
 		if (!birthdayChannel) return;
 
 		const today = new Date();
-        const currentMonth = today.getMonth() + 1;
-        const currentDay = today.getDate();
-        const currentYear = today.getFullYear();
-
 		const birthdayMembers = await FindAllNonNullKeys("birthday");
 
-		const todaysBirthdays = birthdayMembers.filter((member) => {
-			const birthday = member.birthday as UserProfile["birthday"] | null;
+        const todaysBirthdays = birthdayMembers.filter((member) => {
+            const birthday = member.birthday as UserProfile["birthday"] | null;
 			const birthdayDate = birthday ? new Date(birthday * 1000) : null;
-			return (
-				birthdayDate &&
-				birthdayDate.getMonth() + 1 === currentMonth &&
-				birthdayDate.getDate() === currentDay
-			);
-		});
+
+            if (!birthdayDate) return false;
+
+            return isBirthdayToday(birthdayDate, today);
+        });
 
 		if (todaysBirthdays.length === 0) return;
 
 		todaysBirthdays.sort((a, b) => {
-			return (
-				((new Date(b.birthday || 0).getFullYear() as UserProfile["birthday"])) -
-				((new Date(a.birthday || 0).getFullYear() as UserProfile["birthday"]))
-			);
-		});
+            const yearA = new Date((a.birthday as number) * 1000)?.getFullYear() || 0;
+            const yearB = new Date((b.birthday as number) * 1000)?.getFullYear() || 0;
+            return yearB - yearA; 
+        });
 
 		const descriptionLines = todaysBirthdays.map(member => 
-			formatBirthdayLine(guild, member, currentYear)
-		);
+            formatBirthdayLine(guild, member, today.getFullYear())
+        );
 
 		const embed = new EmbedBuilder()
-			.setTitle("🎉 Happy Birthday! 🎂")
-			.setDescription(
-				descriptionLines.join("\n")
-			)
-			.setFooter({
-				text: `Use /birthday set to set your birthday!`,
-			})
+            .setTitle("🎉 Happy Birthday! 🎉")
+            .setDescription(descriptionLines.join("\n"))
+            .setFooter({ text: "Use /birthday set to set your birthday!" })
 			.setColor(0xff0000);
 			
 
@@ -82,6 +95,7 @@ const repeating: Repeating = {
 			embeds: [embed],
 			allowedMentions: { users: [] },
 		});
+
 		response.react("🎉").catch(() => null);
 	},
 };

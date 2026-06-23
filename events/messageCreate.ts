@@ -77,6 +77,10 @@ export default {
 					await message.reply("Invalid formatting, didn't include two parts split by $$").catch(() => null);
 					return;
 				}
+				if (email.includes("learnet.se")){
+					await message.reply("De har bytt till learnet <@586643628990922752>").catch(() => null);
+					return;
+				}
 				if (!email.endsWith("lbs.se")){
 					await message.reply("Email must end with lbs.se").catch(() => null);
 					return;

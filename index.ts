@@ -8,6 +8,7 @@ import {
 	Client,
 	Collection,
 	GatewayIntentBits,
+	Partials,
 	REST,
 	Routes,
 } from "discord.js";
@@ -29,10 +30,15 @@ const client = new Client({
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
 		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.DirectMessages,
 		GatewayIntentBits.GuildVoiceStates,
 		GatewayIntentBits.GuildMembers,
 		GatewayIntentBits.GuildPresences,
 	],
+	partials: [
+		Partials.Channel,
+		Partials.Message
+	]
 });
 
 client.commands = new Collection();

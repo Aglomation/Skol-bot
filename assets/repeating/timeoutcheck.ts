@@ -34,12 +34,19 @@ const repeating = {
 			console.log(
 				`- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`,
 			);
-
+			const timeLeft = profile.timeout - Date.now();
+			const MAX_TIMEOUT_MS = 2419199000; // 28 days - 1s in milliseconds
+			if (timeLeft <= 0) {
+				member.timeout(null, "Timeout should already have been cleared by discord?")
+					.catch((err) => console.error(`Failed to remove timeout for ${member.user.tag}:`, err));
+				return;
+			}
+			
 			// Refreshes the timeout
 			member
 				.timeout(
-					Math.min(profile?.timeout, 28 * 24 * 60 * 60 * 1000 - 1000),
-					"Refreshing timeout",
+					Math.min(timeLeft, MAX_TIMEOUT_MS),
+					`Refreshing timeout, Expires at: ${new Date(profile.timeout).toISOString()}`,
 				)
 				.catch((err) => {
 					console.error(

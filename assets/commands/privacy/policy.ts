@@ -4,6 +4,8 @@ import type {
     SlashCommandSubcommandBuilder,
 } from "discord.js";
 
+import { MessageFlags } from "discord.js";
+
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
         .setName("policy")
@@ -44,6 +46,6 @@ export default async function command(
 
     await interaction.reply({
         embeds: [embed],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
     });
 };

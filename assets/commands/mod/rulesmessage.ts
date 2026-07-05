@@ -2,6 +2,7 @@ import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder
 import {
     Colors,
     EmbedBuilder,
+    MessageFlags,
 } from "discord.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -13,7 +14,7 @@ export default async function command(
 	interaction: ChatInputCommandInteraction,
 	client: Client,
 ) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
 	if (
 		interaction.user.id !== "754965470888722484" &&

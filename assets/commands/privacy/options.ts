@@ -1,8 +1,10 @@
-import type {
+import type{
     ChatInputCommandInteraction,
     Client,
     SlashCommandSubcommandBuilder,
 } from "discord.js";
+
+import { MessageFlags } from "discord.js";
 
 import { UpdateProfile } from "../../../utils/profileManager.js";
 
@@ -35,6 +37,6 @@ export default async function command(
 
     await interaction.reply({
         content: `Your privacy preference has been updated to: **${selectedChoiceName}**`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
     });
 };

@@ -45,6 +45,39 @@ export async function CreateProfile(
 }
 
 /**
+ * Get a single profile
+ * @param userId The ID of the user whose profile to retrieve
+ * @returns The user's profile object, or null if not found
+ */
+export async function GetProfile(userId: string): Promise<UserProfile | null> {
+	try {
+		const result = await db
+			.select()
+			.from(userProfileTable)
+			.where(eq(userProfileTable.id, userId))
+			.limit(1);
+		return result.length > 0 ? result[0] : null;
+	} catch (error) {
+		console.error("Error getting profile:", error);
+		return null;
+	}
+}
+
+export async function getValueByKey(userId: string, key: UserProfileKey): Promise<string | number | boolean | null> {
+	try {
+		const profile = await GetProfile(userId);
+		if (!profile) {
+			console.error(`Profile not found for user ID: ${userId}`);
+			return null;
+		}
+		return profile[key] ?? null;
+	} catch (error) {
+		console.error("Error getting value by key:", error);
+		return null;
+	}
+}
+
+/**
  * Find a user by a specific profile field
  * @param key The profile field to search by
  * @param value The value to search for
@@ -106,25 +139,6 @@ export async function FindAllNonNullKeys(
 	} catch (error) {
 		console.error("Error finding all non-null keys:", error);
 		return [];
-	}
-}
-
-/**
- * Get a single profile
- * @param userId The ID of the user whose profile to retrieve
- * @returns The user's profile object, or null if not found
- */
-export async function GetProfile(userId: string): Promise<UserProfile | null> {
-	try {
-		const result = await db
-			.select()
-			.from(userProfileTable)
-			.where(eq(userProfileTable.id, userId))
-			.limit(1);
-		return result.length > 0 ? result[0] : null;
-	} catch (error) {
-		console.error("Error getting profile:", error);
-		return null;
 	}
 }
 

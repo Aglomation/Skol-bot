@@ -15,4 +15,5 @@ export const userProfileTable = pgTable("user_profiles", {
 	banreason: text("banreason"),
 	banduration: text("banduration"),
 	birthday: bigint({ mode: "number" }),
+	privacyOption: bigint({ mode: "number" }).notNull().default(2),
 });

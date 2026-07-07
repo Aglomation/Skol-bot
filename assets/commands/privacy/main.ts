@@ -5,6 +5,8 @@ import { SlashCommandBuilder } from "discord.js";
 
 import { builder as Option } from "./options.js";
 import { builder as Policy } from "./policy.js";
+import { builder as DeleteMe } from "./deleteme.js";
+import { builder as myData } from "./mydata.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -12,7 +14,9 @@ const command: Command = {
 		.setDescription("Handles your privacy preferences")
 
 		.addSubcommand(Policy)
-        .addSubcommand(Option),
+        .addSubcommand(Option)
+        .addSubcommand(DeleteMe)
+        .addSubcommand(myData),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
 		if (!interaction.guild) {

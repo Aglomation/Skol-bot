@@ -81,7 +81,18 @@ export default async function command(
                 value:
                     `​\n**1 § Profile Integrity:**\n` +
                     `Your username and profile picture must not be offensive or impersonate others.\n` +
-                    `*Penalty:* Request to change -> Kick.`
+                    `*Penalty:* Request to change -> Kick.\n`
+            },
+            {
+                name: '*5. PRIVACY POLICY*',
+                value:
+                    `​\n**1 § Privacy Policy:**\n` +
+                    `\`/privacy policy\` to review the privacy policy.\n` +
+                    `The policy can also be found at https://gist.github.com/Aglomation/03bb1931386d59bc69fba53684e91953\n` +
+                    `\n**2 § Data Management:**\n` +
+                    `\`/privacy options\` to set your privacy preferences.\n` +
+                    `\`/privacy mydata\` to request a copy of your data.\n` +
+                    `\`/privacy deleteme\` to delete your data and revoke server access.\n`
             }
         )
         .setFooter({ 

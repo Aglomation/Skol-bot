@@ -6,6 +6,7 @@ import type {
 } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
 import { UpdateProfile } from "../../../utils/profileManager.js";
+import repeating from "../../repeating/birthday.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -102,4 +103,8 @@ export default async function set(
 	await interaction.editReply({
 		embeds: [embed]
 	});
+
+	if (month === currentMonth && day === currentDay) {
+		await repeating.execute(_client);
+	}
 }

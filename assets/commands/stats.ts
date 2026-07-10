@@ -9,6 +9,7 @@ const Roles = {
     åk25: "1497140069843079225",
     åk24: "1497140069843079224",
     åk23: "1497140069843079223",
+    åk22: "1498635283321852006",
     verified: "1498832228145168514",
 };
 
@@ -38,11 +39,13 @@ const command = {
                 .setDescription("Order the leaderboard by specific year")
                 .setRequired(true)
                 .addChoices(
+                    { name: "Nuvarande", value: "current" },
                     { name: "Total", value: "all" },
                     { name: "Åk 26", value: "åk26" },
                     { name: "Åk 25", value: "åk25" },
                     { name: "Åk 24", value: "åk24" },
                     { name: "Åk 23", value: "åk23" },
+                    { name : "Åk 22", value: "åk22" },
                 )
         ),
 
@@ -70,23 +73,37 @@ const command = {
         let totalStudentsCapacity = 0;
 
         for (const [key, roleData] of Object.entries(schoolData)) {
-            // Get individual counts
-            const counts: Record<string, number> = {
-                åk26: getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk26]),
-                åk25: getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk25]),
-                åk24: getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk24]),
-                åk23: getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk23]),
-            };
+            let activeCount = 0;
 
-			// Remember to remove åk23 before the next year :3
-            counts.all = counts.åk26 + counts.åk25 + counts.åk24 + counts.åk23;
+            // This looks horrible but technically better than checking all years when we only want one.
+            if (order === "all") {
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk26]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk25]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk24]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk23]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk22]);
+            } else if (order === "current") {
+                // Current classes that go to lbs :3
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk26]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk25]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, Roles.åk24]);
+            } else {
+                // order is a specific year (åk26, åk25, etc.)
+                const specificRole = Roles[order as keyof typeof Roles];
+                if (specificRole) {
+                    activeCount = getRoleUserCount(interaction.guild, roleData.id, false, [Roles.verified, specificRole]);
+                }
+            }
+            
+            // 3 classes of students divided by 3 is roughly one class
+            const studentCount = (order === "all" || order === "current") 
+                ? roleData.studentCount 
+                : roleData.studentCount / 3;
 
-            // get the count based on the user's choice
-            const activeCount = counts[order] || 0;
-            const percentage = roleData.studentCount > 0 ? (activeCount / roleData.studentCount) * 100 : 0;
+            const percentage = studentCount > 0 ? (activeCount / studentCount) * 100 : 0;
 
             totalMembersForFilter += activeCount;
-            totalStudentsCapacity += roleData.studentCount;
+            totalStudentsCapacity += studentCount;
 
             finalSchoolData.push({
                 name: key,
@@ -97,7 +114,7 @@ const command = {
         }
 
         finalSchoolData.sort((a, b) => {
-            if (order === "all") {
+            if (order === "current") {
                 return b.percentage - a.percentage; 
             }
             return b.activeCount - a.activeCount;
@@ -112,24 +129,28 @@ const command = {
             fields.push({
                 name: `${parseLeaderboardPosition(index + 1)} ${schoolData.name}`,
                 value: order==="all"
-				? `\`👥 (${schoolData.activeCount}/${schoolData.studentCount}) • ${Math.round(schoolData.percentage)}%\``
-				: `\`👥(${schoolData.activeCount}) • 🏫(≈${Math.round(schoolData.studentCount/3)})\``,
+				? `\`👥 (${schoolData.activeCount})\``
+                : order==="current"
+                ? `\`👥(${schoolData.activeCount}) • 🏫(${schoolData.studentCount}) • ${Math.round(schoolData.percentage)}%\``
+				: `\`👥(${schoolData.activeCount}) • 🏫(≈${Math.round(schoolData.studentCount/3)}) • ${Math.round(schoolData.percentage)}%\``,
                 inline: false,
             });
         });
 
 
         const embed = new EmbedBuilder()
-            .setTitle(`Deltagarstatistik per stad (${order === "all" ? "Total" : order})`)
+            .setTitle(`Deltagarstatistik per stad (${order === "all" ? "Total" : order === "current" ? "Nuvarande" : order}) ( ♻️ ${order === "current" ? "%" : "Antal"} )`)
             .setDescription(
 				order==="all"
-                ? `Servermedlemmar: **${totalMembersForFilter}** • Nationell total: **${totalStudentsCapacity}** • Deltagande: **${Math.round(overallParticipation)}%**`
-                : `Servermedlemmar: **${totalMembersForFilter}** • Nationell total: **≈${Math.round(totalStudentsCapacity/3)}** • Deltagande: **≈${Math.round(overallParticipation*3)}%**`
+                ? `Servermedlemmar: **${totalMembersForFilter}**`
+                : order==="current"
+                ? `Servermedlemmar: **${totalMembersForFilter}** • Nationell total: **${totalStudentsCapacity}** • Deltagande: **≈${Math.round(overallParticipation)}%**`
+                : `Servermedlemmar: **${totalMembersForFilter}** • Nationell total: **≈${Math.round(totalStudentsCapacity/3)}** • Deltagande: **≈${Math.round(overallParticipation)}%**`
             )
             .addFields(fields)
             .setColor(0x2b2d31)
             .setTimestamp()
-            .setFooter({ text: "Data: Skolverket API 🥵" });
+            .setFooter({ text: `Data: Skolverket API ${order!== "all" && order!== "current" ? "& Guessing " : ""}🥵` });
 
         await interaction.editReply({ embeds: [embed] });
     },

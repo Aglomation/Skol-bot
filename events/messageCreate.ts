@@ -4,7 +4,7 @@ import type {
 	Message,
 	TextChannel,
 } from "discord.js";
-import { Events } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
 
@@ -71,23 +71,9 @@ export default {
 			message.webhookId === "1498837897527431188"
 		) {
 			try {
-				// Removes all whitespace before splitting
 				const [email, verify] = message.content.replace(/\s+/g, "").split("$$");
 				if (!email || !verify){
 					await message.reply("Invalid formatting, didn't include two parts split by $$").catch(() => null);
-					return;
-				}
-				if (email.includes("learnet.se")){
-					await message.reply("De har bytt till learnet <@586643628990922752>").catch(() => null);
-					return;
-				}
-				if (!email.endsWith("lbs.se")){
-					await message.reply("Email must end with lbs.se").catch(() => null);
-					return;
-				}
-				if (email.includes("+")){
-					// Google should've patched being able to use plus addressed mails on school accounts, but i don't trust them.
-					await message.reply("Attempt to use a plus addressed mail").catch(() => null);
 					return;
 				}
 
@@ -105,6 +91,31 @@ export default {
 
 				if (profile.email && profile.email !== email){
 					await message.reply(`This verification code has already been used with a different email.\n[${profile.email}]`).catch(() => null);
+					return;
+				}
+
+				if (!/@([a-z0-9-]+\.)*lbs\.se$/i.test(email) || email.includes("+")){
+					await message.reply(`Sending dm to <@${profile.id}> about invalid email`).catch(() => null);
+					const embed = new EmbedBuilder()
+						.setTitle("❌ Ogiltig LBS-mail")
+                        .setDescription(
+                            `Mailen du försökte verifiera med är inte en giltig LBS-mail.\n\n` +
+                            `\`${email}\` Slutar inte med @lbs.se, byt konto och försök igen!\n\n` +
+                            `*Problem? Skapa en ticket i <#1499885683995840683>.*`
+                        )
+                        .setColor(0xFF0000);
+
+					const button = new ButtonBuilder()
+						.setLabel("Försök igen")
+						.setEmoji("🔄")
+						.setStyle(ButtonStyle.Link)
+						.setURL(
+							`https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=${verify}`,
+						);
+
+					await message.guild?.members.cache.get(profile.id)?.send({ embeds: [embed], components: [
+						new ActionRowBuilder<ButtonBuilder>().addComponents(button)
+					] }).catch(() => null);
 					return;
 				}
 
@@ -135,7 +146,7 @@ export default {
 				}
 
 				// Give teacher role if email doesn't end with @elev.ga.lbs.se
-				if (!email.endsWith("@elev.ga.lbs.se")) {
+				if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {
 					const teacherRole = message.guild?.roles.cache.get(
 						"1497140069872435217",
 					);

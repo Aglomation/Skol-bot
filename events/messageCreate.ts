@@ -12,7 +12,8 @@ export default {
 	name: Events.MessageCreate,
 	once: false,
 	async execute(message: Message, client: Client) {
-		if (!message.guild){
+
+		if (!message.guild && message.author.id !== client.user?.id) {
 			const logChannel = client.channels.cache.get("1499149296203993169") as
 			| TextChannel
 			| undefined;
@@ -23,6 +24,8 @@ export default {
 			}
 			return;
 		}
+		
+		if (!message.guild) return;
 
 		if (
 			message.channel.id === "1498834244854878209" &&

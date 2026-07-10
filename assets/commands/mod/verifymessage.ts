@@ -30,7 +30,7 @@ export default async function command(
 	}
 	const embed = new EmbedBuilder()
         .setTitle("Verifiera din LBS-mejl 🔒")
-        .setDescription("Klicka på knappen nedan och godkänn reglerna i <#1497140071176863759> för att komma in på servern.")
+        .setDescription("Klicka på knappen nedan och läs reglerna i <#1497140071176863759> för att komma in på servern.")
         .setColor(0x87CFEB);
 
 	const btn = new ButtonBuilder()

@@ -66,17 +66,15 @@ const button: Button = {
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });
 		
 		const embed = new EmbedBuilder()
-			.setTitle("READ FIRST ⚠️")
+			.setTitle("⚠️ Viktigt")
 			.setDescription(
-				`Make sure your browser is logged into your **school account**!\n` +
-				`The email option in the form **has to** end with an @lbs.se mail!\n` +
-				`The verification will be blocked if you don't follow these instructions.\n` +
-				`Your code is: \`${verificationCode}\``,
+				`Din webbläsare måste vara inloggad på ditt **@\*lbs.se**-konto.\n\n` +
+        		`Din kod för formuläret är: \`${verificationCode}\``
 			)
 			.setColor("#f2ff00");
 
 		const button = new ButtonBuilder()
-			.setLabel("Verify School Mail")
+			.setLabel("Gå till formuläret")
 			.setStyle(ButtonStyle.Link)
 			.setURL(
 				`https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=${verificationCode}`,

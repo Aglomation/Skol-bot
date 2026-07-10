@@ -3,7 +3,7 @@ import "dotenv/config";
 import { GetProfile } from "../../utils/profileManager.js";
 
 const repeating = {
-	data : {
+	data: {
 		immediate: false,
 		repeating: true,
 		time: 1 * 60 * 60 * 1000,

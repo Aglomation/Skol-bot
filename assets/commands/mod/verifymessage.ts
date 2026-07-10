@@ -29,13 +29,13 @@ export default async function command(
 		return;
 	}
 	const embed = new EmbedBuilder()
-        .setTitle("Verify your email!")
-        .setDescription("Click the button below to verify, by pressing the button you agree to follow the rules in <#1497140071176863759>\nMake sure to use your school email!")
+        .setTitle("Verifiera din LBS-mejl 🔒")
+        .setDescription("Klicka på knappen nedan och godkänn reglerna i <#1497140071176863759> för att komma in på servern.")
         .setColor(0x87CFEB);
 
 	const btn = new ButtonBuilder()
         .setCustomId(button.data.customId)
-        .setLabel("Verify")
+        .setLabel("Verifiera Här!")
         .setEmoji("✅")
         .setStyle(ButtonStyle.Success);
 

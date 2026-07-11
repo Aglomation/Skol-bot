@@ -109,7 +109,7 @@ const repeating = {
                     .setColor(Colors.Aqua);
 
 
-                // await channel.send({ embeds: [embed], components: [row] });
+                await channel.send({ embeds: [embed], components: [row] });
 
                 dataMap.set(item.id, item);
             } else {

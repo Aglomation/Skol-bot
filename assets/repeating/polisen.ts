@@ -26,8 +26,7 @@ const hideTypes = [
     "inbrott", 
     "misshandel", 
     "skottlossning", 
-    "våldtäkt", 
-    "brand", 
+    "våldtäkt",  
     "mord",
     "personskada"
 ];
@@ -63,10 +62,8 @@ const repeating = {
         clockTime: null,
     },
     async execute(client: Client) {
-        // 1. Load previous data
         const dataMap = await loadCache();
 
-        // 2. Fetch new data
         const apiData = await axios.get(API_URL).then(res => res.data).catch((err) => {
             console.error("Error fetching polisen data:", err.message);
             return null;
@@ -76,7 +73,6 @@ const repeating = {
 
         apiData.reverse();
 
-        // 3. Process each item
         for (let i = 0; i < apiData.length; i++) {
             const item = apiData[i] as PolisenEvent;
             const isNew = !dataMap.has(item.id);
@@ -85,10 +81,9 @@ const repeating = {
                 console.log(`New item found: ${item.id} - ${item.summary}`);
                 
                 
-                const channel = await client.channels.fetch("1525368060846932058") as TextChannel;
+                const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
                 if (!channel) return;
-                // rån should match rån, beväpnad
-                // but not ... från, 
+
                 const isHiddenType = hideTypes.some(type => new RegExp(`\\b${type}\\b`, "i").test(item.type));
 
                 const embed = new EmbedBuilder()
@@ -111,15 +106,12 @@ const repeating = {
                         .setStyle(ButtonStyle.Primary)
                         .setCustomId(`poliseninfo:${item.id}`)
                 );
-                await channel.send({ embeds: [embed], components: [row] });
+                // await channel.send({ embeds: [embed], components: [row] });
 
-                // for testing
-                // if (i < 1) continue;
                 dataMap.set(item.id, item);
             }
         }
 
-        // 4. Save everything back to disk
         await saveCache(dataMap);
 
 

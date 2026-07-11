@@ -8,6 +8,7 @@ const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
 const API_URL = "https://polisen.se/api/events";
 const BASE_URL = "https://polisen.se";
+const USER_AGENT = "LBS Discord bot (Vera Heltborg; vera.heltborg@proton.me)";
 
 export interface PolisenEvent {
 	id: number; // 645957
@@ -74,7 +75,11 @@ const repeating: Repeating = {
             const cachedEvents = await loadCache();
             const cachedIds = cachedEvents.map(e => e.id);
 
-            const apiDataRaw = await axios.get(API_URL).then(res => res.data).catch((err) => {
+            const apiDataRaw = await axios.get(API_URL, {
+                headers: {
+                    "User-Agent": USER_AGENT,
+                },
+            }).then(res => res.data).catch((err) => {
                 console.error("Error fetching polisen data:", err.message);
                 return null;
             });

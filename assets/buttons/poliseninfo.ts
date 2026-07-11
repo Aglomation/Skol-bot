@@ -8,6 +8,7 @@ import type { PolisenEvent } from "../repeating/polisen.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
+const USER_AGENT = "LBS Discord bot (Vera Heltborg; vera.heltborg@proton.me)";
 
 async function loadCache(): Promise<Map<number, PolisenEvent>> {
     try {
@@ -23,8 +24,13 @@ async function loadCache(): Promise<Map<number, PolisenEvent>> {
 /**
  * Scrapes the individual event article for updates and details.
  */
+
 async function scrapeEventDetails(url: string) {
-    const { data } = await axios.get(`https://polisen.se${url}`);
+    const { data } = await axios.get(`https://polisen.se${url}`, {
+        headers: {
+            "User-Agent": USER_AGENT,
+        },
+    });
     const $ = cheerio.load(data);
     const contentDiv = $('div.event-page.editorial-content').first();
 

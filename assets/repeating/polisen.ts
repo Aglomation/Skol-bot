@@ -85,7 +85,7 @@ const repeating = {
                 console.log(`New item found: ${item.id} - ${item.summary}`);
                 
                 
-                const channel = await client.channels.fetch("1525316373935427604") as TextChannel;
+                const channel = await client.channels.fetch("1525368060846932058") as TextChannel;
                 if (!channel) return;
                 // rån should match rån, beväpnad
                 // but not ... från, 

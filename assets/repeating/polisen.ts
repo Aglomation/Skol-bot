@@ -97,7 +97,7 @@ const repeating = {
                         url: BASE_URL,
                         iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
                     })
-                    .setFooter({ text: `Written: ${new Date(item.datetime).toLocaleString()}` })
+                    .setFooter({ text: `Publicerad: ${new Date(item.datetime).toLocaleString()}` })
                     .setColor(Colors.Aqua);
 
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(

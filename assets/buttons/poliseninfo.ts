@@ -112,13 +112,13 @@ const button: Button = {
             // Put main content in the description to utilize the 4096 char limit
             .setDescription(truncateText(formatMainContent(mainContent), 4000))
             .addFields(
-                { name: "🚨 Type", value: event.type, inline: true },
-                { name: "📍 Location", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
-                { name: "🕒 Time", value: `<t:${Math.floor(time.getTime() / 1000)}:R>`, inline: true },
+                { name: "Typ", value: event.type, inline: true },
+                { name: "Plats", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
+                { name: "Tid", value: `<t:${Math.floor(time.getTime() / 1000)}:R>`, inline: true },
             )
             .setColor(0x005293)
             .setFooter({ 
-                text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Written ${new Date(event.datetime).toLocaleString()}`,
+                text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Publicerad ${new Date(event.datetime).toLocaleString()}`,
                 iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
             });
 

@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import axios from "axios";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, type Client, type TextChannel } from "discord.js";
+import type { Client, TextChannel } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from "discord.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
@@ -28,8 +29,13 @@ const hideTypes = [
     "skottlossning", 
     "våldtäkt",  
     "mord",
-    "personskada"
+    "personskada",
+    "explosion",
+    "kroppskada"
 ];
+
+let isProcessing = false;
+
 /**
  * Loads the existing cache file into a Map for easy lookups by ID.
  */
@@ -57,92 +63,125 @@ const repeating = {
         clockTime: null,
     },
     async execute(client: Client) { 
-        const cachedEvents = await loadCache();
-        const cachedIds = cachedEvents.map(e => e.id);
 
-        const apiData = await axios.get(API_URL).then(res => res.data).catch((err) => {
-            console.error("Error fetching polisen data:", err.message);
-            return null;
-        });
-
-        if (!Array.isArray(apiData)) return;
-        
-        const currentIds = apiData.map(e => e.id);
-
-        // Filter the cached IDs down to ONLY those that still exist in the current API response.
-        // This gives us the exact order we *expect* to see known items in.
-        let expectedOldOrder = cachedIds.filter(id => currentIds.includes(id));
-
-        const jsonempty = cachedEvents.length === 0;
-
-        for (const item of apiData as PolisenEvent[]) {
-            const isNew = !cachedIds.includes(item.id);
-
-            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder()
-                    .setLabel("Läs mer")
-                    .setEmoji("📰")
-                    .setStyle(ButtonStyle.Primary)
-                    .setCustomId(`poliseninfo:${item.id}`)
-            );
-
-            if (isNew) {
-                console.log(`New item found: ${item.id} - ${item.summary}`);
-                
-                const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
-                if (!channel) continue;
-
-                const isHiddenType = hideTypes.some(type => new RegExp(`\\b${type}\\b`, "i").test(item.type));
-
-                const embed = new EmbedBuilder()
-                    .setTitle(item.name)
-                    .setDescription(
-                        `${isHiddenType ? "||":""}${item.summary}${isHiddenType ? "||":""}`
-                    )
-                    .setURL(`${BASE_URL}${item.url}`)
-                    .setAuthor({
-                        name: "Polisen.se",
-                        url: BASE_URL,
-                        iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
-                    })
-                    .setFooter({ text: `Publicerad: ${new Date(item.datetime).toLocaleString()}` })
-                    .setColor(Colors.Aqua);
-
-                if (!jsonempty) {
-                    await channel.send({ embeds: [embed], components: [row] });
-                }
-            } else {
-                // If it's not new, it's a known item. Let's see if it's in the expected order.
-                if (expectedOldOrder[0] === item.id) {
-                    // It's exactly where we expected it. Pop it off our expected queue.
-                    expectedOldOrder.shift();
-                } else {
-                    // It appeared BEFORE we expected it to! It was bumped/updated.
-                    console.log(`Item updated (bumped to top): ${item.id}`);
-                    
-                    const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
-                    if (channel && !jsonempty) {
-                        const embed = new EmbedBuilder()
-                            .setTitle(item.name)
-                            .setDescription(`Updated!`)
-                            .setURL(`${BASE_URL}${item.url}`)
-                            .setAuthor({
-                                name: "Polisen.se",
-                                url: BASE_URL,
-                                iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
-                            })
-                            .setColor(Colors.DarkAqua);
-
-                        await channel.send({ embeds: [embed], components: [row] });
-                    }
-                    
-                    // Remove it from the expected order queue so it doesn't throw off the rest of the list
-                    expectedOldOrder = expectedOldOrder.filter(id => id !== item.id);
-                }
-            }
+        if (isProcessing) {
+            console.log("Polisen check skipped: Previous check is still running.");
+            return;
         }
 
-        await saveCache(apiData);
+        isProcessing = true;
+        try {
+            const cachedEvents = await loadCache();
+            const cachedIds = cachedEvents.map(e => e.id);
+
+            const apiDataRaw = await axios.get(API_URL).then(res => res.data).catch((err) => {
+                console.error("Error fetching polisen data:", err.message);
+                return null;
+            });
+
+            if (!Array.isArray(apiDataRaw)) return;
+
+            // Makes sure there's no duplicates
+            const seenIds = new Set<number>();
+            const apiData: PolisenEvent[] = [];
+            for (const item of apiDataRaw) {
+                if (!seenIds.has(item.id)) {
+                    seenIds.add(item.id);
+                    apiData.push(item);
+                }
+            }
+            
+            const currentIds = apiData.map(e => e.id);
+            let expectedOldOrder = cachedIds.filter(id => currentIds.includes(id));
+            const jsonempty = cachedEvents.length === 0;
+
+            const channel = await client.channels.fetch("1525548308385370253") as TextChannel;
+            if (!channel) return;
+
+            const newEventsToSend: PolisenEvent[] = [];
+            const updatedEventsToSend: PolisenEvent[] = [];
+
+            for (const item of apiData) {
+                const isNew = !cachedIds.includes(item.id);
+
+                if (isNew) {
+                    newEventsToSend.push(item);
+                } else {
+                    if (expectedOldOrder[0] === item.id) {
+                        expectedOldOrder.shift();
+                    } else {
+                        // Found an update
+                        updatedEventsToSend.push(item);
+                        expectedOldOrder = expectedOldOrder.filter(id => id !== item.id);
+                    }
+                }
+            }
+
+            // Hopefully fixes the spam if something fucks up
+            const MAX_UPDATES_PER_TICK = 5;
+            if (updatedEventsToSend.length > MAX_UPDATES_PER_TICK) {
+                console.warn(`[WARNING] Polisen API sorting glitch detected! ${updatedEventsToSend.length} items flagged as updated. Suppressing messages to avoid spam.`);
+                updatedEventsToSend.length = 0;
+            }
+
+            if (!jsonempty) {
+                // New Events
+                for (const item of newEventsToSend) {
+                    console.log(`New item found: ${item.id} - ${item.summary}`);
+                    const isHiddenType = hideTypes.some(type => new RegExp(`\\b${type}\\b`, "i").test(item.type));
+
+                    const embed = new EmbedBuilder()
+                        .setTitle(item.name)
+                        .setDescription(`${isHiddenType ? "||":""}${item.summary}${isHiddenType ? "||":""}`)
+                        .setURL(`${BASE_URL}${item.url}`)
+                        .setAuthor({
+                            name: "Polisen.se",
+                            url: BASE_URL,
+                            iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
+                        })
+                        .setFooter({ text: `Publicerad: ${new Date(item.datetime).toLocaleString()}` })
+                        .setColor(Colors.Aqua);
+
+                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                        new ButtonBuilder()
+                            .setLabel("Läs mer")
+                            .setEmoji("📰")
+                            .setStyle(ButtonStyle.Primary)
+                            .setCustomId(`poliseninfo:${item.id}`)
+                    );
+
+                    await channel.send({ embeds: [embed], components: [row] });
+                }
+
+                // Updates
+                for (const item of updatedEventsToSend) {
+                    console.log(`Item updated (bumped to top): ${item.id}`);
+                    const embed = new EmbedBuilder()
+                        .setTitle(item.name)
+                        .setDescription(`Updated!`)
+                        .setURL(`${BASE_URL}${item.url}`)
+                        .setAuthor({
+                            name: "Polisen.se",
+                            url: BASE_URL,
+                            iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
+                        })
+                        .setColor(Colors.DarkAqua);
+
+                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                        new ButtonBuilder()
+                            .setLabel("Läs mer")
+                            .setEmoji("📰")
+                            .setStyle(ButtonStyle.Primary)
+                            .setCustomId(`poliseninfo:${item.id}`)
+                    );
+
+                    await channel.send({ embeds: [embed], components: [row] });
+                }
+            }
+            await saveCache(apiData);
+        } finally {
+            isProcessing = false;
+        }
     },
 };
 

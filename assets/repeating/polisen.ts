@@ -22,14 +22,14 @@ export interface PolisenEvent {
 }
 
 const hideTypes = [
-    "väpnat rån", 
     "rån", 
     "inbrott", 
     "misshandel", 
     "skottlossning", 
     "våldtäkt", 
     "brand", 
-    "mord"
+    "mord",
+    "personskada"
 ];
 /**
  * Loads the existing cache file into a Map for easy lookups by ID.
@@ -74,6 +74,8 @@ const repeating = {
 
         if (!Array.isArray(apiData)) return;
 
+        apiData.reverse();
+
         // 3. Process each item
         for (let i = 0; i < apiData.length; i++) {
             const item = apiData[i];
@@ -85,7 +87,9 @@ const repeating = {
                 
                 const channel = await client.channels.fetch("1525316373935427604") as TextChannel;
                 if (!channel) return;
-                const isHiddenType = hideTypes.some(type => item.type.toLowerCase().includes(type));
+                // rån should match rån, beväpnad
+                // but not ... från, 
+                const isHiddenType = hideTypes.some(type => item.type.toLowerCase().test(new RegExp(`\\b${type}\\b`, "i")));
 
                 const embed = new EmbedBuilder()
                     .setTitle(item.name)

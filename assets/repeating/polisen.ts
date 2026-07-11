@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import axios from "axios";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, type Client, type TextChannel } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, type Client, type TextChannel } from "discord.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
@@ -89,7 +89,7 @@ const repeating = {
                 const embed = new EmbedBuilder()
                     .setTitle(item.name)
                     .setDescription(
-                        `**${isHiddenType ? "||":""}${item.summary}${isHiddenType ? "||":""}**`
+                        `${isHiddenType ? "||":""}${item.summary}${isHiddenType ? "||":""}`
                     )
                     .setURL(`${BASE_URL}${item.url}`)
                     .setAuthor({
@@ -97,7 +97,8 @@ const repeating = {
                         url: BASE_URL,
                         iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
                     })
-                    .setFooter({ text: `Written: ${new Date(item.datetime).toLocaleString()}` });
+                    .setFooter({ text: `Written: ${new Date(item.datetime).toLocaleString()}` })
+                    .setColor(Colors.Aqua);
 
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                     new ButtonBuilder()
@@ -106,7 +107,7 @@ const repeating = {
                         .setStyle(ButtonStyle.Primary)
                         .setCustomId(`poliseninfo:${item.id}`)
                 );
-                // await channel.send({ embeds: [embed], components: [row] });
+                await channel.send({ embeds: [embed], components: [row] });
 
                 dataMap.set(item.id, item);
             }

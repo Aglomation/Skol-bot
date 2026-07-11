@@ -2,7 +2,7 @@ import type { Client } from "discord.js";
 import "dotenv/config";
 import { GetProfile } from "../../utils/profileManager.js";
 
-const repeating = {
+const repeating: Repeating = {
 	data: {
 		immediate: false,
 		repeating: true,
@@ -55,8 +55,6 @@ const repeating = {
 					);
 				});
 		});
-
-		return timedOutMembers;
 	},
 };
 

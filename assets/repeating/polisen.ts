@@ -22,7 +22,7 @@ export interface PolisenEvent {
     };
 }
 
-const hideTypes = [
+const hideTypes: Array<string> = [
     "rån", 
     "inbrott", 
     "misshandel", 
@@ -37,7 +37,7 @@ const hideTypes = [
 let isProcessing = false;
 
 /**
- * Loads the existing cache file into a Map for easy lookups by ID.
+ * Loads the existing cache file into an Array.
  */
 async function loadCache(): Promise<PolisenEvent[]> {
     try {
@@ -49,13 +49,13 @@ async function loadCache(): Promise<PolisenEvent[]> {
     }
 }
 /**
- * Saves the Map values back to the cache file, sorted by datetime.
+ * Saves the Array values back to the cache file.
  */
 async function saveCache(data: PolisenEvent[]): Promise<void> {
     await fs.writeFile(CACHE_FILE, JSON.stringify(data, null, 2));
 }
 
-const repeating = {
+const repeating: Repeating = {
     data: {
         immediate: true,
         repeating: true,
@@ -93,7 +93,7 @@ const repeating = {
             
             const currentIds = apiData.map(e => e.id);
             let expectedOldOrder = cachedIds.filter(id => currentIds.includes(id));
-            const jsonempty = cachedEvents.length === 0;
+            const isCacheFileEmpty = cachedEvents.length === 0;
 
             const channel = await client.channels.fetch("1525548308385370253") as TextChannel;
             if (!channel) return;
@@ -117,14 +117,14 @@ const repeating = {
                 }
             }
 
-            // Hopefully fixes the spam if something fucks up
+            // Hopefully fixes the spam if something goes wrong
             const MAX_UPDATES_PER_TICK = 5;
             if (updatedEventsToSend.length > MAX_UPDATES_PER_TICK) {
-                console.warn(`[WARNING] Polisen API sorting glitch detected! ${updatedEventsToSend.length} items flagged as updated. Suppressing messages to avoid spam.`);
+                console.warn(`Polisen API sorting glitch detected! ${updatedEventsToSend.length} items flagged as updated.`);
                 updatedEventsToSend.length = 0;
             }
 
-            if (!jsonempty) {
+            if (!isCacheFileEmpty) {
                 // New Events
                 for (const item of newEventsToSend) {
                     console.log(`New item found: ${item.id} - ${item.summary}`);
@@ -160,9 +160,8 @@ const repeating = {
                         .setTitle(item.name)
                         .setDescription(`Updated!`)
                         .setURL(`${BASE_URL}${item.url}`)
-                        .setAuthor({
-                            name: "Polisen.se",
-                            url: BASE_URL,
+                        .setFooter({ 
+                            text: `Polisen.se ・ Publicerad ${new Date(item.datetime).toLocaleString()}`,
                             iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
                         })
                         .setColor(Colors.DarkAqua);

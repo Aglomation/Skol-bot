@@ -29,7 +29,7 @@ function parseLeaderboardPosition(position: number): string {
     }
 }
 
-const command = {
+const command: Command = {
     data: new SlashCommandBuilder()
         .setName("stats")
         .setDescription("Get the current amount of members per region")

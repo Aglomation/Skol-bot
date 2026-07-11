@@ -10,8 +10,8 @@ import {
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
 function generateRandomString(length: number) {
-	// 36 ^ 4 = 1,679,616
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+	// 39 ^ 8 = 5_352_009_260_481
+	const chars = "abcdefghijklmnopqrstuvwxyzåäö0123456789";
 	let result = "";
 	for (let i = 0; i < length; i++) {
 		const randomIndex = Math.floor(Math.random() * chars.length);
@@ -57,10 +57,10 @@ const button: Button = {
 			return;
 		}
 
-		// Generate a random 4 character verification code
+		// Generate a random 8 character verification code
 		const verificationCode = profile?.verifycode
 			? profile.verifycode
-			: generateRandomString(4);
+			: generateRandomString(8);
 
 		// Store the verification code in the user's profile
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });

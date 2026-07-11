@@ -93,7 +93,7 @@ const SchoolList: Schools[] = [
 	},
 ];
 
-const repeating = {
+const repeating: Repeating = {
 	data: {
 		immediate: false,
 		repeating: true,

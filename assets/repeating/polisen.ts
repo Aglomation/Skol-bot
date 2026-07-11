@@ -78,7 +78,7 @@ const repeating = {
 
         // 3. Process each item
         for (let i = 0; i < apiData.length; i++) {
-            const item = apiData[i];
+            const item = apiData[i] as PolisenEvent;
             const isNew = !dataMap.has(item.id);
 
             if (isNew) {
@@ -89,7 +89,7 @@ const repeating = {
                 if (!channel) return;
                 // rån should match rån, beväpnad
                 // but not ... från, 
-                const isHiddenType = hideTypes.some(type => item.type.toLowerCase().test(new RegExp(`\\b${type}\\b`, "i")));
+                const isHiddenType = hideTypes.some(type => new RegExp(`\\b${type}\\b`, "i").test(item.type));
 
                 const embed = new EmbedBuilder()
                     .setTitle(item.name)

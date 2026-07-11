@@ -57,10 +57,10 @@ const button: Button = {
 			return;
 		}
 
-		// Generate a random 8 character verification code
+		// Generate a random 5 character verification code
 		const verificationCode = profile?.verifycode
 			? profile.verifycode
-			: generateRandomString(8);
+			: generateRandomString(5);
 
 		// Store the verification code in the user's profile
 		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });

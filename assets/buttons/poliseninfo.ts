@@ -1,0 +1,133 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import axios from "axios";
+import * as cheerio from "cheerio";
+import type { ButtonInteraction, Client } from "discord.js";
+import { EmbedBuilder, MessageFlags } from "discord.js";
+import type { PolisenEvent } from "../repeating/polisen.js";
+
+const CACHE_DIR = "./cache";
+const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
+
+async function loadCache(): Promise<Map<number, PolisenEvent>> {
+    try {
+        await fs.mkdir(CACHE_DIR, { recursive: true });
+        const data = await fs.readFile(CACHE_FILE, "utf-8");
+        const parsedData = JSON.parse(data);
+        return new Map(parsedData.map((item: PolisenEvent) => [item.id, item]));
+    } catch {
+        return new Map(); // Return empty map if file doesn't exist or is invalid
+    }
+}
+
+/**
+ * Scrapes the individual event article for updates and details.
+ */
+async function scrapeEventDetails(url: string) {
+    const { data } = await axios.get(`https://polisen.se${url}`);
+    const $ = cheerio.load(data);
+    const contentDiv = $('div.event-page.editorial-content').first();
+
+    const lastUpdated = contentDiv.
+        find('span.text')
+        .first()
+        .text()
+        .trim();
+    const mainContent = contentDiv.
+        find('div.text-body.editorial-html')
+        .first()
+        .text()
+        .trim();
+    return { lastUpdated, mainContent };
+}
+
+/**
+ * Formats the raw scraped text to make it readable for Discord embeds.
+ */
+const formatMainContent = (text: string) => {
+    if (!text) return "";
+    let formatted = text.replace(/([^\n])\n([^\n])/g, "$1\n\n$2");
+
+    // 2. Process line-by-line to catch updates and timestamps
+    formatted = formatted
+        .split("\n")
+        .map((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return line;
+
+            const timeRegex = /\b\d{1,2}[:.]\d{2}\b/;
+            if (trimmed.length < 60 && timeRegex.test(trimmed)) {
+                return `📝 **${trimmed}**`;
+            }
+
+            return line;
+        })
+        .join("\n");
+
+    return formatted
+
+};
+
+const truncateText = (text: string, maxLength: number) => {
+    if (!text) return "";
+    return text.length > maxLength ? `${text.substring(0, maxLength - 3)}...` : text;
+};
+
+const button: Button = {
+    data: {
+        customId: "poliseninfo",
+    },
+    async execute(
+        interaction: ButtonInteraction,
+        _client: Client,
+    ): Promise<void> {
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+		const id = parseInt(interaction.customId.split(":")[1], 10) || null;
+		if (!id) {
+			await interaction.editReply({
+				content: "Invalid page number.",
+			});
+			return;
+		}
+        const database = await loadCache();
+        const event = database.get(id);
+        if (!event) {
+            await interaction.editReply({
+                content: "Event not found.",
+            });
+            return;
+        }
+
+		// webscrape the page for more info
+		const { lastUpdated, mainContent } = await scrapeEventDetails(event.url);
+        //10 juli 22.04, Skottlossning, misstänkt, Gävle
+        // 
+        const time = new Date(`${event.name.match(/(\d{1,2} \w+) \d{2}\.\d{2}/)?.[0].replace(".", ":")} ${new Date().getFullYear()}` || 0);
+
+        const embed = new EmbedBuilder()
+            
+            .setTitle(event.name)
+            .setURL(`https://polisen.se${event.url}`)
+            // Put main content in the description to utilize the 4096 char limit
+            .setDescription(truncateText(formatMainContent(mainContent), 4000))
+            .addFields(
+                { name: "🚨 Type", value: event.type, inline: true },
+                { name: "📍 Location", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
+                { name: "🕒 Time", value: `<t:${Math.floor(time.getTime() / 1000)}:R>`, inline: true },
+            )
+            .setColor(0x005293)
+            .setFooter({ 
+                text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Written ${new Date(event.datetime).toLocaleString()}`,
+                iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
+            });
+
+        // Actually send the embed instead of dumping raw text
+        await interaction.editReply({
+            content: null, // Clear out any previous text
+            embeds: [embed],
+        });
+    },
+};
+
+export default button;

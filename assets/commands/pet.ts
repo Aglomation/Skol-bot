@@ -1,5 +1,5 @@
 import type { ChatInputCommandInteraction, Client } from "discord.js";
-import { Colors, EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 
 const gifs = [
     "https://klipy.com/gifs/lily-yami-healer-toshite-tanoshiku-ikiru",

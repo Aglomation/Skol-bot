@@ -1,10 +1,10 @@
 import type { ButtonInteraction, Client, GuildMember } from "discord.js";
 import {
-	MessageFlags,
-	ButtonBuilder,
 	ActionRowBuilder,
+	ButtonBuilder,
 	ButtonStyle,
 	EmbedBuilder,
+	MessageFlags,
 } from "discord.js";
 
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
@@ -68,7 +68,7 @@ const button: Button = {
 		const embed = new EmbedBuilder()
 			.setTitle("⚠️ Viktigt")
 			.setDescription(
-				`Din webbläsare måste vara inloggad på ditt **@\*lbs.se**-konto.\n\n` +
+				`Din webbläsare måste vara inloggad på ditt **@*lbs.se**-konto.\n\n` +
         		`Din kod för formuläret är: \`${verificationCode}\``
 			)
 			.setColor("#f2ff00");

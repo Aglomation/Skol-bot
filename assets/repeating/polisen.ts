@@ -33,23 +33,20 @@ const hideTypes = [
 /**
  * Loads the existing cache file into a Map for easy lookups by ID.
  */
-async function loadCache(): Promise<Map<number, PolisenEvent>> {
+async function loadCache(): Promise<PolisenEvent[]> {
     try {
         await fs.mkdir(CACHE_DIR, { recursive: true });
         const data = await fs.readFile(CACHE_FILE, "utf-8");
-        const parsedData = JSON.parse(data);
-        return new Map(parsedData.map((item: PolisenEvent) => [item.id, item]));
+        return JSON.parse(data);
     } catch {
-        return new Map(); // Return empty map if file doesn't exist or is invalid
+        return []; // Return empty array if file doesn't exist or is invalid
     }
 }
-
 /**
  * Saves the Map values back to the cache file, sorted by datetime.
  */
-async function saveCache(dataMap: Map<number, PolisenEvent>): Promise<void> {
-    const mergedData = Array.from(dataMap.values()).reverse();
-    await fs.writeFile(CACHE_FILE, JSON.stringify(mergedData, null, 0));
+async function saveCache(data: PolisenEvent[]): Promise<void> {
+    await fs.writeFile(CACHE_FILE, JSON.stringify(data, null, 2));
 }
 
 const repeating = {
@@ -59,8 +56,9 @@ const repeating = {
         time: 1 * 60 * 1000,
         clockTime: null,
     },
-    async execute(client: Client) {
-        const dataMap = await loadCache();
+    async execute(client: Client) { 
+        const cachedEvents = await loadCache();
+        const cachedIds = cachedEvents.map(e => e.id);
 
         const apiData = await axios.get(API_URL).then(res => res.data).catch((err) => {
             console.error("Error fetching polisen data:", err.message);
@@ -68,15 +66,17 @@ const repeating = {
         });
 
         if (!Array.isArray(apiData)) return;
-        const cachedIds = Array.from(dataMap.keys());
+        
         const currentIds = apiData.map(e => e.id);
 
-        apiData.reverse();
+        // Filter the cached IDs down to ONLY those that still exist in the current API response.
+        // This gives us the exact order we *expect* to see known items in.
+        let expectedOldOrder = cachedIds.filter(id => currentIds.includes(id));
 
-        // go backwards
-        for (let i = 0; i < apiData.length; i++) {
-            const item = apiData[i] as PolisenEvent;
-            const isNew = !dataMap.has(item.id);
+        const jsonempty = cachedEvents.length === 0;
+
+        for (const item of apiData as PolisenEvent[]) {
+            const isNew = !cachedIds.includes(item.id);
 
             const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder()
@@ -90,7 +90,7 @@ const repeating = {
                 console.log(`New item found: ${item.id} - ${item.summary}`);
                 
                 const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
-                if (!channel) return;
+                if (!channel) continue;
 
                 const isHiddenType = hideTypes.some(type => new RegExp(`\\b${type}\\b`, "i").test(item.type));
 
@@ -108,44 +108,41 @@ const repeating = {
                     .setFooter({ text: `Publicerad: ${new Date(item.datetime).toLocaleString()}` })
                     .setColor(Colors.Aqua);
 
-
-                await channel.send({ embeds: [embed], components: [row] });
-
-                dataMap.set(item.id, item);
-            } else {
-                const newIndex = currentIds.indexOf(item.id);
-                const oldIndex = cachedIds.indexOf(item.id);
-
-                // If newIndex is lower than oldIndex, it moved up and therefor recently updated
-                if (oldIndex !== -1 && newIndex < oldIndex) {
-                    console.log(`Item moved to the top of API response: ${item.id}`);
-                    const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
-                    if (!channel) return;
-                    const embed = new EmbedBuilder()
-                        .setTitle(item.name)
-                        .setDescription(
-                            `Updated!`
-                        )
-                        .setAuthor({
-                            name: "Polisen.se",
-                            url: BASE_URL,
-                            iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
-                        })
-                        .setColor(Colors.DarkAqua)
-
+                if (!jsonempty) {
                     await channel.send({ embeds: [embed], components: [row] });
-
-
-                    dataMap.delete(item.id);
-                    dataMap.set(item.id, item);
                 }
-                
+            } else {
+                // If it's not new, it's a known item. Let's see if it's in the expected order.
+                if (expectedOldOrder[0] === item.id) {
+                    // It's exactly where we expected it. Pop it off our expected queue.
+                    expectedOldOrder.shift();
+                } else {
+                    // It appeared BEFORE we expected it to! It was bumped/updated.
+                    console.log(`Item updated (bumped to top): ${item.id}`);
+                    
+                    const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
+                    if (channel && !jsonempty) {
+                        const embed = new EmbedBuilder()
+                            .setTitle(item.name)
+                            .setDescription(`Updated!`)
+                            .setURL(`${BASE_URL}${item.url}`)
+                            .setAuthor({
+                                name: "Polisen.se",
+                                url: BASE_URL,
+                                iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
+                            })
+                            .setColor(Colors.DarkAqua);
+
+                        await channel.send({ embeds: [embed], components: [row] });
+                    }
+                    
+                    // Remove it from the expected order queue so it doesn't throw off the rest of the list
+                    expectedOldOrder = expectedOldOrder.filter(id => id !== item.id);
+                }
             }
         }
 
-        await saveCache(dataMap);
-
-
+        await saveCache(apiData);
     },
 };
 

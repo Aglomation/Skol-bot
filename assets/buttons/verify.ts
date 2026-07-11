@@ -10,8 +10,8 @@ import {
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
 function generateRandomString(length: number) {
-	// 39 ^ 8 = 5_352_009_260_481
-	const chars = "abcdefghijklmnopqrstuvwxyzåäö0123456789";
+	// 36 ^ 5 = 60_466_176
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 	let result = "";
 	for (let i = 0; i < length; i++) {
 		const randomIndex = Math.floor(Math.random() * chars.length);

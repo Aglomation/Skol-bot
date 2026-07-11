@@ -101,8 +101,7 @@ const button: Button = {
 
 		// webscrape the page for more info
 		const { lastUpdated, mainContent } = await scrapeEventDetails(event.url);
-        //10 juli 22.04, Skottlossning, misstänkt, Gävle
-        // 
+
         const time = new Date(`${event.name.match(/(\d{1,2} \w+) \d{2}\.\d{2}/)?.[0].replace(".", ":")} ${new Date().getFullYear()}` || 0);
 
         const embed = new EmbedBuilder()

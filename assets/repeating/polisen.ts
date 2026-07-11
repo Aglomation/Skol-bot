@@ -48,9 +48,7 @@ async function loadCache(): Promise<Map<number, PolisenEvent>> {
  * Saves the Map values back to the cache file, sorted by datetime.
  */
 async function saveCache(dataMap: Map<number, PolisenEvent>): Promise<void> {
-    const mergedData = Array.from(dataMap.values()).sort((a, b) => {
-        return new Date(b.datetime).getTime() - new Date(a.datetime).getTime();
-    });
+    const mergedData = Array.from(dataMap.values()).reverse();
     await fs.writeFile(CACHE_FILE, JSON.stringify(mergedData, null, 0));
 }
 
@@ -70,16 +68,26 @@ const repeating = {
         });
 
         if (!Array.isArray(apiData)) return;
+        const cachedIds = Array.from(dataMap.keys());
+        const currentIds = apiData.map(e => e.id);
 
         apiData.reverse();
 
+        // go backwards
         for (let i = 0; i < apiData.length; i++) {
             const item = apiData[i] as PolisenEvent;
             const isNew = !dataMap.has(item.id);
 
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                    .setLabel("Läs mer")
+                    .setEmoji("📰")
+                    .setStyle(ButtonStyle.Primary)
+                    .setCustomId(`poliseninfo:${item.id}`)
+            );
+
             if (isNew) {
                 console.log(`New item found: ${item.id} - ${item.summary}`);
-                
                 
                 const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
                 if (!channel) return;
@@ -100,16 +108,38 @@ const repeating = {
                     .setFooter({ text: `Publicerad: ${new Date(item.datetime).toLocaleString()}` })
                     .setColor(Colors.Aqua);
 
-                const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-                    new ButtonBuilder()
-                        .setLabel("Läs mer")
-                        .setEmoji("📰")
-                        .setStyle(ButtonStyle.Primary)
-                        .setCustomId(`poliseninfo:${item.id}`)
-                );
-                await channel.send({ embeds: [embed], components: [row] });
+
+                // await channel.send({ embeds: [embed], components: [row] });
 
                 dataMap.set(item.id, item);
+            } else {
+                const newIndex = currentIds.indexOf(item.id);
+                const oldIndex = cachedIds.indexOf(item.id);
+
+                // If newIndex is lower than oldIndex, it moved up and therefor recently updated
+                if (oldIndex !== -1 && newIndex < oldIndex) {
+                    console.log(`Item moved to the top of API response: ${item.id}`);
+                    const channel = await client.channels.fetch("1525370464950554724") as TextChannel;
+                    if (!channel) return;
+                    const embed = new EmbedBuilder()
+                        .setTitle(item.name)
+                        .setDescription(
+                            `Updated!`
+                        )
+                        .setAuthor({
+                            name: "Polisen.se",
+                            url: BASE_URL,
+                            iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
+                        })
+                        .setColor(Colors.DarkAqua)
+
+                    await channel.send({ embeds: [embed], components: [row] });
+
+
+                    dataMap.delete(item.id);
+                    dataMap.set(item.id, item);
+                }
+                
             }
         }
 

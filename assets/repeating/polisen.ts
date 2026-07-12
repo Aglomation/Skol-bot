@@ -97,7 +97,9 @@ const repeating: Repeating = {
             }
             
             const currentIds = apiData.map(e => e.id);
-            let expectedOldOrder = cachedIds.filter(id => currentIds.includes(id));
+            const currentIdsSet = new Set(currentIds);
+            let expectedOldOrder = cachedIds.filter(id => currentIdsSet.has(id));
+
             const isCacheFileEmpty = cachedEvents.length === 0;
 
             const channel = await client.channels.fetch("1525548308385370253") as TextChannel;
@@ -131,7 +133,7 @@ const repeating: Repeating = {
 
             if (!isCacheFileEmpty) {
                 // New Events
-                for (const item of newEventsToSend) {
+                for (const item of [...newEventsToSend].reverse()) {
                     console.log(`New item found: ${item.id} - ${item.summary}`);
                     const isHiddenType = hideTypes.some(type => new RegExp(`\\b${type}\\b`, "i").test(item.type));
 
@@ -159,7 +161,7 @@ const repeating: Repeating = {
                 }
 
                 // Updates
-                for (const item of updatedEventsToSend) {
+                for (const item of [...updatedEventsToSend].reverse()) {
                     console.log(`Item updated (bumped to top): ${item.id}`);
                     const embed = new EmbedBuilder()
                         .setTitle(item.name)
@@ -182,7 +184,15 @@ const repeating: Repeating = {
                     await channel.send({ embeds: [embed], components: [row] });
                 }
             }
-            await saveCache(apiData);
+
+            // New stuff
+            const apiDataIds = new Set(apiData.map(e => e.id));
+            // Old stuff
+            const historicalEvents = cachedEvents.filter(e => !apiDataIds.has(e.id));
+            // All stuff
+            const allEvents = [...apiData, ...historicalEvents];
+            
+            await saveCache(allEvents);
         } finally {
             isProcessing = false;
         }

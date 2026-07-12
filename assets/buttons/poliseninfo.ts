@@ -36,21 +36,23 @@ async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | 
 
     const lastUpdated = contentDiv.
         find('span.text')
-        .eq(0)
-        .text()
-        .trim();
+            .first()
+            .text()
+            .trim();
 
     const mainContent = contentDiv.
         find('div.text-body.editorial-html')
-        .eq(0)
-        .text()
-        .trim() || "No additional details provided.";
+            .first()
+            .text()
+            .trim() || "No additional details provided.";
 
     const Writer = contentDiv.
         find('div.page-meta-data')
-        .eq(1)
-        .text()
-        .trim();
+            .first()
+            .find('dd')
+                .first()
+                .text()
+                .trim();
 
     return { lastUpdated, mainContent, Writer };
 }

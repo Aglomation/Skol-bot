@@ -32,7 +32,8 @@ const hideTypes: Array<string> = [
     "mord",
     "personskada",
     "explosion",
-    "kroppskada"
+    "kroppskada",
+    "sexualbrott"
 ];
 
 let isProcessing = false;

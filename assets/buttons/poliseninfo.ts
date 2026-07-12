@@ -71,7 +71,7 @@ const formatMainContent = (text: string) => {
             const trimmed = line.trim();
             if (!trimmed) return line;
 
-            const timeRegex = /\b\d{1,2}[:.]\d{2}\b/;
+            const timeRegex = /(?:Uppdatering(?:\s+\d{1,2}[:.]\d{2})?:?|\b\d{1,2}[:.]\d{2}\b)/;
             if (trimmed.length < 60 && timeRegex.test(trimmed)) {
                 return `📝 **${trimmed}**`;
             }

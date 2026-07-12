@@ -125,10 +125,11 @@ const repeating: Repeating = {
             }
 
             // Hopefully fixes the spam if something goes wrong
-            const MAX_UPDATES_PER_TICK = 5;
-            if (updatedEventsToSend.length > MAX_UPDATES_PER_TICK) {
-                console.warn(`Polisen API sorting glitch detected! ${updatedEventsToSend.length} items flagged as updated.`);
+            const MAX_UPDATES_PER_TICK = 6767;
+            if (updatedEventsToSend.length + newEventsToSend.length > MAX_UPDATES_PER_TICK) {
+                console.warn(`Max updateds hit ${updatedEventsToSend.length+newEventsToSend.length} items flagged as updated.`);
                 updatedEventsToSend.length = 0;
+                newEventsToSend.length = 0;
             }
 
             if (!isCacheFileEmpty) {

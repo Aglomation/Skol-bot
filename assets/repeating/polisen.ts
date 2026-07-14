@@ -126,7 +126,7 @@ const repeating: Repeating = {
             }
 
             // Hopefully fixes the spam if something goes wrong
-            const MAX_UPDATES_PER_TICK = 6767;
+            const MAX_UPDATES_PER_TICK = 10;
             if (updatedEventsToSend.length + newEventsToSend.length > MAX_UPDATES_PER_TICK) {
                 console.warn(`Max updateds hit ${updatedEventsToSend.length+newEventsToSend.length} items flagged as updated.`);
                 updatedEventsToSend.length = 0;

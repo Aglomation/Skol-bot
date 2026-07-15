@@ -43,7 +43,7 @@ export default {
             }).then((channel) => {
                 new_state.setChannel(channel);
                 channel?.send({
-                    content: `Welcome to your temporary voice channel, <@${new_state.member?.id}>!\n\nYou can customize your channel settings using the \`/tempvc options\` command.\n\nTo invite users to your channel, use the \`/tempvc invite\` command.`,
+                    content: `Welcome to your temporary voice channel, <@${new_state.member?.id}>!\n\nYou can customize your channel settings using the \`/tempvc options\` command.\n\nTo invite users to your channel, use the \`/tempvc invite\` command.\n\nWhitelist is by default disabled.`,
                 }).catch(() => null);
             });
         }

@@ -42,7 +42,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
-// client.autocompletes = new Collection();
+client.autocompletes = new Collection();
 client.buttons = new Collection();
 
 const fileFilter = (file: string) =>
@@ -109,14 +109,14 @@ async function startBot() {
 		client.buttons.set(button.data.customId, button);
 	}
 
-	// const autocompletesPath = path.join(__dirname, 'assets', 'autocompletes');
-	// const autcompleteFiles = fs.readdirSync(autocompletesPath).filter(fileFilter);
+	const autocompletesPath = path.join(__dirname, 'assets', 'autocompletes');
+	const autcompleteFiles = fs.readdirSync(autocompletesPath).filter(fileFilter);
 
-	// for (const file of autcompleteFiles) {
-	//     const filePath = path.join(autocompletesPath, file);
-	//     const { default: autocomplete } = await import(pathToFileURL(filePath).href);
-	//     client.autocompletes.set(autocomplete.data.name, autocomplete);
-	// }
+	for (const file of autcompleteFiles) {
+	    const filePath = path.join(autocompletesPath, file);
+	    const { default: autocomplete } = await import(pathToFileURL(filePath).href);
+	    client.autocompletes.set(autocomplete.data.name, autocomplete);
+	}
 
 	// --- 3. Register Slash Commands ---
 	const rest = new REST({ version: "10" }).setToken(

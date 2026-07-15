@@ -18,6 +18,10 @@ declare global {
 			interaction: ChatInputCommandInteraction,
 			client: Client,
 		) => Promise<void>;
+		autocomplete?: (
+			interaction: AutocompleteInteraction,
+			client: Client,
+		) => Promise<void>;
 	}
 	interface Button {
 		data: { customId: string };

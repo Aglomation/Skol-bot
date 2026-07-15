@@ -24,8 +24,7 @@ async function loadCache(): Promise<Map<number, PolisenEvent>> {
 /**
  * Scrapes the individual event article for updates and details.
  */
-
-async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | null ; mainContent: string; Writer: string }> {
+async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | null ; mainContent: string; writer: string }> {
     const { data } = await axios.get(`https://polisen.se${url}`, {
         headers: {
             "User-Agent": USER_AGENT,
@@ -38,7 +37,7 @@ async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | 
         find('span.text')
             .first()
             .text()
-            .trim();
+            .trim() || null;
 
     const mainContent = contentDiv.
         find('div.text-body.editorial-html')
@@ -46,15 +45,15 @@ async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | 
             .text()
             .trim() || "No additional details provided.";
 
-    const Writer = contentDiv.
+    const writer = contentDiv.
         find('div.page-meta-data')
             .first()
             .find('dd')
                 .first()
                 .text()
-                .trim();
+                .trim() || "Okänd";
 
-    return { lastUpdated, mainContent, Writer };
+    return { lastUpdated, mainContent, writer };
 }
 
 /**
@@ -71,7 +70,7 @@ const formatMainContent = (text: string) => {
             const trimmed = line.trim();
             if (!trimmed) return line;
 
-            const timeRegex = /(?:Uppdatering(?:\s+\d{1,2}[:.]\d{2})?:?|\b\d{1,2}[:.]\d{2}\b)/;
+            const timeRegex = /(?:Uppdatering(?:\s+\d{1,2}[:.]\d{2})?:?|\b\d{1,2}[:.]\d{2}\b)/i;
             if (trimmed.length < 20 && timeRegex.test(trimmed)) {
                 return `📝 **${trimmed}**`;
             }
@@ -116,7 +115,7 @@ const button: Button = {
         }
 
 		// webscrape the page for more info
-		const { lastUpdated, mainContent, Writer } = await scrapeEventDetails(event.url);
+		const { lastUpdated, mainContent, writer } = await scrapeEventDetails(event.url);
 
         const time = new Date(`${event.name.match(/(\d{1,2} \w+) \d{2}\.\d{2}/)?.[0].replace(".", ":")} ${new Date().getFullYear()}` || 0);
 
@@ -130,7 +129,7 @@ const button: Button = {
                 { name: "Typ", value: event.type, inline: true },
                 { name: "Plats", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
                 { name: "Tid", value: `<t:${Math.floor(time.getTime() / 1000)}:R>`, inline: true },
-                { name: "Skribent", value: Writer || "Okänd", inline: true },
+                { name: "Skribent", value: writer || "Okänd", inline: true },
             )
             .setColor(0x005293)
             .setFooter({ 

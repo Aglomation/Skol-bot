@@ -15,15 +15,27 @@ export default {
 				console.error(error);
 			}
 		} else if (interaction.isAutocomplete()) {
-			const autocompleteCommand = client.autocompletes.get(
-				interaction.commandName,
-			);
-			if (!autocompleteCommand) return;
+			const standaloneAutocomplete = client.autocompletes.get(interaction.commandName);
+			
+			if (standaloneAutocomplete) {
+				try {
+					await standaloneAutocomplete.execute(interaction, client);
+				} catch (error) {
+					console.error(error);
+				}
+				return;
+			}
 
-			try {
-				await autocompleteCommand.execute(interaction, client);
-			} catch (error) {
-				console.error(error);
+			// Look in the commands file too
+			const command = client.commands.get(interaction.commandName);
+			if (!command) return;
+
+			if (typeof command.autocomplete === "function") {
+				try {
+					await command.autocomplete(interaction, client);
+				} catch (error) {
+					console.error(error);
+				}
 			}
 		} else if (interaction.isButton()) {
 			const buttonCommand = client.buttons.get(

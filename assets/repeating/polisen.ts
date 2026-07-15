@@ -9,7 +9,7 @@ const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
 const API_URL = "https://polisen.se/api/events";
 const BASE_URL = "https://polisen.se";
 const USER_AGENT = "LBS Discord bot (Vera Heltborg; vera.heltborg@proton.me)";
-const CHANNEL_ID = "1499407739292749955";
+const CHANNEL_ID = "1525548308385370253";
 export interface PolisenEvent {
 	id: number; // 645957
     datetime: string; // "2026-07-02 11:57:10 +02:00"

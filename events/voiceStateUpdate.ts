@@ -12,7 +12,7 @@ export default {
         const voiceChannel = await guild.channels.fetch(old_state.channelId ? old_state.channelId : new_state.channelId || "", { force: true }) as VoiceChannel | null;
 
         if (voiceChannel?.type !== ChannelType.GuildVoice) return;
-        console.log(voiceChannel?.members.size)
+
         if (old_state.channel?.parent?.id === TEMP_CATEGORY && old_state.channel.id !== TEMP_CHANNEL) {
             if (!new_state) return;
             

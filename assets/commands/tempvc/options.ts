@@ -27,7 +27,7 @@ const SETTING_CHOICES: Record<string, string[]> = {
     [SETTINGS.NAME]: [],
     [SETTINGS.WHITELIST]: ["true", "false"],
     [SETTINGS.OPERATORS]: [],
-    [SETTINGS.VISIBILITY]: ["normal", "nsfw", "spoiler"],
+    [SETTINGS.VISIBILITY]: ["normal", "spoiler"],
 };
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -198,19 +198,20 @@ export default async function command(
             }
 
             case SETTINGS.VISIBILITY: {
-                // NSFW 
                 // Spoiler (flags: ChannelFlagsBitField { bitfield: 2097152 },)
                 // Normal 
+                // NSFW (not shown by default in autocomplete, but can be set)
+                
                 switch (value.toLowerCase()) {
                     case "normal":
                         await channel.edit({ nsfw: false, flags: 0 });
                         return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Normal**.` });
-                    case "nsfw":
-                        await channel.edit({ nsfw: true, flags: 0 });
-                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **NSFW**.` });
                     case "spoiler":
                         await channel.edit({ nsfw: false, flags: 2097152 });
                         return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Spoiler**.` });
+                    case "nsfw":
+                        await channel.edit({ nsfw: true, flags: 0 });
+                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **NSFW**.` });
                     default:
                         return interaction.editReply({ content: "Invalid visibility option. Please choose from Normal, NSFW, or Spoiler." });
                 }

@@ -1,5 +1,6 @@
 import type { Client, VoiceChannel, VoiceState } from "discord.js";
 import { ChannelType, Events } from "discord.js";
+import { getDisplayName } from "../utils/memberUtils.js";
 
 const TEMP_CHANNEL = "1526740160853577909";
 const TEMP_CATEGORY = "1526742944818659378";
@@ -25,7 +26,7 @@ export default {
 
         if (new_state.channelId === TEMP_CHANNEL) {
             new_state.guild.channels.create({
-                name: `${new_state.member?.user.username}'s VC`,
+                name: `${getDisplayName(new_state.guild, new_state.member?.id)}'s VC`,
                 type: ChannelType.GuildVoice,
                 parent: TEMP_CATEGORY,
                 bitrate: 96000,

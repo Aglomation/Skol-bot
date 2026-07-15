@@ -6,13 +6,29 @@ import type{
 } from "discord.js";
 
 import { ChannelType, MessageFlags } from "discord.js";
-export const options = new Map([
-    ["Bitrate:bitrate", [8000, 32000, 64000, 96000, 128000, 256000]],
-    ["User Limit:user_limit", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]],
-    ["Name:name", []],
-    ["Whitelist:whitelist", [true, false]],
-    ["Operators (userid):operators", []],
-])
+
+const CONFIG = {
+    GENERATOR_CHANNEL_ID: "1526740160853577909",
+    TEMP_VOICE_CATEGORY_ID: "1526742944818659378",
+};
+
+const SETTINGS = {
+    BITRATE: "Bitrate:bitrate",
+    USER_LIMIT: "User Limit:user_limit",
+    NAME: "Name:name",
+    WHITELIST: "Whitelist:whitelist",
+    OPERATORS: "Operators (userid):operators",
+    VISIBILITY: "Visibility:visibility",
+};
+
+const SETTING_CHOICES: Record<string, string[]> = {
+    [SETTINGS.BITRATE]: ["8000", "32000", "64000", "96000", "128000", "256000"],
+    [SETTINGS.USER_LIMIT]: ["0", "99"], // 0 = unlimited, up to 99
+    [SETTINGS.NAME]: [],
+    [SETTINGS.WHITELIST]: ["true", "false"],
+    [SETTINGS.OPERATORS]: [],
+    [SETTINGS.VISIBILITY]: ["normal", "nsfw", "spoiler"],
+};
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
         .setName("options")
@@ -38,48 +54,57 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 .setRequired(true)
                 .setAutocomplete(true)
         );
-
 export const autocomplete = async (interaction: AutocompleteInteraction, _client: Client) => {
     const focusedOption = interaction.options.getFocused(true);
     const optionName = focusedOption.name;
     const focusedValue = focusedOption.value.toLowerCase();
 
-    if (optionName === "channel") {
-        const channels = interaction.guild?.channels.cache.filter((channel) => 
-            channel.type === ChannelType.GuildVoice && 
-            channel.id !== "1526740160853577909" &&
-            channel.parentId === "1526742944818659378" &&
-            channel.permissionsFor(interaction.user)?.has("Connect")
-        );
-        if (!channels) return interaction.respond([]);
+    switch (optionName) {
+        case "channel": {
+            const channels = interaction.guild?.channels.cache.filter((channel) =>
+                channel.type === ChannelType.GuildVoice &&
+                channel.id !== CONFIG.GENERATOR_CHANNEL_ID &&
+                channel.parentId === CONFIG.TEMP_VOICE_CATEGORY_ID &&
+                channel.permissionsFor(interaction.user)?.has("Connect")
+            );
 
-        const choices = channels
-            .map((channel) => ({ name: channel.name, value: channel.id }))
-            .slice(0, 25);
+            if (!channels) return interaction.respond([]);
 
-        return interaction.respond(choices);
-    } else if (optionName === "setting") {
-        const choices = Array.from(options.keys())
-            .filter((name) => name.split(":")[1].toLowerCase().includes(focusedValue))
-            .slice(0, 25)
-            .map((name) => ({ name: name.split(":")[0], value: name }));
+            const choices = channels
+                .map((channel) => ({ name: channel.name, value: channel.id }))
+                .slice(0, 25);
 
-        return interaction.respond(choices);
-        
-    } else if (optionName === "value") {
-        const selectedSetting = interaction.options.getString("setting");
-        if (!selectedSetting) return interaction.respond([]);
+            return interaction.respond(choices);
+        }
 
-        const settingValues = options.get(selectedSetting) || [];
-        
-        const choices = settingValues
-            .map(String)
-            .filter((val) => val.toLowerCase().includes(focusedValue))
-            .slice(0, 25)
-            .map((val) => ({ name: val, value: val }));
+        case "setting": {
+            const choices = Object.keys(SETTING_CHOICES)
+                .filter((name) => name.split(":")[1].toLowerCase().includes(focusedValue))
+                .slice(0, 25)
+                .map((name) => ({ name: name.split(":")[0], value: name }));
 
-        return interaction.respond(choices);
-    };
+            return interaction.respond(choices);
+        }
+
+        case "value": {
+            const selectedSetting = interaction.options.getString("setting");
+            if (!selectedSetting || !SETTING_CHOICES[selectedSetting]) {
+                return interaction.respond(
+                    ["Please select a valid setting first."].map((val) => ({ name: val, value: "" }))
+                );
+            }
+
+            const choices = SETTING_CHOICES[selectedSetting]
+                .filter((val) => val.toLowerCase().includes(focusedValue))
+                .slice(0, 25)
+                .map((val) => ({ name: val, value: val }));
+
+            return interaction.respond(choices);
+        }
+
+        default:
+            return interaction.respond([]);
+    }
 };
 
 export default async function command(
@@ -91,99 +116,112 @@ export default async function command(
     const setting = interaction.options.getString("setting", true);
     const value = interaction.options.getString("value", true);
     if (!interaction.guild) {
-        await interaction.editReply({
-            content: "This command can only be used in a server.",
-        });
-        return;
+        return interaction.editReply({ content: "This command can only be used in a server." });
     }
+
+    // Validate Channel
     if (
-        channel?.type !== ChannelType.GuildVoice ||
-        channel?.id === "1526740160853577909" ||
-        channel?.parentId !== "1526742944818659378" ||
-        !channel?.permissionsFor(interaction.user)?.has("MoveMembers")
+        !channel ||
+        channel.type !== ChannelType.GuildVoice ||
+        channel.id === CONFIG.GENERATOR_CHANNEL_ID ||
+        channel.parentId !== CONFIG.TEMP_VOICE_CATEGORY_ID ||
+        !channel.permissionsFor(interaction.user)?.has("MoveMembers") // Acting as an ownership check
     ) {
-        await interaction.editReply({
-            content: "Invalid channel selected. Please select a valid temporary voice channel.",
+        return interaction.editReply({
+            content: "Invalid channel selected. Please select a valid temporary voice channel that you own.",
         });
-        return;
     }
 
-    if (!options.has(setting)) {
-        await interaction.editReply({
-            content: "Invalid setting selected. Please select a valid setting.",
+    // Validate Setting
+    if (!(setting in SETTING_CHOICES)) {
+        return interaction.editReply({
+            content: "Invalid setting selected. Please select a valid setting from the autocomplete list.",
         });
-        return;
     }
+    try {
+        switch (setting) {
+            case SETTINGS.BITRATE: {
+                const bitrateValue = parseInt(value, 10);
+                if (Number.isNaN(bitrateValue) || bitrateValue < 8000 || bitrateValue > 256000) {
+                    return interaction.editReply({ content: "Invalid bitrate. Please provide a number between 8000 and 256000." });
+                }
+                
+                await channel.setBitrate(bitrateValue);
+                return interaction.editReply({ content: `Bitrate for **<#${channel.id}>** has been set to **${bitrateValue}** bps.` });
+            }
 
-    if (setting === "Bitrate:bitrate") {
-        const bitrateValue = parseInt(value, 10);
-        if (bitrateValue < 8000 || bitrateValue > 256000) {
-            await interaction.editReply({
-                content: "Invalid bitrate value. Please select a value between 8000 and 256000.",
-            });
-            return;
+            case SETTINGS.USER_LIMIT: {
+                const userLimitValue = parseInt(value, 10);
+                if (Number.isNaN(userLimitValue) || userLimitValue < 0 || userLimitValue > 99) {
+                    return interaction.editReply({ content: "Invalid user limit. Please provide a number between 0 and 99." });
+                }
+                
+                await channel.setUserLimit(userLimitValue);
+                return interaction.editReply({ content: `User limit for **<#${channel.id}>** has been set to **${userLimitValue}**.` });
+            }
+
+            case SETTINGS.NAME: {
+                if (value.length < 1 || value.length > 100) {
+                    return interaction.editReply({ content: "Invalid name. Please provide a name between 1 and 100 characters." });
+                }
+                
+                await channel.setName(value);
+                return interaction.editReply({ content: `Channel name has been updated to **${value}**.` });
+            }
+
+            case SETTINGS.WHITELIST: {
+                const isEnabled = value.toLowerCase() === "true";
+                
+                await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+                    Connect: !isEnabled, 
+                });
+                
+                return interaction.editReply({ content: `Whitelist for **<#${channel.id}>** has been **${isEnabled ? "enabled" : "disabled"}**.` });
+            }
+
+            case SETTINGS.OPERATORS: {
+                // Strip out formatting from mentions
+                const userId = value.replace(/[<@!>]/g, "");
+                const user = await interaction.guild.members.fetch(userId).catch(() => null);
+                
+                if (!user) {
+                    return interaction.editReply({ content: "Invalid user ID or mention. Please provide a valid user currently in the server." });
+                }
+
+                await channel.permissionOverwrites.edit(userId, {
+                    Connect: true,
+                    Speak: true,
+                    MoveMembers: true,
+                });
+                
+                return interaction.editReply({ content: `User <@${userId}> has been added as an operator for **<#${channel.id}>**.` });
+            }
+
+            case SETTINGS.VISIBILITY: {
+                // NSFW 
+                // Spoiler (flags: ChannelFlagsBitField { bitfield: 2097152 },)
+                // Normal 
+                switch (value.toLowerCase()) {
+                    case "normal":
+                        await channel.edit({ nsfw: false, flags: 0 });
+                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Normal**.` });
+                    case "nsfw":
+                        await channel.edit({ nsfw: true, flags: 0 });
+                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **NSFW**.` });
+                    case "spoiler":
+                        await channel.edit({ nsfw: false, flags: 2097152 });
+                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Spoiler**.` });
+                    default:
+                        return interaction.editReply({ content: "Invalid visibility option. Please choose from Normal, NSFW, or Spoiler." });
+                }
+            }
+
         }
-        await channel.setBitrate(bitrateValue).catch(() => null);
-        await interaction.editReply({
-            content: `Bitrate for channel **<#${channel.id}>** has been set to **${bitrateValue}**.`,
+    } catch (error) {
+        console.error("Failed to update temporary channel setting:", error);
+        return interaction.editReply({
+            content: "An error occurred while trying to apply the setting.",
         });
-        return;
-    } else if (setting === "User Limit:user_limit") {
-        const userLimitValue = parseInt(value, 10);
-        if (userLimitValue < 0 || userLimitValue > 99) {
-            await interaction.editReply({
-                content: "Invalid user limit value. Please select a value between 0 and 99.",
-            });
-            return;
-        }
-        await channel.setUserLimit(userLimitValue).catch(() => null);
-        await interaction.editReply({
-            content: `User limit for channel **<#${channel.id}>** has been set to **${userLimitValue}**.`,
-        });
-        return;
-    } else if (setting === "Name:name") {
-        if (value.length < 1 || value.length > 100) {
-            await interaction.editReply({
-                content: "Invalid name value. Please select a name between 1 and 100 characters.",
-            });
-            return;
-        }
-        await channel.setName(value).catch(() => null);
-        await interaction.editReply({
-            content: `Name for channel **<#${channel.id}>** has been set to **${value}**.`,
-        });
-        return;
-    } else if (setting === "Whitelist:whitelist") {
-        const whitelistValue = value.toLowerCase() === "true";
-
-        await channel.permissionOverwrites.edit(interaction.guild?.roles.everyone, {
-            Connect: !whitelistValue,
-        }).catch(() => null);
-
-        await interaction.editReply({
-            content: `Whitelist for channel **<#${channel.id}>** has been set to **${whitelistValue ? "enabled" : "disabled"}**.`,
-        });
-        return;
-    } else if (setting === "Operators (userid):operators") {
-        const userId = value;
-        const user = await interaction.guild?.members.fetch(userId).catch(() => null);
-        if (!user) {
-            await interaction.editReply({
-                content: "Invalid user ID. Please provide a valid user ID.",
-            });
-            return;
-        }
-
-        await channel.permissionOverwrites.edit(userId, {
-            Connect: true,
-            Speak: true,
-            MoveMembers: true,
-        }).catch(() => null);
-
-        await interaction.editReply({
-            content: `User <@${userId}> has been added as an operator for channel **<#${channel.id}>**.`,
-        });
-        return;
     }
 
 

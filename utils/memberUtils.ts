@@ -5,9 +5,10 @@ import type { Guild } from "discord.js";
  */
 export const getDisplayName = (
     guild: Guild | null, 
-    userId: string, 
+    userId: string | undefined, 
     maxLength?: number
 ): string | undefined => {
+    if (!guild || !userId) return undefined;
     const member = guild?.members.cache.get(userId);
 
     const name = member?.displayName || member?.user.username;

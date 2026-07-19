@@ -97,7 +97,7 @@ export default {
 					return;
 				}
 
-				if (!/@([a-z0-9-]+\.)*lbs\.se$/i.test(email) || email.includes("+")){
+				if (!/@(?:[a-z0-9-]+\.)*(?:lbs\.se|dbgy\.se|learnet\.se)$/i.test(email) || email.includes("+")){
 					await message.reply(`Sending dm to <@${profile.id}> about invalid email`).catch(() => null);
 					const embed = new EmbedBuilder()
 						.setTitle("❌ Ogiltig LBS-mail")

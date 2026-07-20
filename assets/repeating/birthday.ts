@@ -10,8 +10,7 @@ const formatBirthdayLine = (
     currentYear: number
 ): string => {
     const name = getDisplayName(guild, member.id);
-    const mention = `(<@${member.id}>)`;
-    if (!member.birthday) return `${name} ${mention}`; 
+    const mention = `(<@${member.id}>)`; 
 
     const birthdayDate = new Date((member.birthday as number) * 1000);
     const age = currentYear - birthdayDate.getFullYear();
@@ -64,6 +63,9 @@ const repeating: Repeating = {
 		const birthdayMembers = await FindAllNonNullKeys("birthday");
 
         const todaysBirthdays = birthdayMembers.filter((member) => {
+            const name = getDisplayName(guild, member.id);
+            if (!name) return false;
+            
             const birthday = member.birthday as UserProfile["birthday"] | null;
 			const birthdayDate = birthday ? new Date(birthday * 1000) : null;
 

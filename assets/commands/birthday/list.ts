@@ -93,8 +93,9 @@ export const generateBirthdayPage = async (
 
         const { user, birthday } = currentItem;
         const age = calculateAge(birthday, currentMonth, currentDay, currentYear);
-        const name = getDisplayName(guild, user.id) || "User has left";
-
+        const name = getDisplayName(guild, user.id);
+		if (!name) continue;
+		
         const prevItem = pageItems[i - 1];
         // const nextItem = pageItems[i + 1];
 

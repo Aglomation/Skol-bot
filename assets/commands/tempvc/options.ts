@@ -5,11 +5,12 @@ import type{
     SlashCommandSubcommandBuilder,
 } from "discord.js";
 
-import { ChannelType, MessageFlags } from "discord.js";
+import { ChannelType, MessageFlags, OverwriteType } from "discord.js";
 
 const CONFIG = {
     GENERATOR_CHANNEL_ID: "1526740160853577909",
     TEMP_VOICE_CATEGORY_ID: "1526742944818659378",
+    VERIFIED_ROLE_ID: "1498832228145168514",
 };
 
 const SETTINGS = {
@@ -19,6 +20,7 @@ const SETTINGS = {
     WHITELIST: "Whitelist:whitelist",
     OPERATORS: "Operators (userid):operators",
     VISIBILITY: "Visibility:visibility",
+    TYPE: "Type:type",
 };
 
 const SETTING_CHOICES: Record<string, string[]> = {
@@ -27,7 +29,8 @@ const SETTING_CHOICES: Record<string, string[]> = {
     [SETTINGS.NAME]: [],
     [SETTINGS.WHITELIST]: ["true", "false"],
     [SETTINGS.OPERATORS]: [],
-    [SETTINGS.VISIBILITY]: ["normal", "spoiler"],
+    [SETTINGS.VISIBILITY]: ["Everyone", "Join Only"],
+    [SETTINGS.TYPE]: ["normal", "spoiler", "nsfw"],
 };
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -196,8 +199,37 @@ export default async function command(
                 
                 return interaction.editReply({ content: `User <@${userId}> has been added as an operator for **<#${channel.id}>**.` });
             }
-
             case SETTINGS.VISIBILITY: {
+                switch (value.toLowerCase()) {
+                    case "everyone":
+                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(CONFIG.VERIFIED_ROLE_ID) || "", {
+                            ViewChannel: true,
+                        });
+                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Everyone**.` });
+                    case "join only": {
+                        const allowedUsers = channel.permissionOverwrites.cache.filter(
+                            (overwrite) => 
+                                overwrite.type === OverwriteType.Member && 
+                                overwrite.allow.has("Connect")
+                        );
+                        
+                        for (const overwrite of allowedUsers.values()) {
+                            await channel.permissionOverwrites.edit(overwrite.id, {
+                                ViewChannel: true,
+                            });
+                        }
+
+                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(CONFIG.VERIFIED_ROLE_ID) || "", {
+                            ViewChannel: false,
+                        });
+
+                        return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Join Only**.` });
+                    }
+                    default:
+                        return interaction.editReply({ content: "Invalid visibility option. Please choose from Everyone or Join Only." });
+                }
+            }
+            case SETTINGS.TYPE: {
                 // Spoiler (flags: ChannelFlagsBitField { bitfield: 2097152 },)
                 // Normal 
                 // NSFW (not shown by default in autocomplete, but can be set)

@@ -32,6 +32,12 @@ const command: Command = {
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		if (!interaction.guild) {
+			await interaction.editReply({
+				content: "This command can only be used in a server.",
+			});
+			return;
+		}
 
 		const executor = interaction.member as GuildMember;
 		if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers)) {
@@ -55,7 +61,7 @@ const command: Command = {
 			return;
 		}
 
-		await UpdateProfile(user.id, {
+		await UpdateProfile(user.id, interaction.guild.id, {
 			banned: false,
 			banreason: null,
 			banduration: null,

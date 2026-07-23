@@ -42,7 +42,12 @@ const command: Command = {
 		} else {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		}
-		
+		if (!interaction.guild) {
+			await interaction.editReply({
+				content: "This command can only be used in a server.",
+			});
+			return;
+		}
 		// Ensure interaction.member is treated as a GuildMember to access permissions
 		const executor = interaction.member as GuildMember;
 
@@ -66,7 +71,7 @@ const command: Command = {
 				`Unmuted by ${interaction.user.tag} for the reason: ${reason}`,
 			);
 
-			await UpdateProfile(user.id, { timeout: Date.now() + 0 });
+			await UpdateProfile(user.id, interaction.guild.id, { timeout: Date.now() + 0 });
 
 			await user
 				.send(

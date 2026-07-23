@@ -67,7 +67,12 @@ const command: Command = {
 		} else {
 			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		}
-		
+		if (!interaction.guild) {
+			await interaction.editReply({
+				content: "This command can only be used in a server.",
+			});
+			return;
+		}
 		// Ensure interaction.member is treated as a GuildMember to access permissions
 		const executor = interaction.member as GuildMember;
 
@@ -101,7 +106,7 @@ const command: Command = {
 				reason,
 			);
 
-			await UpdateProfile(user.id, { timeout: Date.now() + date });
+			await UpdateProfile(user.id, interaction.guild.id, { timeout: Date.now() + date });
 
 			const expiresAt = Number.isFinite(date)
 				? Math.floor((Date.now() + date) / 1000)

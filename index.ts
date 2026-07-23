@@ -1,4 +1,3 @@
-import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -12,7 +11,10 @@ import {
 	REST,
 	Routes,
 } from "discord.js";
+import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/neon-http";
+import { relations } from "./db/relations.js";
+import { userProfileTable } from "./db/schema.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,10 +37,7 @@ const client = new Client({
 		GatewayIntentBits.GuildMembers,
 		GatewayIntentBits.GuildPresences,
 	],
-	partials: [
-		Partials.Channel,
-		Partials.Message
-	]
+	partials: [Partials.Channel, Partials.Message],
 });
 
 client.commands = new Collection();
@@ -56,7 +55,29 @@ async function startBot() {
 	}
 
 	const sql = neon(process.env.DATABASE_URL);
-	const _db = drizzle({ client: sql });
+	const db = drizzle({ client: sql, relations });
+
+	await db.query.serverConfigTable
+		.findFirst({
+			where: {
+				id: "1497140069746741338",
+			},
+			with: {
+				members: true,
+			},
+		})
+		.then((data) => {
+			if (!data) {
+				console.error("No server configuration found in the database.");
+				return;
+			}
+			console.log("Server configuration loaded:", data.id);
+			console.log("Number of members in the db:", data.members.length);
+			console.log(
+				"Lazyllama:",
+				data.members.find((m) => m.discordId === "754965470888722484"),
+			);
+		});
 
 	// --- 1. Load Events ---
 	const eventsPath = path.join(__dirname, "events");
@@ -109,13 +130,15 @@ async function startBot() {
 		client.buttons.set(button.data.customId, button);
 	}
 
-	const autocompletesPath = path.join(__dirname, 'assets', 'autocompletes');
+	const autocompletesPath = path.join(__dirname, "assets", "autocompletes");
 	const autcompleteFiles = fs.readdirSync(autocompletesPath).filter(fileFilter);
 
 	for (const file of autcompleteFiles) {
-	    const filePath = path.join(autocompletesPath, file);
-	    const { default: autocomplete } = await import(pathToFileURL(filePath).href);
-	    client.autocompletes.set(autocomplete.data.name, autocomplete);
+		const filePath = path.join(autocompletesPath, file);
+		const { default: autocomplete } = await import(
+			pathToFileURL(filePath).href
+		);
+		client.autocompletes.set(autocomplete.data.name, autocomplete);
 	}
 
 	// --- 3. Register Slash Commands ---
@@ -146,7 +169,7 @@ async function loadRepeatingTasks() {
 		const filePath = path.join(repeatingPath, file);
 		const { default: repeating } = await import(pathToFileURL(filePath).href);
 		const options = repeating.data;
-		
+
 		if (options.clockTime) {
 			const [hours, minutes] = options.clockTime.split(":").map(Number);
 

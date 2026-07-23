@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { userProfileTable } from "./db/schema.js";
+import { userProfileTable } from "../db/schema.js";
 
 const PROFILE_FILE = "./storage/profiles.json";
 const sql = neon(process.env.DATABASE_URL || "");

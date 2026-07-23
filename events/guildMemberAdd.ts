@@ -4,13 +4,6 @@ import { EmbedBuilder, Events } from "discord.js";
 import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
 import { GetServerConfig } from "../utils/configManager.js";
 
-const CONFIG = {
-    TEST_BOT: "1410803606180986911",
-    CHANNELS: {
-        WELCOME: "1497140071176863756",
-    }
-};
-
 export default {
 	name: Events.GuildMemberAdd,
 	once: false,

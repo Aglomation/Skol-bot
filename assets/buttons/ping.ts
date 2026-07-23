@@ -46,7 +46,7 @@ const button: Button = {
         
         // Hopefully this wont be used for an @everyone exploit :P
         // await channel.send(`${interaction.user.username} has requested your help <@${userid}>`);
-        await channel.send({ content: `<@${interaction.user.id}> has requested your help <@${userid}>`, allowedMentions: { users: [userid], roles: [userid] } });
+        await channel.send({ content: `<@${interaction.user.id}> has requested your help <@${userid}>` });
         
         interaction.deleteReply();
 	},

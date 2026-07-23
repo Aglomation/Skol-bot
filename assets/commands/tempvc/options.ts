@@ -60,16 +60,17 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
     const optionName = focusedOption.name;
     const focusedValue = focusedOption.value.toLowerCase();
 
+    const TEMP_CHANNEL = await GetServerConfig(guild.id, "tempVcMainChannel") as string;
+    const TEMP_CATEGORY = await GetServerConfig(guild.id, "tempvcCategory") as string;
+
     switch (optionName) {
         case "channel": {
-            const channels = interaction.guild?.channels.cache.filter(async (channel) =>
-                
+            const channels = interaction.guild?.channels.cache.filter((channel) =>
                 channel.type === ChannelType.GuildVoice &&
-                channel.id !== await GetServerConfig(guild.id, "tempVcMainChannel") &&
-                channel.parentId === await GetServerConfig(guild.id, "tempvcCategory") &&
+                channel.id !== TEMP_CHANNEL &&
+                channel.parentId === TEMP_CATEGORY &&
                 channel.permissionsFor(interaction.user)?.has("Connect")
             );
-
             if (!channels) return interaction.respond([]);
 
             const choices = channels
@@ -113,21 +114,23 @@ export default async function command(
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     if (!interaction.guild) {
         return interaction.editReply({ content: "This command can only be used in a server." });
     }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const channel = interaction.guild?.channels.cache.get(interaction.options.getString("channel", true) || "");
     const setting = interaction.options.getString("setting", true);
     const value = interaction.options.getString("value", true);
+
+    const TEMP_CHANNEL = await GetServerConfig(interaction.guild.id, "tempVcMainChannel") as string;
+    const TEMP_CATEGORY = await GetServerConfig(interaction.guild.id, "tempvcCategory") as string;
 
     // Validate Channel
     if (
         !channel ||
         channel.type !== ChannelType.GuildVoice ||
-        channel.id === await GetServerConfig(interaction.guild.id, "tempVcMainChannel") ||
-        channel.parentId !== await GetServerConfig(interaction.guild.id, "tempvcCategory") ||
+        channel.id === TEMP_CHANNEL ||
+        channel.parentId !== TEMP_CATEGORY ||
         !channel.permissionsFor(interaction.user)?.has("MoveMembers") // Acting as an ownership check
     ) {
         return interaction.editReply({

@@ -2,6 +2,7 @@ import type { Client, GuildMember, TextChannel } from "discord.js";
 import { EmbedBuilder, Events } from "discord.js";
 
 import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
+import { GetServerConfig } from "../utils/configManager.js";
 
 const CONFIG = {
     TEST_BOT: "1410803606180986911",
@@ -14,8 +15,6 @@ export default {
 	name: Events.GuildMemberAdd,
 	once: false,
 	async execute(member: GuildMember, client: Client) {
-		if (client.user?.id !== CONFIG.TEST_BOT) return;
-
 		const profile = await GetProfile(member.id);
         
         // Check if the user is banned
@@ -56,7 +55,7 @@ async function handleSoftBanCheck(member: GuildMember, profile: UserProfile): Pr
 
 async function sendWelcomeMessage(member: GuildMember, client: Client) {
     const channel = await client.channels
-        .fetch(CONFIG.CHANNELS.WELCOME)
+        .fetch(await GetServerConfig(member.guild.id, "welcomeChannel") as string)
         .catch(() => null) as TextChannel | null;
         
     if (!channel) return;

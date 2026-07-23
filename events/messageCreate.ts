@@ -1,5 +1,6 @@
 import type {
     Client,
+    Guild,
     GuildTextBasedChannel,
     Message,
     TextChannel,
@@ -7,17 +8,17 @@ import type {
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
+import { GetServerConfig } from "../utils/configManager.js";
 
 const CONFIG = {
     CHANNELS: {
-        LOG: "1499149296203993169",
+        PRIVATELOG: "1499149296203993169",
         AUTO_DELETE: "1498834244854878209",
         HONEYPOT: "1497140071176863755",
         VERIFYBACKEND: "1498837870876688434",
         TICKET_SUPPORT: "1499885683995840683",
     },
     ROLES: {
-        VERIFIED: "1498832228145168514",
         TEACHER: "1497140069872435217",
     },
     WEBHOOKS: {
@@ -38,21 +39,25 @@ export default {
         }
 
         switch (message.channel.id) {
+            // Might make this a server config option later
             case CONFIG.CHANNELS.AUTO_DELETE:
                 await handleAutoDelete(message);
                 break;
-            case CONFIG.CHANNELS.HONEYPOT:
+            case await GetServerConfig(message.guild.id, "honeypotChannel") as string:
                 await handleHoneypot(message, client);
                 break;
+            // This only exists on the official server
             case CONFIG.CHANNELS.VERIFYBACKEND:
-                await handleVerification(message);
+                await handleVerification(message, client);
                 break;
         }
     },
 };
 
 async function handleDMLogging(message: Message, client: Client) {
-    const logChannel = client.channels.cache.get(CONFIG.CHANNELS.LOG) as TextChannel | undefined;
+    // dms only goes to the private log channel
+    const serverlog = CONFIG.CHANNELS.PRIVATELOG;
+    const logChannel = client.channels.cache.get(serverlog) as TextChannel | undefined;
     if (!logChannel) return;
 
     await logChannel.send(
@@ -71,7 +76,8 @@ async function handleHoneypot(message: Message, client: Client) {
 	if (!message.guild) return;
 
     const compromisedUserId = message.author.id;
-    const logChannel = client.channels.cache.get(CONFIG.CHANNELS.LOG) as TextChannel | undefined;
+    
+    const logChannel = client.channels.cache.get(await GetServerConfig(message.guild.id, "logChannel") as string) as TextChannel | undefined;
 
     if (logChannel) {
         await logChannel.send(`Honeypot triggered by <@${compromisedUserId}>! Wiping messages`);
@@ -94,8 +100,9 @@ async function handleHoneypot(message: Message, client: Client) {
     }
 }
 
-async function handleVerification(message: Message) {
+async function handleVerification(message: Message, client: Client) {
     if (message.webhookId !== CONFIG.WEBHOOKS.VERIFYBACKEND) return;
+    if (!message.guild) return;
 
     try {
         const [email, verify] = message.content.replace(/\s+/g, "").split("$$");
@@ -129,8 +136,8 @@ async function handleVerification(message: Message) {
             return;
         }
 
-        await UpdateProfile(userId, { email });
-        await assignVerificationRoles(message, userId, email);
+        await UpdateProfile(userId, profile.serverId, { email });
+        await assignVerificationRoles(client.guilds.cache.get(profile.serverId), userId, email);
         await message.delete().catch(() => null);
 
     } catch (error) {
@@ -165,26 +172,22 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
     }
 }
 
-async function assignVerificationRoles(message: Message, userId: string, email: string) {
-    let member = message.guild?.members.cache.get(userId) || null;
+async function assignVerificationRoles(guild: Guild | undefined, userId: string, email: string) {
+    if (!guild) return;
+    let member = guild.members.cache.get(userId) || null;
     
     if (!member) {
         console.error(`Failed to fetch member for user ID ${userId} from cache, attempting API fetch.`);
-        member = await message.guild?.members.fetch(userId).catch(() => null) || null;
-    }
-
-    if (!member) {
-        console.error(`Failed to fetch member for user ID ${userId} from API.`);
-        await message.reply("Verification succeeded but failed to fetch member data.").catch(() => null);
+        member = await guild.members.fetch(userId).catch(() => null) || null;
         return;
     }
 
-    const verifiedRole = message.guild?.roles.cache.get(CONFIG.ROLES.VERIFIED);
+    const verifiedRole = guild.roles.cache.get(await GetServerConfig(guild.id, "verifiedRoleId") as string);
     if (verifiedRole) await member.roles.add(verifiedRole);
 
 	// Gives the teacher role automatically to teachers
     if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {
-        const teacherRole = message.guild?.roles.cache.get(CONFIG.ROLES.TEACHER);
+        const teacherRole = guild.roles.cache.get(await GetServerConfig(guild.id, "teacherRoleId") as string);
         if (teacherRole) await member.roles.add(teacherRole);
     }
 }

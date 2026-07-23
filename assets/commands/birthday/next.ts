@@ -16,8 +16,9 @@ export default async function next(
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) {
+	if (!interaction.guild) return;
 	await interaction.deferReply({});
-	const formattedList = await sortedList();
+	const formattedList = await sortedList(interaction.guild);
 
 	if (!formattedList || formattedList.length === 0) {
 		await interaction.editReply({ content: "No birthdays have been set yet!" });
@@ -50,7 +51,7 @@ export default async function next(
 		return;
 	}
 	const displayNames = nextBirthdayGroup
-		.map((entry) => getDisplayName(interaction.guild, entry.user.id) ?? `<@${entry.user.id}>`)
+		.map((entry) => getDisplayName(interaction.guild, entry.user.discordId))
 		.filter((name): name is string => Boolean(name));
 	const birthdayYear =
 		nextBirthday.birthday.month < currentMonth ||
@@ -76,7 +77,7 @@ export default async function next(
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` })
 		.setDescription(
-			`The next birthday${nextBirthdayGroup.length > 1 ? "s" : ""} is ${nextBirthdayGroup.length > 1 ? `shared by: \n**${displayNames.join(", ")}**\n` : `**${getDisplayName(interaction.guild, nextBirthday?.user.id)}**`} and will be on <t:${nextBirthdayTimestamp}:D> <t:${nextBirthdayTimestamp}:R>`,
+			`The next birthday${nextBirthdayGroup.length > 1 ? "s" : ""} is ${nextBirthdayGroup.length > 1 ? `shared by: \n**${displayNames.join(", ")}**\n` : `**${getDisplayName(interaction.guild, nextBirthday?.user.discordId)}**`} and will be on <t:${nextBirthdayTimestamp}:D> <t:${nextBirthdayTimestamp}:R>`,
 		);
 
 	await interaction.editReply({

@@ -6,6 +6,7 @@ import type{
 } from "discord.js";
 
 import { ChannelType, MessageFlags } from "discord.js";
+import { GetServerConfig } from "../../../utils/configManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -26,14 +27,18 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         );
 
 export const autocomplete = async (interaction: AutocompleteInteraction, _client: Client) => {
+    if (!interaction.guild) return interaction.respond([]);
     const focusedOption = interaction.options.getFocused(true);
     const optionName = focusedOption.name;
+    
+    const TEMP_CHANNEL = await GetServerConfig(interaction.guild.id, "tempVcMainChannel") as string;
+    const TEMP_CATEGORY = await GetServerConfig(interaction.guild.id, "tempvcCategory") as string;
 
     if (optionName === "channel") {
-        const channels = interaction.guild?.channels.cache.filter((channel) => 
-            channel.type === ChannelType.GuildVoice && 
-            channel.id !== "1526740160853577909" &&
-            channel.parentId === "1526742944818659378" &&
+        const channels = interaction.guild?.channels.cache.filter((channel) =>
+            channel.type === ChannelType.GuildVoice &&
+            channel.id !== TEMP_CHANNEL &&
+            channel.parentId === TEMP_CATEGORY &&
             channel.permissionsFor(interaction.user)?.has("Connect")
         );
         if (!channels) return interaction.respond([]);
@@ -51,20 +56,23 @@ export default async function command(
 	_client: Client,
 ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const channel = interaction.guild?.channels.cache.get(interaction.options.getString("channel", true) || "");
-    const user = interaction.options.getUser("user", true);
-
     if (!interaction.guild) {
         await interaction.editReply({
             content: "This command can only be used in a server.",
         });
         return;
     }
+    const channel = interaction.guild?.channels.cache.get(interaction.options.getString("channel", true) || "");
+    const user = interaction.options.getUser("user", true);
+
+    const TEMP_CHANNEL = await GetServerConfig(interaction.guild.id, "tempVcMainChannel") as string;
+    const TEMP_CATEGORY = await GetServerConfig(interaction.guild.id, "tempvcCategory") as string;
+    
     if (
         channel?.type !== ChannelType.GuildVoice ||
-        channel?.id === "1526740160853577909" ||
-        channel?.parentId !== "1526742944818659378" ||
-        !channel?.permissionsFor(interaction.user)?.has("MoveMembers")
+        channel?.id === TEMP_CHANNEL ||
+        channel?.parentId !== TEMP_CATEGORY ||
+        !channel?.permissionsFor(interaction.user)?.has("MoveMembers") // Acting as an ownership check
     ) {
         await interaction.editReply({
             content: "Invalid channel selected. Please select a valid temporary voice channel.",

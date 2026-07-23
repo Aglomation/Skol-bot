@@ -36,7 +36,7 @@ async function handleSoftBanCheck(member: GuildMember, profile: UserProfile): Pr
     // Check if the current time is past the ban expiration
     if (Date.now() > banExpiration) {
         // Ban expired: clean up the database
-        await UpdateProfile(member.id, {
+        await UpdateProfile(member.id, member.guild.id, {
             banreason: null,
             banduration: null,
         });

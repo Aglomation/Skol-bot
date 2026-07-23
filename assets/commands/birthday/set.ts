@@ -29,6 +29,7 @@ export default async function set(
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) {
+	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 	const date = interaction.options.getString("date", false);
 	const user = interaction.user.id;
@@ -44,7 +45,7 @@ export default async function set(
 	}
 
 	if (!date) {
-		await UpdateProfile(user, { birthday: null });
+		await UpdateProfile(user, interaction.guild.id, { birthday: null });
 		await interaction.editReply({
 			content: "Cleared birthday.",
 		});
@@ -91,7 +92,7 @@ export default async function set(
 		return;
 	}
 
-	await UpdateProfile(user, { birthday: Math.floor(timestamp / 1000) });
+	await UpdateProfile(user, interaction.guild.id, { birthday: Math.floor(timestamp / 1000) });
 
 	const embed = new EmbedBuilder()
 		.setTitle("Birthday Set!")

@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import { userProfileTable } from "../db/schema.js";
 
@@ -10,39 +10,82 @@ export type UserProfile = typeof userProfileTable.$inferSelect;
 export type UserProfileKey = keyof UserProfile;
 
 /**
- * Update partial data in a user's profile
+ * Update a user's profile, if not exist make one
  */
 export async function UpdateProfile(
-	userId: string,
-	newData: Partial<UserProfile>,
-): Promise<void> {
-	try {
-		if ((await GetProfile(userId)) === null) {
-			await CreateProfile(userId, newData);
-			return;
-		}
-		await db
-			.update(userProfileTable)
-			.set(newData)
-			.where(eq(userProfileTable.id, userId));
-	} catch (err) {
-		console.error("Error updating profile value1:", err);
-	}
+    discordId: string,
+    serverId: string,
+    newData: Partial<UserProfile>,
+): Promise<number | null> {
+    try {
+        await db.insert(userProfileTable)
+            .values({
+                discordId,
+                serverId,
+                ...newData 
+            })
+            .onConflictDoUpdate({
+                target: [userProfileTable.discordId, userProfileTable.serverId],
+                set: newData
+            });
+    } catch (err: unknown) {
+		if (err instanceof Error) {
+            const pgError = err as Error & { code?: string };
+            
+            // Postgres error code 23505 means "unique_violation"
+            if (pgError.code === '23505' || pgError.message.includes("unique constraint")) {
+                console.warn("Unique constraint violation in UpdateProfile.");
+                return 1;
+            }
+        }
+
+        console.error("Error upserting profile:", err);
+    }
+    return null;
 }
 
-/**
- * Create a user's profile
- */
-export async function CreateProfile(
-	userId: string,
-	newData: Partial<UserProfile>,
-): Promise<void> {
-	try {
-		await db.insert(userProfileTable).values({ ...newData, id: userId });
-	} catch (err) {
-		console.error("Error creating profile:", err);
-	}
-}
+// /**
+//  * Update partial data in a user's profile
+//  */
+// export async function UpdateProfile(
+// 	userId: string,
+// 	discordId: string,
+// 	serverId: string,
+// 	newData: Partial<UserProfile>,
+// ): Promise<null | number>  {
+// 	try {
+// 		if ((await GetProfile(userId)) === null) {
+// 			await CreateProfile(userId, discordId, serverId, newData);
+// 			return null;
+// 		}
+// 		await db
+// 			.update(userProfileTable)
+// 			.set(newData)
+// 			.where(eq(userProfileTable.id, userId));
+// 	} catch (err) {
+// 		console.error("Error updating profile value1:", err);
+// 		if (err instanceof Error && err.message.includes("duplicate key value violates unique constraint")) {
+// 			return 1;
+// 		}
+// 	}
+// 	return null;
+// }
+
+// /**
+//  * Create a user's profile
+//  */
+// export async function CreateProfile(
+// 	userId: string,
+// 	discordId: string,
+// 	serverId: string,
+// 	newData: Partial<UserProfile>,
+// ): Promise<void> {
+// 	try {
+// 		await db.insert(userProfileTable).values({ ...newData, id: userId, discordId, serverId });
+// 	} catch (err) {
+// 		console.error("Error creating profile:", err);
+// 	}
+// }
 
 /**
  * Get a single profile
@@ -129,12 +172,17 @@ export async function FindAllByValue(
  */
 export async function FindAllNonNullKeys(
 	key: UserProfileKey,
+	serverId?: string,
 ): Promise<UserProfile[]> {
 	try {
 		const result = await db
 			.select()
 			.from(userProfileTable)
-			.where(isNotNull(userProfileTable[key]));
+			.where(
+				serverId
+					? and(isNotNull(userProfileTable[key]), eq(userProfileTable.serverId, serverId))
+					: isNotNull(userProfileTable[key]),
+			);
 		return result.length > 0 ? result : [];
 	} catch (error) {
 		console.error("Error finding all non-null keys:", error);

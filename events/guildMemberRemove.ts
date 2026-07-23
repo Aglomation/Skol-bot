@@ -23,7 +23,7 @@ export default {
 
             case PRIVACY_PREFERENCE.DELETE_OPTIONAL:
                 // Delete optionally added data (currently only birthday)
-                await UpdateProfile(member.id, { birthday: null });
+                await UpdateProfile(member.id, member.guild.id, { birthday: null });
                 console.log(`Deleted optionally added data for user ${member.user.tag} (${member.id}) due to privacy preference.`);
                 break;
 

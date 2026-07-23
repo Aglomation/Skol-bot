@@ -3,8 +3,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AutocompleteInteraction, ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
-import { builder as Option, autocomplete as optionAutocomplete } from "./options.js";
-import { builder as Invite, autocomplete as inviteAutocomplete } from "./invite.js";
+import { autocomplete as inviteAutocomplete, builder as Invite } from "./invite.js";
+import { autocomplete as optionAutocomplete, builder as Option } from "./options.js";
+
 const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("tempvc")

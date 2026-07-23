@@ -48,8 +48,7 @@ export const generateBirthdayPage = async (
 	components: ActionRowBuilder<ButtonBuilder>[];
 } | null> => {
 	if (!guild) return null;
-	const formattedList = await sortedList();
-
+	const formattedList = await sortedList(guild);
 	if (!formattedList || formattedList.length === 0) return null;
 
 	const pageSize = 30;
@@ -86,14 +85,14 @@ export const generateBirthdayPage = async (
 
 	const descLines: string[] = [];
 	let hasInsertedYearSeparator = false;
-
 	for (let i = 0; i < pageItems.length; i++) {
         const currentItem = pageItems[i];
         if (!currentItem.birthday) continue;
 
         const { user, birthday } = currentItem;
+
         const age = calculateAge(birthday, currentMonth, currentDay, currentYear);
-        const name = getDisplayName(guild, user.id);
+        const name = getDisplayName(guild, user.discordId);
 		if (!name) continue;
 		
         const prevItem = pageItems[i - 1];
@@ -130,7 +129,7 @@ export const generateBirthdayPage = async (
 	let nextBdayTime: number | null = null;
 	if (nextBirthday?.birthday) {
 		const displayNames = nextBirthdayGroup
-			.map((entry) => getDisplayName(guild, entry.user.id))
+			.map((entry) => getDisplayName(guild, entry.user.discordId))
 			.filter((name): name is string => Boolean(name));
 
 		const displayYear =
@@ -148,12 +147,13 @@ export const generateBirthdayPage = async (
 
 		nextBirthdayValue = displayNames.map(name => `• ${name}`).join(`\n`);
 	}
+	console.log(nextBirthdayValue, nextBdayTime);
 
 	const embed = new EmbedBuilder()
 		.setTitle(
 			`Birthdays | Page ${currentPage}/${maxPage} [${formattedList.length}]`,
 		)
-		.setAuthor({ name: guild?.name || "", iconURL: guild?.iconURL?.() || "" })
+		.setAuthor({ name: guild?.name || "", iconURL: guild?.iconURL?.() || undefined })
 		.setColor("Aqua")
 		.setFooter({
 			text: `Total (${formattedList.length}) ・ ${pageSize} per page [Showing: ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, formattedList.length)}] ・ Use /birthday set to set your birthday!`,

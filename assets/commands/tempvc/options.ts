@@ -6,12 +6,7 @@ import type{
 } from "discord.js";
 
 import { ChannelType, MessageFlags, OverwriteType } from "discord.js";
-
-const CONFIG = {
-    GENERATOR_CHANNEL_ID: "1526740160853577909",
-    TEMP_VOICE_CATEGORY_ID: "1526742944818659378",
-    VERIFIED_ROLE_ID: "1498832228145168514",
-};
+import { GetServerConfig } from "../../../utils/configManager.js";
 
 const SETTINGS = {
     BITRATE: "Bitrate:bitrate",
@@ -58,19 +53,24 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 .setAutocomplete(true)
         );
 export const autocomplete = async (interaction: AutocompleteInteraction, _client: Client) => {
+    const guild = interaction.guild;
+    if (!guild) return interaction.respond([]);
+
     const focusedOption = interaction.options.getFocused(true);
     const optionName = focusedOption.name;
     const focusedValue = focusedOption.value.toLowerCase();
+
+    const TEMP_CHANNEL = await GetServerConfig(guild.id, "tempVcMainChannel") as string;
+    const TEMP_CATEGORY = await GetServerConfig(guild.id, "tempvcCategory") as string;
 
     switch (optionName) {
         case "channel": {
             const channels = interaction.guild?.channels.cache.filter((channel) =>
                 channel.type === ChannelType.GuildVoice &&
-                channel.id !== CONFIG.GENERATOR_CHANNEL_ID &&
-                channel.parentId === CONFIG.TEMP_VOICE_CATEGORY_ID &&
+                channel.id !== TEMP_CHANNEL &&
+                channel.parentId === TEMP_CATEGORY &&
                 channel.permissionsFor(interaction.user)?.has("Connect")
             );
-
             if (!channels) return interaction.respond([]);
 
             const choices = channels
@@ -115,19 +115,22 @@ export default async function command(
 	_client: Client,
 ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const channel = interaction.guild?.channels.cache.get(interaction.options.getString("channel", true) || "");
-    const setting = interaction.options.getString("setting", true);
-    const value = interaction.options.getString("value", true);
     if (!interaction.guild) {
         return interaction.editReply({ content: "This command can only be used in a server." });
     }
+    const channel = interaction.guild?.channels.cache.get(interaction.options.getString("channel", true) || "");
+    const setting = interaction.options.getString("setting", true);
+    const value = interaction.options.getString("value", true);
+
+    const TEMP_CHANNEL = await GetServerConfig(interaction.guild.id, "tempVcMainChannel") as string;
+    const TEMP_CATEGORY = await GetServerConfig(interaction.guild.id, "tempvcCategory") as string;
 
     // Validate Channel
     if (
         !channel ||
         channel.type !== ChannelType.GuildVoice ||
-        channel.id === CONFIG.GENERATOR_CHANNEL_ID ||
-        channel.parentId !== CONFIG.TEMP_VOICE_CATEGORY_ID ||
+        channel.id === TEMP_CHANNEL ||
+        channel.parentId !== TEMP_CATEGORY ||
         !channel.permissionsFor(interaction.user)?.has("MoveMembers") // Acting as an ownership check
     ) {
         return interaction.editReply({
@@ -202,7 +205,7 @@ export default async function command(
             case SETTINGS.VISIBILITY: {
                 switch (value.toLowerCase()) {
                     case "everyone":
-                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(CONFIG.VERIFIED_ROLE_ID) || "", {
+                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string) || "", {
                             ViewChannel: true,
                         });
                         return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Everyone**.` });
@@ -219,7 +222,7 @@ export default async function command(
                             });
                         }
 
-                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(CONFIG.VERIFIED_ROLE_ID) || "", {
+                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string) || "", {
                             ViewChannel: false,
                         });
 

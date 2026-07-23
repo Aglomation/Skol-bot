@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction, Client, Guild } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
 import { FindAllNonNullKeys } from "../../../utils/profileManager.js";
@@ -10,8 +10,10 @@ import { builder as listBuilder } from "./list.js";
 import { builder as nextBuilder } from "./next.js";
 import { builder as setBuilder } from "./set.js";
 
-export const sortedList = async () => {
-	const users = (await FindAllNonNullKeys("birthday")) as UserProfile[];
+export const sortedList = async (guild: Guild) => {
+	if (!guild) return null;
+
+	const users = (await FindAllNonNullKeys("birthday", guild.id))
 
 	if (users.length === 0) return null;
 

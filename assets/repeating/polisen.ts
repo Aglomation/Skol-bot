@@ -3,13 +3,14 @@ import path from "node:path";
 import axios from "axios";
 import type { Client, TextChannel } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from "discord.js";
+import { GetServerConfig } from "../../utils/configManager.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
 const API_URL = "https://polisen.se/api/events";
 const BASE_URL = "https://polisen.se";
 const USER_AGENT = "LBS Discord bot (Vera Heltborg; vera.heltborg@proton.me)";
-const CHANNEL_ID = "1525548308385370253";
+
 export interface PolisenEvent {
 	id: number; // 645957
     datetime: string; // "2026-07-02 11:57:10 +02:00"
@@ -102,9 +103,10 @@ const repeating: Repeating = {
             console.log("Polisen check skipped: Previous check is still running.");
             return;
         }
-
+        if (process.env.client !== "1499931865723830392") return;
         isProcessing = true;
         try {
+            const CHANNEL_ID = "1525548308385370253";
             const channel = await client.channels.fetch(CHANNEL_ID) as TextChannel | null;
             if (!channel) return;
 

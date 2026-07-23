@@ -16,6 +16,7 @@ import {
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 import { purgeChannels } from "../../utils/purgeMessages.js";
 import { stringToDate } from "../../utils/stringConvert.js";
+import { GetServerConfig } from "../../utils/configManager.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -63,6 +64,13 @@ const command: Command = {
 		.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
+		if (!interaction.guild) {
+			await interaction.reply({
+				content: "This command can only be used in a server.",
+				flags: MessageFlags.Ephemeral,
+			});
+			return;
+		}
 		if (interaction.options.getBoolean("announce")) {
 			await interaction.deferReply();
 		} else {
@@ -86,9 +94,9 @@ const command: Command = {
 			interaction.options.getString("deletemessages", false) || "",
 		);
 
-		const logChannel = client.channels.cache.get("1499149296203993169") as
-			| TextChannel
-			| undefined;
+		const logChannel = client.channels.cache.get(
+			await GetServerConfig(interaction.guild.id, "logChannel") as string
+		) as TextChannel | undefined;
 
 		const profile = await GetProfile(targetUser.id);
 
@@ -101,7 +109,7 @@ const command: Command = {
 			await interaction.editReply(
 				"User is already on the ban list. Editing their ban instead.",
 			);
-			await UpdateProfile(targetUser.id, {
+			await UpdateProfile(targetUser.id, interaction.guild.id, {
 				banned: true,
 				banreason: reason,
 				banduration: String(Date.now() + date),
@@ -116,7 +124,7 @@ const command: Command = {
 			return;
 		}
 		try {
-			await UpdateProfile(targetUser.id, {
+			await UpdateProfile(targetUser.id, interaction.guild.id, {
 				banned: true,
 				banreason: reason,
 				banduration: String(Date.now() + date),

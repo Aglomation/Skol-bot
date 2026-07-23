@@ -12,7 +12,6 @@ const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("privacy")
 		.setDescription("Handles your privacy preferences")
-
 		.addSubcommand(Policy)
         .addSubcommand(Option)
         .addSubcommand(DeleteMe)

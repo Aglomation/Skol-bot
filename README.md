@@ -11,11 +11,11 @@ This discord bot was made to handle our School discord server. It has features s
 - Temporary voice channels where the creator of the channel has control over who can join.
 - Happy birthday messages for members on their birthday
 
-### Setup
+### Setup - You will need a database to store information for the bot to work properly. 
 1. Clone the repository
 2. Install dependencies with `npm install`
-3. Create a `.env` file in the root directory and add your bot token
-4. Change all the hard coded ids because i'm too stupid to make it dynamic
-5. Build the bot with `npm run build`
-6. Run the bot with `npm start`
+3. Create a `.env` file in the root directory and add your bot token, an example is provided in `.env.example`
+   A large part of the bot uses a database to store information, so you will need to set up a neon database and add the connection string to your `.env` file as well.
+4. Build the bot with `npm run build`
+5. Run the bot with `npm start`
 

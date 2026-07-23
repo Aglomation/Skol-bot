@@ -1,9 +1,9 @@
 import type { Client, VoiceChannel, VoiceState } from "discord.js";
 import { ChannelType, Events } from "discord.js";
 import { getDisplayName } from "../utils/memberUtils.js";
+import { GetServerConfig } from "../utils/configManager.js";
 
-const TEMP_CHANNEL = "1526740160853577909";
-const TEMP_CATEGORY = "1526742944818659378";
+
 
 export default {
 	name: Events.VoiceStateUpdate,
@@ -11,8 +11,11 @@ export default {
 	async execute(old_state: VoiceState, new_state: VoiceState, _client: Client) {
         const guild = new_state.guild;
         const voiceChannel = await guild.channels.fetch(old_state.channelId ? old_state.channelId : new_state.channelId || "", { force: true }) as VoiceChannel | null;
-
         if (voiceChannel?.type !== ChannelType.GuildVoice) return;
+        
+        const TEMP_CHANNEL = await GetServerConfig(guild.id, "tempVcMainChannel") as string;
+        const TEMP_CATEGORY = await GetServerConfig(guild.id, "tempvcCategory") as string;
+        const VerifiedRole = await GetServerConfig(guild.id, "verifiedRoleId") as string;
 
         if (old_state.channel?.parent?.id === TEMP_CATEGORY && old_state.channel.id !== TEMP_CHANNEL) {
             if (!new_state) return;
@@ -36,7 +39,7 @@ export default {
                         allow: ["ViewChannel", "Connect", "Speak", "MoveMembers"],
                     },
                     {
-                        id: new_state.guild.roles.cache.get("1498832228145168514")?.id || "",
+                        id: new_state.guild.roles.cache.get(VerifiedRole)?.id || "",
                         allow: ["ViewChannel"],
                     }
                 ],

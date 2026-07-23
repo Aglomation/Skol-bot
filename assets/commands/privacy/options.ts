@@ -30,10 +30,18 @@ export default async function command(
 	interaction: ChatInputCommandInteraction,
 	_client: Client,
 ) {
+    if (!interaction.guild) {
+        await interaction.reply({
+            content: "This command can only be used in a server.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+    
     const optionValue = interaction.options.getInteger("option", true);
     const selectedChoiceName = privacyChoices.find(c => c.value === optionValue)?.name;
 
-    await UpdateProfile(interaction.user.id, { privacyOption: optionValue });
+    await UpdateProfile(interaction.user.id, interaction.guild.id, { privacyOption: optionValue });
 
     await interaction.reply({
         content: `Your privacy preference has been updated to: **${selectedChoiceName}**`,

@@ -25,6 +25,14 @@ const button: Button = {
 		customId: "verify",
 	},
 	async execute(interaction: ButtonInteraction, _client: Client) {
+		if (!interaction.guild) {
+			// this should never happen, but ts was being angry about maybe being null
+			await interaction.reply({
+				content: "This button can only be used in a server.",
+				flags: MessageFlags.Ephemeral,
+			});
+			return;
+		}
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		// In case the autoban failed, check an extra time
@@ -63,8 +71,14 @@ const button: Button = {
 			: generateRandomString(5);
 
 		// Store the verification code in the user's profile
-		await UpdateProfile(interaction.user?.id, { verifycode: verificationCode });
-		
+		const updateResult = await UpdateProfile(interaction.user?.id, interaction.guild.id, { verifycode: verificationCode });
+		if (updateResult === 1) {
+			await interaction.editReply({
+				content: `An error occurred while updating your profile. Please try again.`,
+			});
+			return;
+		}
+
 		const embed = new EmbedBuilder()
 			.setTitle("⚠️ Viktigt")
 			.setDescription(

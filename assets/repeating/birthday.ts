@@ -9,8 +9,8 @@ const formatBirthdayLine = (
     member: UserProfile, 
     currentYear: number
 ): string => {
-    const name = getDisplayName(guild, member.id);
-    const mention = `(<@${member.id}>)`; 
+    const name = getDisplayName(guild, member.discordId);
+    const mention = `(<@${member.discordId}>)`; 
 
     const birthdayDate = new Date((member.birthday as number) * 1000);
     const age = currentYear - birthdayDate.getFullYear();

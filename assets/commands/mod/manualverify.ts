@@ -1,9 +1,11 @@
-import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, Client, GuildMember, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import {
 	MessageFlags,
+    PermissionsBitField,
 } from "discord.js";
 
 import { FindByValue, UpdateProfile } from "../../../utils/profileManager.js";
+import { GetServerConfig } from "../../../utils/configManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -30,23 +32,26 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
+	client: Client,
 ) {
+    if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	if (
-		interaction.user.id !== "754965470888722484" &&
-		interaction.user.id !== "586643628990922752"
-	) {
-		await interaction.editReply({
-			content: "You are not authorized to use this command.",
-		});
-		return;
-	}
+    // Check if the user has the "Ban Members" permission, which assumes you're a moderator or admin
+    const executor = interaction.member as GuildMember;
+
+    if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers) && await GetServerConfig(interaction.guild.id, "isDevServer") === false) {
+        await interaction.editReply("You don't have permission to use this.");
+        return;
+    }
+    
     const user = interaction.options.getUser("user", true);
     const email = interaction.options.getString("email", true);
     const force = interaction.options.getBoolean("force") ?? false;
-
+    const logChannel = client.channels.cache.get(
+        await GetServerConfig(interaction.guild.id, "logChannel") as string
+    ) as TextChannel | undefined;
+    
     if (await FindByValue("email", email)) {
         if (!force) {
             await interaction.editReply({
@@ -57,11 +62,11 @@ export default async function command(
 
         const existingProfile = await FindByValue("email", email);
         if (existingProfile) {
-            await UpdateProfile(existingProfile.id, { email: null });
+            await UpdateProfile(existingProfile.id, interaction.guild.id, { email: null });
         }
     }
 
-    await UpdateProfile(user.id, { email });
+    await UpdateProfile(user.id, interaction.guild.id, { email });
 
     // gives the verify role
     const member = interaction.guild?.members.cache.get(user.id);
@@ -72,4 +77,10 @@ export default async function command(
     await interaction.editReply({
         content: "User manually verified.",
     });
+
+    if (logChannel) {
+        await logChannel.send({
+            content: `User ${user.tag} has been manually verified by ${interaction.user.tag}.`,
+        });
+    }
 }

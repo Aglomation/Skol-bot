@@ -35,11 +35,11 @@ async function handleChatInputCommand(interaction: ChatInputCommandInteraction, 
     } catch (error) {
         console.error(`[Error] Executing command ${interaction.commandName}:`, error);
 
-        if (interaction.replied || interaction.deferred) {
-            await interaction.editReply({ content: 'There was an error while executing this command!' }).catch(() => null);
-        } else {
-            await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral }).catch(() => null);
-        }
+        // if (interaction.replied || interaction.deferred) {
+        //     await interaction.editReply({ content: 'There was an error while executing this command!' }).catch(() => null);
+        // } else {
+        //     await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral }).catch(() => null);
+        // }
     }
 }
 

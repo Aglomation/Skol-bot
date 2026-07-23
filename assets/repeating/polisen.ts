@@ -91,6 +91,8 @@ function createEventMessage(item: PolisenEvent, isUpdate: boolean) {
     return { embeds: [embed], components: [row] };
 }
 
+// TODO: make the repeating events work in the demo server
+
 const repeating: Repeating = {
     data: {
         immediate: true,

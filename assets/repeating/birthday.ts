@@ -38,7 +38,7 @@ const isBirthdayToday = (birthday: Date | null, date: Date): boolean => {
 
     return false;
 };
-
+// TODO: make the repeating events work in the demo server
 const repeating: Repeating = {
 	data: {
 		immediate: false,

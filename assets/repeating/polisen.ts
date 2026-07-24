@@ -105,7 +105,7 @@ const repeating: Repeating = {
             console.log("Polisen check skipped: Previous check is still running.");
             return;
         }
-        if (process.env.client !== "1410803606180986911") return;
+
         isProcessing = true;
         try {
             const CHANNEL_ID = "1525548308385370253";

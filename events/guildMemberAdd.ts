@@ -8,7 +8,7 @@ export default {
 	name: Events.GuildMemberAdd,
 	once: false,
 	async execute(member: GuildMember, client: Client) {
-		const profile = await GetProfile(member.id);
+		const profile = await GetProfile(member.id, member.guild.id);
         
         // Check if the user is banned
         const isBanned = await handleSoftBanCheck(member, profile);

@@ -73,7 +73,7 @@ export default async function command(
         const member = interaction.guild?.members.cache.get(interaction.user.id);
         if (!member) return;
 
-        await DeleteProfile(interaction.user.id);
+        await DeleteProfile(interaction.user.id, interaction.guild.id);
 
         await interaction.editReply({
             content: "Deletion request completed. Your data has been deleted and your access to the server will now be revoked.",

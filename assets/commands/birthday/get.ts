@@ -27,8 +27,9 @@ export default async function get(
 	const user = interaction.options.getUser("user") || interaction.user as User;
 	const profile = await GetProfile(
 		user.id,
+		interaction.guild?.id as string
 	);
-	console.log(profile);
+
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
 
 	if (!birthday)

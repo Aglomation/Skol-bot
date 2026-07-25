@@ -73,10 +73,6 @@ async function startBot() {
 			}
 			console.log("Server configuration loaded:", data.id);
 			console.log("Number of members in the db:", data.members.length);
-			console.log(
-				"Lazyllama:",
-				data.members.find((m) => m.discordId === "754965470888722484"),
-			);
 		});
 
 	// --- 1. Load Events ---

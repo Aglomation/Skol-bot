@@ -13,11 +13,11 @@ export default {
 	name: Events.GuildMemberRemove,
 	once: false,
 	async execute(member: GuildMember, _client: Client) {
-        const preference = await getValueByKey(member.id, "privacyOption") || 2;
+        const preference = await getValueByKey(member.id, member.guild.id, "privacyOption") || 2;
 
         switch (preference) {
             case PRIVACY_PREFERENCE.DELETE_ALL:
-                await DeleteProfile(member.id);
+                await DeleteProfile(member.id, member.guild.id);
                 console.log(`Deleted all data for user ${member.user.tag} (${member.id}) due to privacy preference.`);
                 break;
 

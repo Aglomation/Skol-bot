@@ -114,7 +114,7 @@ export async function FindAllByValue(
  * @param value The value to search for
  * @returns An array of server configs matching the search criteria
  */
-export async function FindAllNonNullKeys(
+export async function FindAllNonNullKeysConfig(
 	key: ServerConfigKey,
 ): Promise<ServerConfig[]> {
 	try {

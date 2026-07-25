@@ -71,7 +71,7 @@ export default async function next(
 		)
 		.setThumbnail(
 			interaction.guild?.members.cache
-				.get(nextBirthday?.user.id)
+				.get(nextBirthday?.user.discordId)
 				?.displayAvatarURL() || null,
 		)
 		.setColor("Aqua")

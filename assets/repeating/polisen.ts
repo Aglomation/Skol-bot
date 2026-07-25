@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import axios from "axios";
 import type { Client, TextChannel } from "discord.js";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from "discord.js";
-import { GetServerConfig } from "../../utils/configManager.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, PermissionFlagsBits } from "discord.js";
+import { FindAllNonNullKeysConfig, GetServerConfig } from "../../utils/configManager.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
@@ -59,7 +59,7 @@ async function saveCache(data: PolisenEvent[]): Promise<void> {
     await fs.writeFile(CACHE_FILE, JSON.stringify(data, null, 0));
 }
 
-function createEventMessage(item: PolisenEvent, isUpdate: boolean) {
+function createEventMessage(item: PolisenEvent, isUpdate: boolean): { embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] } {
     const isHiddenType = HIDE_TYPES_REGEX.test(item.type);
     const description = isHiddenType ? `||${item.summary}||` : item.summary;
 
@@ -91,8 +91,6 @@ function createEventMessage(item: PolisenEvent, isUpdate: boolean) {
     return { embeds: [embed], components: [row] };
 }
 
-// TODO: make the repeating events work in the demo server
-
 const repeating: Repeating = {
     data: {
         immediate: true,
@@ -108,12 +106,6 @@ const repeating: Repeating = {
 
         isProcessing = true;
         try {
-            const CHANNEL_ID = "1525548308385370253";
-            const channel = await client.channels.fetch(CHANNEL_ID) as TextChannel | null;
-            if (!channel) return;
-
-
-
             const apiDataRaw: PolisenEvent[] = await axios.get(API_URL, {
                 headers: { "User-Agent": USER_AGENT },
             }).then(res => res.data).catch((err) => {
@@ -172,12 +164,12 @@ const repeating: Repeating = {
                 // Sent in reverse to retain chronologic sequence
                 for (const item of newEventsToSend.reverse()) {
                     console.log(`New item found: ${item.id} - ${item.summary}`);
-                    await channel.send(createEventMessage(item, false));
+                    await sendMessagesToServers(client, createEventMessage(item, false));
                 }
 
                 for (const item of updatedEventsToSend.reverse()) {
                     console.log(`Item updated (bumped to top): ${item.id}`);
-                    await channel.send(createEventMessage(item, true));
+                    await sendMessagesToServers(client, createEventMessage(item, true));
                 }
             }
 
@@ -190,5 +182,20 @@ const repeating: Repeating = {
         }
     },
 };
+async function sendMessagesToServers(client: Client, message: { embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] }) {
+    const servers = await FindAllNonNullKeysConfig("policeChannel");
 
+    for (const server of servers) {
+        const channelId = server.policeChannel as string;
+        const channel = client.channels.cache.get(channelId) as TextChannel | undefined;
+
+        if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) continue;
+
+        await channel.send(message).catch(err => {
+            console.error(`Failed to send message to channel ${channelId}:`, err);
+        });
+    }
+
+
+};
 export default repeating;

@@ -20,7 +20,8 @@ export default async function command(
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const userId = interaction.user.id;
-    const profile = await GetProfile(userId);
+    const guildId = interaction.guild?.id as string;
+    const profile = await GetProfile(userId, guildId);
 
     if (!profile) {
         await interaction.editReply({

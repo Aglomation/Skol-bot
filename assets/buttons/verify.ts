@@ -36,7 +36,7 @@ const button: Button = {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		// In case the autoban failed, check an extra time
-		const profile = await GetProfile(interaction.user.id);
+		const profile = await GetProfile(interaction.user.id, interaction.guild.id);
 		if (profile?.banned === true) {
 			const member = interaction.member as GuildMember;
 			if (!member) return;

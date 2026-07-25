@@ -98,7 +98,7 @@ const command: Command = {
 			await GetServerConfig(interaction.guild.id, "logChannel") as string
 		) as TextChannel | undefined;
 
-		const profile = await GetProfile(targetUser.id);
+		const profile = await GetProfile(targetUser.id, interaction.guild.id);
 
 		if (!date) {
 			await interaction.editReply("Invalid duration format. Make sure to follow the format!\nExample: `1h` for 1 hour, `30m` for 30 minutes, `inf` for indefinite.");

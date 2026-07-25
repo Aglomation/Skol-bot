@@ -47,7 +47,7 @@ const command: Command = {
 
 		const user = interaction.options.getUser("user", true);
 		const reason = interaction.options.getString("reason", true);
-		const profile = await GetProfile(user.id);
+		const profile = await GetProfile(user.id, interaction.guild.id);
 
 		if (interaction.guildId !== "1497140069746741338") {
 			await interaction.editReply(

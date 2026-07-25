@@ -92,12 +92,12 @@ export async function UpdateProfile(
  * @param userId The ID of the user whose profile to retrieve
  * @returns The user's profile object, or null if not found
  */
-export async function GetProfile(userId: string): Promise<UserProfile | null> {
+export async function GetProfile(userId: string, serverId: string): Promise<UserProfile | null> {
 	try {
 		const result = await db
 			.select()
 			.from(userProfileTable)
-			.where(eq(userProfileTable.id, userId))
+			.where(eq(userProfileTable.id, userId) && eq(userProfileTable.serverId, serverId))
 			.limit(1);
 		return result.length > 0 ? result[0] : null;
 	} catch (error) {
@@ -106,9 +106,9 @@ export async function GetProfile(userId: string): Promise<UserProfile | null> {
 	}
 }
 
-export async function getValueByKey(userId: string, key: UserProfileKey): Promise<string | number | boolean | null> {
+export async function getValueByKey(userId: string, serverId: string, key: UserProfileKey): Promise<string | number | boolean | null> {
 	try {
-		const profile = await GetProfile(userId);
+		const profile = await GetProfile(userId, serverId);
 		if (!profile) {
 			console.error(`Profile not found for user ID: ${userId}`);
 			return null;
@@ -193,9 +193,9 @@ export async function FindAllNonNullKeys(
 /**
  * Remove a profile
  */
-export async function DeleteProfile(userId: string): Promise<void> {
+export async function DeleteProfile(userId: string, serverId: string): Promise<void> {
 	try {
-		await db.delete(userProfileTable).where(eq(userProfileTable.id, userId));
+		await db.delete(userProfileTable).where(eq(userProfileTable.id, userId) && eq(userProfileTable.serverId, serverId));
 	} catch (error) {
 		console.error("Error deleting profile:", error);
 	}

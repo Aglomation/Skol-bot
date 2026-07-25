@@ -3,9 +3,9 @@ import {
 	MessageFlags,
     PermissionsBitField,
 } from "discord.js";
-
-import { FindByValue, UpdateProfile } from "../../../utils/profileManager.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
+import { FindByValue, UpdateProfile } from "../../../utils/profileManager.js";
+
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand

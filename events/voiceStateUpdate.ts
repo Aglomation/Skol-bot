@@ -1,7 +1,8 @@
 import type { Client, VoiceChannel, VoiceState } from "discord.js";
 import { ChannelType, Events } from "discord.js";
-import { getDisplayName } from "../utils/memberUtils.js";
 import { GetServerConfig } from "../utils/configManager.js";
+import { getDisplayName } from "../utils/memberUtils.js";
+
 
 
 

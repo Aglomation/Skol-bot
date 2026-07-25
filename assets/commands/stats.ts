@@ -1,5 +1,5 @@
-import fs from "node:fs/promises"; // Swapped to async fs promises
 import { existsSync, mkdirSync } from "node:fs";
+import fs from "node:fs/promises"; // Swapped to async fs promises
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { getRoleUserCount } from "../../utils/memberUtils.js";

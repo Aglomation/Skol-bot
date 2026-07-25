@@ -3,10 +3,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
-import { builder as Option } from "./options.js";
-import { builder as Policy } from "./policy.js";
 import { builder as DeleteMe } from "./deleteme.js";
 import { builder as myData } from "./mydata.js";
+import { builder as Option } from "./options.js";
+import { builder as Policy } from "./policy.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()

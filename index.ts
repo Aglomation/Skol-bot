@@ -14,7 +14,6 @@ import {
 import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/neon-http";
 import { relations } from "./db/relations.js";
-import { userProfileTable } from "./db/schema.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

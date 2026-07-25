@@ -1,9 +1,9 @@
 import type { Client, Guild, TextChannel } from "discord.js";
 import { EmbedBuilder } from "discord.js";
-
+import { FindAllNonNullKeysConfig } from "../../utils/configManager.js";
 import { getDisplayName } from "../../utils/memberUtils.js";
 import { FindAllNonNullKeys } from "../../utils/profileManager.js";
-import { FindAllNonNullKeysConfig } from "../../utils/configManager.js";
+
 
 const formatBirthdayLine = (
     guild: Guild | null, 

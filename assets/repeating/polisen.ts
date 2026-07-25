@@ -3,7 +3,7 @@ import path from "node:path";
 import axios from "axios";
 import type { Client, TextChannel } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, PermissionFlagsBits } from "discord.js";
-import { FindAllNonNullKeysConfig, GetServerConfig } from "../../utils/configManager.js";
+import { FindAllNonNullKeysConfig } from "../../utils/configManager.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");

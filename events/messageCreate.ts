@@ -6,9 +6,9 @@ import type {
     TextChannel,
 } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
+import { GetServerConfig } from "../utils/configManager.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
-import { GetServerConfig } from "../utils/configManager.js";
 
 const CONFIG = {
     CHANNELS: {

@@ -1,8 +1,8 @@
 import type { Client, GuildMember, TextChannel } from "discord.js";
 import { EmbedBuilder, Events } from "discord.js";
-
-import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
 import { GetServerConfig } from "../utils/configManager.js";
+import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
+
 
 export default {
 	name: Events.GuildMemberAdd,

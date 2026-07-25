@@ -12,11 +12,11 @@ import {
 	PermissionsBitField,
 	SlashCommandBuilder,
 } from "discord.js";
-
+import { GetServerConfig } from "../../utils/configManager.js";
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 import { purgeChannels } from "../../utils/purgeMessages.js";
 import { stringToDate } from "../../utils/stringConvert.js";
-import { GetServerConfig } from "../../utils/configManager.js";
+
 
 const command: Command = {
 	data: new SlashCommandBuilder()

@@ -7,9 +7,9 @@ import {
 	MessageFlags,
 	PermissionsBitField,
 } from "discord.js";
-
-import button from "../../buttons/verify.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
+import button from "../../buttons/verify.js";
+
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
 		.setName("verifymessage")

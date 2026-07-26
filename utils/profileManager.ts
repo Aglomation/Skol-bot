@@ -44,49 +44,6 @@ export async function UpdateProfile(
     return null;
 }
 
-// /**
-//  * Update partial data in a user's profile
-//  */
-// export async function UpdateProfile(
-// 	userId: string,
-// 	discordId: string,
-// 	serverId: string,
-// 	newData: Partial<UserProfile>,
-// ): Promise<null | number>  {
-// 	try {
-// 		if ((await GetProfile(userId)) === null) {
-// 			await CreateProfile(userId, discordId, serverId, newData);
-// 			return null;
-// 		}
-// 		await db
-// 			.update(userProfileTable)
-// 			.set(newData)
-// 			.where(eq(userProfileTable.discordId, userId));
-// 	} catch (err) {
-// 		console.error("Error updating profile value1:", err);
-// 		if (err instanceof Error && err.message.includes("duplicate key value violates unique constraint")) {
-// 			return 1;
-// 		}
-// 	}
-// 	return null;
-// }
-
-// /**
-//  * Create a user's profile
-//  */
-// export async function CreateProfile(
-// 	userId: string,
-// 	discordId: string,
-// 	serverId: string,
-// 	newData: Partial<UserProfile>,
-// ): Promise<void> {
-// 	try {
-// 		await db.insert(userProfileTable).values({ ...newData, id: userId, discordId, serverId });
-// 	} catch (err) {
-// 		console.error("Error creating profile:", err);
-// 	}
-// }
-
 /**
  * Get a single profile
  * @param userId The ID of the user whose profile to retrieve
@@ -97,7 +54,7 @@ export async function GetProfile(userId: string, serverId: string): Promise<User
 		const result = await db
 			.select()
 			.from(userProfileTable)
-			.where(eq(userProfileTable.discordId, userId) && eq(userProfileTable.serverId, serverId))
+			.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)))
 			.limit(1);
 		return result.length > 0 ? result[0] : null;
 	} catch (error) {
@@ -195,7 +152,8 @@ export async function FindAllNonNullKeys(
  */
 export async function DeleteProfile(userId: string, serverId: string): Promise<void> {
 	try {
-		await db.delete(userProfileTable).where(eq(userProfileTable.discordId, userId) && eq(userProfileTable.serverId, serverId));
+		await db.delete(userProfileTable)
+			.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)));
 	} catch (error) {
 		console.error("Error deleting profile:", error);
 	}

@@ -3,6 +3,7 @@ import {
     Colors,
     EmbedBuilder,
     MessageFlags,
+    PermissionFlagsBits,
     PermissionsBitField,
 } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
@@ -103,8 +104,8 @@ export default async function command(
         });
         
 
-    const channel = await client.channels.fetch(interaction.channel?.id || "") as TextChannel;
-    if (!channel) return;
+    const channel = client.channels.cache.get(interaction.channel?.id as string) as TextChannel;
+    if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
 
     await channel.send({ embeds: [rulesEmbed] });
     await channel.send("**Channels mentioned in the rules:**\n§2.2: <#1497140071391039520>\n§3.4: <#1497140071864864769>\nFooter: <#1499885683995840683>");

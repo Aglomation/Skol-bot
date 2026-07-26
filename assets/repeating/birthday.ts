@@ -1,5 +1,5 @@
 import type { Client, Guild, TextChannel } from "discord.js";
-import { EmbedBuilder } from "discord.js";
+import { EmbedBuilder, PermissionFlagsBits } from "discord.js";
 import { FindAllNonNullKeysConfig } from "../../utils/configManager.js";
 import { getDisplayName } from "../../utils/memberUtils.js";
 import { FindAllNonNullKeys } from "../../utils/profileManager.js";
@@ -55,7 +55,8 @@ const repeating: Repeating = {
 
         for (const server of servers){
             const birthdayChannel = client.channels.cache.get(server.birthdayChannel as string) as TextChannel | undefined;
-            if (!birthdayChannel) continue;
+            if (!client?.user || !birthdayChannel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) continue;
+            
             const guild = client.guilds.cache.get(server.id);
             if (!guild) continue;
 
@@ -90,7 +91,6 @@ const repeating: Repeating = {
                 .setDescription(descriptionLines.join("\n"))
                 .setFooter({ text: "Use /birthday set to set your birthday!" })
                 .setColor(0xff0000);
-			
 
             const response = await birthdayChannel.send({
                 embeds: [embed],

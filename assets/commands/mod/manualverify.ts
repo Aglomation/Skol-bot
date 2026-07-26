@@ -70,8 +70,9 @@ export default async function command(
 
     // gives the verify role
     const member = interaction.guild?.members.cache.get(user.id);
-    if (member) {
-        await member.roles.add("1498832228145168514");
+    const verifyRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string | undefined;
+    if (member && verifyRoleId) {
+        await member.roles.add(verifyRoleId);
     }
 
     await interaction.editReply({

@@ -11,6 +11,7 @@ import {
 	PermissionsBitField,
 	SlashCommandBuilder,
 } from "discord.js";
+import { GetServerConfig } from "../../utils/configManager.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -38,6 +39,12 @@ const command: Command = {
         .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
+		if (!interaction.guild) {
+			await interaction.editReply({
+				content: "This command can only be used in a server.",
+			});
+			return;
+		}
 		if (interaction.options.getBoolean("announce")) {
 			await interaction.deferReply();
 		} else {
@@ -55,9 +62,9 @@ const command: Command = {
 		const targetUser = interaction.options.getUser("user", true);
 		const reason = interaction.options.getString("reason", true);
 
-		const logChannel = client.channels.cache.get("1499149296203993169") as
-			| TextChannel
-			| undefined;
+		const logChannel = client.channels.cache.get(
+			await GetServerConfig(interaction.guild.id, "logChannel") as string
+		) as TextChannel | undefined;
 
 		try {
 			await targetUser

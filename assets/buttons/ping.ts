@@ -1,6 +1,7 @@
 import type { ButtonInteraction, Client, TextChannel } from "discord.js";
 import {
 	MessageFlags,
+    PermissionFlagsBits,
 } from "discord.js";
 
 const button: Button = {
@@ -41,11 +42,9 @@ const button: Button = {
             }
         }
 
-        const channel = await client.channels.fetch(interaction.channel?.id || "") as TextChannel;
-        if (!channel) return;
-        
-        // Hopefully this wont be used for an @everyone exploit :P
-        // await channel.send(`${interaction.user.username} has requested your help <@${userid}>`);
+        const channel = client.channels.cache.get(interaction.channel?.id as string) as TextChannel;
+        if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
+
         await channel.send({ content: `<@${interaction.user.id}> has requested your help <@${userid}>` });
         
         interaction.deleteReply();

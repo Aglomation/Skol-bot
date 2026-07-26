@@ -17,6 +17,8 @@ const command: Command = {
 		.addStringOption((option) => {
 			const userProfileKeys = [
 				"id",
+				"discordId",
+				"serverId",
 				"verifycode",
 				"email",
 				"banreason",

@@ -188,7 +188,7 @@ export default async function command(
             case SETTINGS.OPERATORS: {
                 // Strip out formatting from mentions
                 const userId = value.replace(/[<@!>]/g, "");
-                const user = await interaction.guild.members.fetch(userId).catch(() => null);
+                const user = interaction.guild.members.cache.get(userId);
                 
                 if (!user) {
                     return interaction.editReply({ content: "Invalid user ID or mention. Please provide a valid user currently in the server." });

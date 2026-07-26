@@ -60,7 +60,7 @@ const button: Button = {
 
 			await member.roles.add(role);
 			await interaction.editReply({
-				content: `You have been verified successfully!`,
+				content: `You have been verified successfully!\nLinked to: ${profile.email}`,
 			});
 			return;
 		}

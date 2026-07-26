@@ -10,8 +10,9 @@ import {
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 } from "discord.js";
-
+import { GetServerConfig } from "../../utils/configManager.js";
 import { UpdateProfile } from "../../utils/profileManager.js";
+
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -82,10 +83,10 @@ const command: Command = {
 
 			await interaction.editReply(`**${user.tag}** has been unmuted.`);
 
-            // Logs the unmute
-			const logChannel = client.channels.cache.get("1499149296203993169") as
-				| TextChannel
-				| undefined;
+			const logChannel = client.channels.cache.get(
+				await GetServerConfig(interaction.guild.id, "logChannel") as string
+			) as TextChannel | undefined;
+
 			if (logChannel) {
 				await logChannel.send(
 					`${interaction.user.tag} has unmuted <@${user.id}> for the reason: ${reason}`,

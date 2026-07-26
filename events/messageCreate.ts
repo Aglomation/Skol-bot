@@ -14,12 +14,7 @@ const CONFIG = {
     CHANNELS: {
         PRIVATELOG: "1499149296203993169",
         AUTO_DELETE: "1498834244854878209",
-        HONEYPOT: "1497140071176863755",
         VERIFYBACKEND: "1498837870876688434",
-        TICKET_SUPPORT: "1499885683995840683",
-    },
-    ROLES: {
-        TEACHER: "1497140069872435217",
     },
     WEBHOOKS: {
         VERIFYBACKEND: "1498837897527431188",
@@ -147,13 +142,14 @@ async function handleVerification(message: Message, client: Client) {
 
 async function sendInvalidEmailNotice(message: Message, userId: string, email: string, verifyCode: string) {
     await message.reply(`Sending dm to <@${userId}> about invalid email`).catch(() => null);
-    
+    const supportChannel = await GetServerConfig(message.guild?.id || "", "supportChannel") as string | undefined;
+
     const embed = new EmbedBuilder()
         .setTitle("❌ Ogiltig LBS-mail")
         .setDescription(
             `Mailen du försökte verifiera med är inte en giltig LBS-mail.\n\n` +
-            `\`${email}\` Slutar inte med @lbs.se, byt konto och försök igen!\n\n` +
-            `*Problem? Skapa en ticket i <#${CONFIG.CHANNELS.TICKET_SUPPORT}>.*`
+            `\`${email}\` Slutar inte med @lbs.se, byt konto och försök igen!` +
+            supportChannel ? `\n\n*Problem? Skapa en ticket i <#${supportChannel}>.*` : ""
         )
         .setColor(0xFF0000);
 

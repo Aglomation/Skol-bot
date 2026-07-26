@@ -5,6 +5,7 @@ import {
 	ButtonStyle,
 	EmbedBuilder,
 	MessageFlags,
+	PermissionFlagsBits,
 	PermissionsBitField,
 } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
@@ -44,8 +45,8 @@ export default async function command(
 
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(btn);
 
-	const channel = await client.channels.fetch(interaction.channel?.id || "") as TextChannel;
-	if (!channel) return;
+	const channel = client.channels.cache.get(interaction.channel?.id as string) as TextChannel;
+	if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
 
 	await channel.send({ embeds: [embed], components: [row] });
 

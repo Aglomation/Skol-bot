@@ -1,5 +1,5 @@
 import type { Client, GuildMember, TextChannel } from "discord.js";
-import { EmbedBuilder, Events } from "discord.js";
+import { EmbedBuilder, Events, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
 import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
 
@@ -47,11 +47,10 @@ async function handleSoftBanCheck(member: GuildMember, profile: UserProfile): Pr
 }
 
 async function sendWelcomeMessage(member: GuildMember, client: Client) {
-    const channel = await client.channels
-        .fetch(await GetServerConfig(member.guild.id, "welcomeChannel") as string)
-        .catch(() => null) as TextChannel | null;
+    const channel = client.channels.cache
+        .get(await GetServerConfig(member.guild.id, "welcomeChannel") as string) as TextChannel | null;
         
-    if (!channel) return;
+    if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
 
     // Filter out bots
     const humanMemberCount = member.guild.members.cache.filter((mm) => !mm.user.bot).size;

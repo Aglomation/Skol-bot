@@ -59,10 +59,10 @@ const command: Command = {
 
 		const embed = new EmbedBuilder()
 			.setTitle("User Found")
-			.setDescription(`Result ID: <@${result.id}> (${result.id})`)
+			.setDescription(`Result: <@${result.discordId}> (${result.id})`)
 			.setThumbnail(
 				interaction.guild?.members.cache
-					.get(result.id)
+					.get(result.discordId)
 					?.user.displayAvatarURL() || "",
 			)
 			.setAuthor({

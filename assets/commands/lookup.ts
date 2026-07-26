@@ -8,6 +8,7 @@ import {
 
 import type { UserProfileKey } from "../../utils/profileManager.js";
 import { FindByValue } from "../../utils/profileManager.js";
+import { getDisplayName } from "../../utils/memberUtils.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -59,11 +60,11 @@ const command: Command = {
 
 		const embed = new EmbedBuilder()
 			.setTitle("User Found")
-			.setDescription(`Result: <@${result.discordId}> (${result.id})`)
+			.setDescription(`Result: <@${result.discordId}> (${getDisplayName(interaction.guild, result.discordId)})`)
 			.setThumbnail(
 				interaction.guild?.members.cache
 					.get(result.discordId)
-					?.user.displayAvatarURL() || "",
+					?.user.displayAvatarURL() as string,
 			)
 			.setAuthor({
 				name: `Lookup for key:"${lookup}" with value:"${value}"`,
@@ -76,6 +77,7 @@ const command: Command = {
 				typeof val === "object" && val !== null
 					? JSON.stringify(val, null, 2)
 					: String(val);
+			if (displayValue === "null" || displayValue === "undefined") continue;
 			embed.addFields({ name: key, value: displayValue, inline: false });
 		}
 

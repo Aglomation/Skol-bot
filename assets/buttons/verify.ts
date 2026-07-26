@@ -37,6 +37,8 @@ const button: Button = {
 
 		// In case the autoban failed, check an extra time
 		const profile = await GetProfile(interaction.user.id, interaction.guild.id);
+		console.log("Profile:", profile);
+		console.log(interaction.user.id, interaction.guild.id);
 		if (profile?.banned === true) {
 			const member = interaction.member as GuildMember;
 			if (!member) return;

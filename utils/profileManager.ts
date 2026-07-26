@@ -61,7 +61,7 @@ export async function UpdateProfile(
 // 		await db
 // 			.update(userProfileTable)
 // 			.set(newData)
-// 			.where(eq(userProfileTable.id, userId));
+// 			.where(eq(userProfileTable.discordId, userId));
 // 	} catch (err) {
 // 		console.error("Error updating profile value1:", err);
 // 		if (err instanceof Error && err.message.includes("duplicate key value violates unique constraint")) {
@@ -97,7 +97,7 @@ export async function GetProfile(userId: string, serverId: string): Promise<User
 		const result = await db
 			.select()
 			.from(userProfileTable)
-			.where(eq(userProfileTable.id, userId) && eq(userProfileTable.serverId, serverId))
+			.where(eq(userProfileTable.discordId, userId) && eq(userProfileTable.serverId, serverId))
 			.limit(1);
 		return result.length > 0 ? result[0] : null;
 	} catch (error) {
@@ -195,7 +195,7 @@ export async function FindAllNonNullKeys(
  */
 export async function DeleteProfile(userId: string, serverId: string): Promise<void> {
 	try {
-		await db.delete(userProfileTable).where(eq(userProfileTable.id, userId) && eq(userProfileTable.serverId, serverId));
+		await db.delete(userProfileTable).where(eq(userProfileTable.discordId, userId) && eq(userProfileTable.serverId, serverId));
 	} catch (error) {
 		console.error("Error deleting profile:", error);
 	}

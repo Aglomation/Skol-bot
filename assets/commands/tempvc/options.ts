@@ -185,7 +185,8 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
                             const matchesName =
                                 member.user.username.toLowerCase().includes(focusedValue) ||
                                 member.nickname?.toLowerCase().includes(focusedValue) ||
-                                member.id.includes(focusedValue);
+                                member.id.includes(focusedValue) &&
+                                member.id !== interaction.user.id;
 
                             // puser requires the user to be in the channel
                             if (choiceConfig === "puser" && channel?.isVoiceBased()) {

@@ -3,7 +3,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AutocompleteInteraction, ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
-import { builder as Invite, autocomplete as inviteAutocomplete } from "./invite.js";
 import { builder as Option, autocomplete as optionAutocomplete } from "./options.js";
 
 const command: Command = {
@@ -11,13 +10,10 @@ const command: Command = {
 		.setName("tempvc")
 		.setDescription("Manages your temporary voice channel")
         
-        .addSubcommand(Option)
-        .addSubcommand(Invite),
+        .addSubcommand(Option),
     async autocomplete(interaction: AutocompleteInteraction) {
 		if (interaction.options.getSubcommand() === "options") {
 			await optionAutocomplete(interaction, interaction.client);
-		} else if (interaction.options.getSubcommand() === "invite") {
-			await inviteAutocomplete(interaction, interaction.client);
 		}
     },
 

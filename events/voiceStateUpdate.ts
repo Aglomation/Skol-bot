@@ -40,14 +40,14 @@ export default {
                         allow: ["ViewChannel", "Connect", "Speak", "MoveMembers"],
                     },
                     {
-                        id: new_state.guild.roles.cache.get(VerifiedRole)?.id || "",
+                        id: new_state.guild.roles.cache.get(VerifiedRole)?.id || new_state.guild.roles.everyone.id,
                         allow: ["ViewChannel"],
                     }
                 ],
             }).then((channel) => {
                 new_state.setChannel(channel);
                 channel?.send({
-                    content: `Welcome to your temporary voice channel, <@${new_state.member?.id}>!\n\nYou can customize your channel settings using the \`/tempvc options\` command.\n\nTo invite users to your channel, use the \`/tempvc invite\` command.\n\nWhitelist is by default disabled.`,
+                    content: `Welcome to your temporary voice channel, <@${new_state.member?.id}>!\n\nYou can customize your channel settings using the \`/tempvc options\` command.\n\nExample:\nTo invite users to your channel, use the \`/tempvc options <Invite>\` command.\n\nWhitelist is by default disabled.`,
                 }).catch(() => null);
             });
         }

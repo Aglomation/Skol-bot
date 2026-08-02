@@ -2,10 +2,11 @@ import type{
     AutocompleteInteraction,
     ChatInputCommandInteraction,
     Client,
+    GuildMember,
     SlashCommandSubcommandBuilder,
 } from "discord.js";
 
-import { ChannelType, MessageFlags, OverwriteType } from "discord.js";
+import { ChannelType, GuildPremiumTier, MessageFlags, OverwriteType } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 
 const SETTINGS = {
@@ -13,19 +14,53 @@ const SETTINGS = {
     USER_LIMIT: "User Limit:user_limit",
     NAME: "Name:name",
     WHITELIST: "Whitelist:whitelist",
-    OPERATORS: "Operators (userid):operators",
+    OPERATORS: "Operators:operators",
+    INVITE: "Invite:invite",
     VISIBILITY: "Visibility:visibility",
     TYPE: "Type:type",
 };
+/*
+ * auser: Autocomplete for all users in the server
+ * puser: Autocomplete for all users in the server who are currently in the channel
+ * none: No autocomplete
+ * achannel: Autocomplete for all channels in the server
+ * pchannel: Autocomplete for all channels in the server that the user has permission to manage / move members which is basically manage
+*/
+type DynamicChoice = "auser" | "puser" | "none" | "achannel" | "pchannel";
 
-const SETTING_CHOICES: Record<string, string[]> = {
-    [SETTINGS.BITRATE]: ["8000", "32000", "64000", "96000", "128000", "256000"],
-    [SETTINGS.USER_LIMIT]: ["0", "99"], // 0 = unlimited, up to 99
-    [SETTINGS.NAME]: [],
-    [SETTINGS.WHITELIST]: ["true", "false"],
-    [SETTINGS.OPERATORS]: [],
-    [SETTINGS.VISIBILITY]: ["Everyone", "Join Only"],
-    [SETTINGS.TYPE]: ["normal", "spoiler", "nsfw"],
+const SETTING_CHOICES: Record<string, { name: string; value: string }[] | DynamicChoice> = {
+    [SETTINGS.BITRATE]: [
+        { name: "8000 bps (Very Low)", value: "8000" },
+        { name: "32000 bps", value: "32000" },
+        { name: "64000 bps (Normal)", value: "64000" },
+        { name: "96000 bps", value: "96000" },
+        { name: "128000 bps (High)", value: "128000" },
+        { name: "256000 bps (Ultra)", value: "256000" },
+        { name: "384000 bps (Placebo)", value: "384000" },
+    ],
+    [SETTINGS.USER_LIMIT]: [
+        { name: "Unlimited", value: "0" },
+        { name: "2 Users", value: "2" },
+        { name: "4 Users", value: "4" },
+        { name: "10 Users", value: "10" },
+        { name: "99 Users (Max)", value: "99" },
+    ],
+    [SETTINGS.NAME]: "none",
+    [SETTINGS.WHITELIST]: [
+        { name: "Enable (True)", value: "true" },
+        { name: "Disable (False)", value: "false" },
+    ],
+    [SETTINGS.OPERATORS]: "puser",
+    [SETTINGS.INVITE]: "auser",
+    [SETTINGS.VISIBILITY]: [
+        { name: "Everyone", value: "Everyone" },
+        { name: "Join Only", value: "Join Only" },
+    ],
+    [SETTINGS.TYPE]: [
+        { name: "Normal", value: "normal" },
+        { name: "Spoiler", value: "spoiler" },
+        { name: "NSFW", value: "nsfw" },
+    ],
 };
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -69,20 +104,19 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
                 channel.type === ChannelType.GuildVoice &&
                 channel.id !== TEMP_CHANNEL &&
                 channel.parentId === TEMP_CATEGORY &&
-                channel.permissionsFor(interaction.user)?.has("Connect")
-            );
+                channel.permissionsFor(interaction.user)?.has("MoveMembers")
+            ).first(25);
             if (!channels) return interaction.respond([]);
 
             const choices = channels
-                .map((channel) => ({ name: channel.name, value: channel.id }))
-                .slice(0, 25);
+                .map((channel) => ({ name: channel.name, value: channel.id }));
 
             return interaction.respond(choices);
         }
 
         case "setting": {
             const choices = Object.keys(SETTING_CHOICES)
-                .filter((name) => name.split(":")[1].toLowerCase().includes(focusedValue))
+                .filter((name) => name.split(":")[0].toLowerCase().includes(focusedValue))
                 .slice(0, 25)
                 .map((name) => ({ name: name.split(":")[0], value: name }));
 
@@ -92,17 +126,114 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
         case "value": {
             const selectedSetting = interaction.options.getString("setting");
             if (!selectedSetting || !SETTING_CHOICES[selectedSetting]) {
-                return interaction.respond(
-                    ["Please select a valid setting first."].map((val) => ({ name: val, value: "" }))
-                );
+                return interaction.respond([
+                    { name: "Please select a valid setting first.", value: "invalid" },
+                ]);
             }
 
-            const choices = SETTING_CHOICES[selectedSetting]
-                .filter((val) => val.toLowerCase().includes(focusedValue))
-                .slice(0, 25)
-                .map((val) => ({ name: val, value: val }));
+            const choiceConfig = SETTING_CHOICES[selectedSetting];
 
-            return interaction.respond(choices);
+            // Check if the choice is an array of choices
+            if (Array.isArray(choiceConfig)) {
+                let filteredChoices = choiceConfig;
+
+                // Filters out bitrate choices that exceed the max allowed bitrate for the current server
+                if (selectedSetting === SETTINGS.BITRATE) {
+                    let maxBitrate = 96000; 
+                    switch (interaction.guild?.premiumTier) {
+                        case GuildPremiumTier.Tier1:
+                            maxBitrate = 128000;
+                            break;
+                        case GuildPremiumTier.Tier2:
+                            maxBitrate = 256000;
+                            break;
+                        case GuildPremiumTier.Tier3:
+                            maxBitrate = 384000;
+                            break;
+                    }
+                    
+                    filteredChoices = filteredChoices.filter(choice => parseInt(choice.value, 10) <= maxBitrate);
+                }
+                const choices = filteredChoices
+                    .filter(
+                        (val) =>
+                            val.name.toLowerCase().includes(focusedValue) ||
+                            val.value.toLowerCase().includes(focusedValue)
+                    )
+                    .slice(0, 25);
+
+                return interaction.respond(choices);
+            }
+
+            // Check if the choice is a dynamic choice
+            if (typeof choiceConfig === "string") {
+                if (choiceConfig === "none") {
+                    return interaction.respond([ { name: "No autocomplete, write to your hearts content.", value: focusedOption.value } ]);
+                }
+
+                if (choiceConfig === "auser" || choiceConfig === "puser") {
+                    const channelId = interaction.options.getString("channel");
+                    const channel = channelId ? guild.channels.cache.get(channelId) : null;
+                    if (choiceConfig === "puser" && !channel) {
+                        return interaction.respond([
+                            { name: "Can't provide member choices without a valid channel.", value: "0" }
+                        ]);
+                    }
+                    const members = guild.members.cache
+                        .filter((member) => {
+                            if (member.user.bot) return false;
+                            const matchesName =
+                                member.user.username.toLowerCase().includes(focusedValue) ||
+                                member.nickname?.toLowerCase().includes(focusedValue) ||
+                                member.id.includes(focusedValue);
+
+                            if (choiceConfig === "puser" && channel) {
+                                return matchesName && channel.permissionsFor(member).has("Connect");
+                            }
+                            return Boolean(matchesName);
+                        })
+                        .first(25);
+
+                    return interaction.respond(
+                        members.map((member) => ({
+                            name: `${member.user.username} ${member.nickname ? `(${member.nickname})` : ""}`,
+                            value: member.id,
+                        }))
+                    );
+                }
+
+                if (
+                    choiceConfig === "achannel" ||
+                    choiceConfig === "pchannel"
+                ) {
+                    const channels = guild.channels.cache
+                        .filter((channel) => {
+                            if (
+                                channel.type !== ChannelType.GuildVoice ||
+                                channel.parentId !== TEMP_CATEGORY ||
+                                channel.id === TEMP_CHANNEL 
+                            ) return false;
+
+                            const matchesName = channel.name.toLowerCase().includes(focusedValue);
+
+                            // pchannel requires the user to have MoveMembers permission in the channel
+                            if (choiceConfig === "pchannel") {
+                                return matchesName && channel.permissionsFor(interaction.user)?.has("MoveMembers");
+                            }
+                            return matchesName;
+                        })
+                        .first(25);
+
+                    return interaction.respond(
+                        channels.map((channel) => ({
+                            name: channel.name,
+                            value: channel.id,
+                        }))
+                    );
+                }
+            }
+
+            return interaction.respond([]);
         }
 
         default:
@@ -148,8 +279,25 @@ export default async function command(
         switch (setting) {
             case SETTINGS.BITRATE: {
                 const bitrateValue = parseInt(value, 10);
-                if (Number.isNaN(bitrateValue) || bitrateValue < 8000 || bitrateValue > 256000) {
-                    return interaction.editReply({ content: "Invalid bitrate. Please provide a number between 8000 and 256000." });
+                let maxBitrate = 96000; // Default max bitrate
+                switch (interaction.guild.premiumTier) {
+                    case null:
+                        break;
+                    case GuildPremiumTier.Tier1:
+                        maxBitrate = 128000;
+                        break;
+                    case GuildPremiumTier.Tier2:
+                        maxBitrate = 256000;
+                        break;
+                    case GuildPremiumTier.Tier3:
+                        maxBitrate = 384000;
+                        break;
+                    default:
+                        break;
+                }
+
+                if (Number.isNaN(bitrateValue) || bitrateValue < 8000 || bitrateValue > maxBitrate) {
+                    return interaction.editReply({ content: `Invalid bitrate. Please provide a number between 8000 and ${maxBitrate}.` });
                 }
                 
                 await channel.setBitrate(bitrateValue);
@@ -177,6 +325,10 @@ export default async function command(
 
             case SETTINGS.WHITELIST: {
                 const isEnabled = value.toLowerCase() === "true";
+                if (value.toLowerCase() !== "true" && value.toLowerCase() !== "false") {
+                    const currentState = channel.permissionOverwrites.cache.get(interaction.guild.roles.everyone.id)?.deny.has("Connect");
+                    return interaction.editReply({ content: `Current whitelist is set to ${currentState ? "disabled" : "enabled"}` });
+                };
                 
                 await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
                     Connect: !isEnabled, 
@@ -188,26 +340,32 @@ export default async function command(
             case SETTINGS.OPERATORS: {
                 // Strip out formatting from mentions
                 const userId = value.replace(/[<@!>]/g, "");
-                const user = interaction.guild.members.cache.get(userId);
+                const user = interaction.guild.members.cache.get(userId) as GuildMember;
                 
-                if (!user) {
-                    return interaction.editReply({ content: "Invalid user ID or mention. Please provide a valid user currently in the server." });
+                if (!user || interaction.user.id === userId) {
+                    return interaction.editReply({ content: "Invalid user ID. Please provide a valid user." });
                 }
+                const currentperms = channel.permissionOverwrites.cache.get(userId)?.allow.has("MoveMembers");
 
                 await channel.permissionOverwrites.edit(userId, {
                     Connect: true,
                     Speak: true,
-                    MoveMembers: true,
+                    MoveMembers: !currentperms,
                 });
-                
+
+                if (!currentperms) {
+                    return interaction.editReply({ content: `User <@${userId}> has been removed as an operator for **<#${channel.id}>**.` });
+                }
+
                 return interaction.editReply({ content: `User <@${userId}> has been added as an operator for **<#${channel.id}>**.` });
             }
             case SETTINGS.VISIBILITY: {
                 switch (value.toLowerCase()) {
                     case "everyone":
-                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string) || "", {
-                            ViewChannel: true,
-                        });
+                        await channel.permissionOverwrites.edit(
+                            await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string || interaction.guild.roles.everyone,
+                            { ViewChannel: true }
+                        );
                         return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Everyone**.` });
                     case "join only": {
                         const allowedUsers = channel.permissionOverwrites.cache.filter(
@@ -222,9 +380,10 @@ export default async function command(
                             });
                         }
 
-                        await channel.permissionOverwrites.edit(interaction.guild.roles.cache.get(await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string) || "", {
-                            ViewChannel: false,
-                        });
+                        await channel.permissionOverwrites.edit(
+                            await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string || interaction.guild.roles.everyone,
+                            { ViewChannel: false }
+                        );
 
                         return interaction.editReply({ content: `Visibility for **<#${channel.id}>** has been set to **Join Only**.` });
                     }

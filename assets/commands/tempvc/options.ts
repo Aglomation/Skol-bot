@@ -8,16 +8,17 @@ import type{
 
 import { ChannelType, GuildPremiumTier, MessageFlags, OverwriteType } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
+import { uppercaseFirstLetter } from "../../../utils/stringConvert.js";
 
 const SETTINGS = {
-    BITRATE: "Bitrate:bitrate",
-    USER_LIMIT: "User Limit:user_limit",
-    NAME: "Name:name",
-    WHITELIST: "Whitelist:whitelist",
-    OPERATORS: "Operators:operators",
-    INVITE: "Invite:invite",
-    VISIBILITY: "Visibility:visibility",
-    TYPE: "Type:type",
+    BITRATE: "bitrate",
+    USER_LIMIT: "user_limit",
+    NAME: "name",
+    WHITELIST: "whitelist",
+    OPERATORS: "operators",
+    INVITE: "invite",
+    VISIBILITY: "visibility",
+    TYPE: "type",
 };
 /*
  * auser: Autocomplete for all users in the server
@@ -47,8 +48,9 @@ const SETTING_CHOICES: Record<string, { name: string; value: string }[] | Dynami
     ],
     [SETTINGS.NAME]: "none",
     [SETTINGS.WHITELIST]: [
-        { name: "Enable (True)", value: "true" },
-        { name: "Disable (False)", value: "false" },
+        { name: "Enable", value: "true" },
+        { name: "Disable", value: "false" },
+        { name: "Current State", value: "state" }
     ],
     [SETTINGS.OPERATORS]: "puser",
     [SETTINGS.INVITE]: "auser",
@@ -62,6 +64,16 @@ const SETTING_CHOICES: Record<string, { name: string; value: string }[] | Dynami
         { name: "NSFW", value: "nsfw" },
     ],
 };
+
+function getMaxBitrate(tier: GuildPremiumTier | null | undefined): number {
+    switch (tier) {
+        case GuildPremiumTier.Tier1: return 128000;
+        case GuildPremiumTier.Tier2: return 256000;
+        case GuildPremiumTier.Tier3: return 384000;
+        default: return 96000;
+    }
+}
+
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
         .setName("options")
@@ -94,7 +106,7 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
     const focusedOption = interaction.options.getFocused(true);
     const optionName = focusedOption.name;
     const focusedValue = focusedOption.value.toLowerCase();
-
+    
     const TEMP_CHANNEL = await GetServerConfig(guild.id, "tempVcMainChannel") as string;
     const TEMP_CATEGORY = await GetServerConfig(guild.id, "tempvcCategory") as string;
 
@@ -116,9 +128,9 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
 
         case "setting": {
             const choices = Object.keys(SETTING_CHOICES)
-                .filter((name) => name.split(":")[0].toLowerCase().includes(focusedValue))
+                .filter((name) => name.toLowerCase().includes(focusedValue))
                 .slice(0, 25)
-                .map((name) => ({ name: name.split(":")[0], value: name }));
+                .map((name) => ({ name: uppercaseFirstLetter(name), value: name }));
 
             return interaction.respond(choices);
         }
@@ -139,19 +151,7 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
 
                 // Filters out bitrate choices that exceed the max allowed bitrate for the current server
                 if (selectedSetting === SETTINGS.BITRATE) {
-                    let maxBitrate = 96000; 
-                    switch (interaction.guild?.premiumTier) {
-                        case GuildPremiumTier.Tier1:
-                            maxBitrate = 128000;
-                            break;
-                        case GuildPremiumTier.Tier2:
-                            maxBitrate = 256000;
-                            break;
-                        case GuildPremiumTier.Tier3:
-                            maxBitrate = 384000;
-                            break;
-                    }
-                    
+                    const maxBitrate = getMaxBitrate(guild.premiumTier);
                     filteredChoices = filteredChoices.filter(choice => parseInt(choice.value, 10) <= maxBitrate);
                 }
                 const choices = filteredChoices
@@ -282,22 +282,7 @@ export default async function command(
         switch (setting) {
             case SETTINGS.BITRATE: {
                 const bitrateValue = parseInt(value, 10);
-                let maxBitrate = 96000; // Default max bitrate
-                switch (interaction.guild.premiumTier) {
-                    case null:
-                        break;
-                    case GuildPremiumTier.Tier1:
-                        maxBitrate = 128000;
-                        break;
-                    case GuildPremiumTier.Tier2:
-                        maxBitrate = 256000;
-                        break;
-                    case GuildPremiumTier.Tier3:
-                        maxBitrate = 384000;
-                        break;
-                    default:
-                        break;
-                }
+                const maxBitrate = getMaxBitrate(interaction.guild.premiumTier);
 
                 if (Number.isNaN(bitrateValue) || bitrateValue < 8000 || bitrateValue > maxBitrate) {
                     return interaction.editReply({ content: `Invalid bitrate. Please provide a number between 8000 and ${maxBitrate}.` });
@@ -330,7 +315,7 @@ export default async function command(
                 const isEnabled = value.toLowerCase() === "true";
                 if (value.toLowerCase() !== "true" && value.toLowerCase() !== "false") {
                     const currentState = channel.permissionOverwrites.cache.get(interaction.guild.roles.everyone.id)?.deny.has("Connect");
-                    return interaction.editReply({ content: `Current whitelist is set to ${currentState ? "disabled" : "enabled"}` });
+                    return interaction.editReply({ content: `Current whitelist is set to ${currentState ? "enabled" : "disabled"}` });
                 };
                 
                 await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
@@ -360,10 +345,10 @@ export default async function command(
                 });
 
                 if (!currentperms) {
-                    return interaction.editReply({ content: `User <@${userId}> has been removed as an operator for **<#${channel.id}>**.` });
+                    return interaction.editReply({ content: `User <@${userId}> has been added as an operator for **<#${channel.id}>**.` });
                 }
 
-                return interaction.editReply({ content: `User <@${userId}> has been added as an operator for **<#${channel.id}>**.` });
+                return interaction.editReply({ content: `User <@${userId}> has been removed as an operator for **<#${channel.id}>**.` });
             }
             case SETTINGS.VISIBILITY: {
                 switch (value.toLowerCase()) {

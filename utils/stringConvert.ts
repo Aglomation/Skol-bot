@@ -79,3 +79,17 @@ export function numToMonth(input: number): string {
 			return "Unknown";
 	}
 }
+
+export function uppercaseFirstLetter(input: string, onlyFirst?: boolean): string {
+	if (!input) return input;
+	const cleaned = input.trim().replace(/[_]/g, " ");
+	if (onlyFirst) {
+		return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+	}
+	
+	return cleaned
+		.split(/[\s\s]+/g)
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
+}

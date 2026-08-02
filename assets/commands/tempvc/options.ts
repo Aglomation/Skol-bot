@@ -187,8 +187,9 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
                                 member.nickname?.toLowerCase().includes(focusedValue) ||
                                 member.id.includes(focusedValue);
 
-                            if (choiceConfig === "puser" && channel) {
-                                return matchesName && channel.permissionsFor(member).has("Connect");
+                            // puser requires the user to be in the channel
+                            if (choiceConfig === "puser" && channel?.isVoiceBased()) {
+                                return matchesName && channel.members.has(member.id);
                             }
                             return Boolean(matchesName);
                         })
@@ -218,8 +219,9 @@ export const autocomplete = async (interaction: AutocompleteInteraction, _client
 
                             // pchannel requires the user to have MoveMembers permission in the channel
                             if (choiceConfig === "pchannel") {
-                                return matchesName && channel.permissionsFor(interaction.user)?.has("MoveMembers");
+                                return matchesName && channel.permissionOverwrites.cache.get(interaction.user.id)?.allow.has("MoveMembers");
                             }
+                            
                             return matchesName;
                         })
                         .first(25);
@@ -344,6 +346,9 @@ export default async function command(
                 
                 if (!user || interaction.user.id === userId) {
                     return interaction.editReply({ content: "Invalid user ID. Please provide a valid user." });
+                }
+                if (interaction.guild.members.cache.get(userId)?.permissions.has("MoveMembers")) {
+                    return interaction.editReply({ content: "You cannot edit operator to a Moderator" });
                 }
                 const currentperms = channel.permissionOverwrites.cache.get(userId)?.allow.has("MoveMembers");
 

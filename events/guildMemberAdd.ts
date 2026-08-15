@@ -23,7 +23,7 @@ async function handleSoftBanCheck(member: GuildMember, profile: UserProfile): Pr
     // If there's no ban duration (or profile), the user isn't banned
     if (!profile?.banduration) return false;
 
-    const banExpiration = parseInt(profile.banduration, 10);
+    const banExpiration = parseInt(profile?.banduration || "0", 10);
 
     // Check if the current time is past the ban expiration
     if (Date.now() > banExpiration) {

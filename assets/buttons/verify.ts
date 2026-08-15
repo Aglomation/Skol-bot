@@ -40,7 +40,7 @@ const button: Button = {
 		// In case the autoban failed, check an extra time
 		const profile = await GetProfile(interaction.user.id, interaction.guild.id) as UserProfile;
 
-		const banExpiration = parseInt(profile.banduration, 10);
+		const banExpiration = parseInt(profile?.banduration || "0", 10);
 
 		if (banExpiration && Date.now() < banExpiration) {
 			const member = interaction.member as GuildMember;

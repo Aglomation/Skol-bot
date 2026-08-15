@@ -35,6 +35,7 @@ export default async function command(
 	const embed = new EmbedBuilder()
         .setTitle("Verifiera din LBS-mejl 🔒")
         .setDescription("Klicka på knappen nedan och läs reglerna i <#1497140071176863759> för att komma in på servern.")
+		.setFooter({ text: "Använd /privacy policy för att läsa vår integritetspolicy. :3" })
         .setColor(0x87CFEB);
 
 	const btn = new ButtonBuilder()

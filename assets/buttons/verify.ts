@@ -9,12 +9,14 @@ import {
 
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
+const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=";
+
 function generateRandomString(length: number) {
 	// 36 ^ 5 = 60_466_176
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 	let result = "";
 	for (let i = 0; i < length; i++) {
-		const randomIndex = Math.floor(Math.random() * chars.length);
+		const randomIndex = Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / (Math.pow(2, 32) / chars.length));
 		result += chars[randomIndex];
 	}
 	return result;
@@ -36,10 +38,11 @@ const button: Button = {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		// In case the autoban failed, check an extra time
-		const profile = await GetProfile(interaction.user.id, interaction.guild.id);
-		console.log("Profile:", profile);
-		console.log(interaction.user.id, interaction.guild.id);
-		if (profile?.banned === true) {
+		const profile = await GetProfile(interaction.user.id, interaction.guild.id) as UserProfile;
+
+		const banExpiration = parseInt(profile.banduration, 10);
+
+		if (banExpiration && Date.now() < banExpiration) {
 			const member = interaction.member as GuildMember;
 			if (!member) return;
 
@@ -89,16 +92,16 @@ const button: Button = {
 			)
 			.setColor("#f2ff00");
 
-		const button = new ButtonBuilder()
+		const formLinkButton = new ButtonBuilder()
 			.setLabel("Gå till formuläret")
 			.setStyle(ButtonStyle.Link)
 			.setURL(
-				`https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=${verificationCode}`,
+				`${formURL}${verificationCode}`,
 			);
 
 		await interaction.editReply({
 			embeds: [embed],
-			components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)],
+			components: [new ActionRowBuilder<ButtonBuilder>().addComponents(formLinkButton)],
 		});
 	},
 };

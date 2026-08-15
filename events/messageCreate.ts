@@ -113,7 +113,7 @@ async function handleVerification(message: Message, client: Client) {
             return;
         }
 
-        const userId = profile.id;
+        const userId = profile.discordId;
         if (!userId) {
             await message.reply("Verification code found but no ID was tied to it").catch(() => null);
             return;
@@ -127,7 +127,7 @@ async function handleVerification(message: Message, client: Client) {
         // checks for valid email while allowing subdomains
         const isValidEmail = /@(?:[a-z0-9-]+\.)*(?:lbs\.se|dbgy\.se|learnet\.se)$/i.test(email) && !email.includes("+");
         if (!isValidEmail) {
-            await sendInvalidEmailNotice(message, profile.id, email, verify);
+            await sendInvalidEmailNotice(message, profile.discordId, email, verify);
             return;
         }
 

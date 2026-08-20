@@ -118,9 +118,9 @@ async function handleVerification(message: Message, client: Client) {
             await message.reply("Verification code found but no ID was tied to it").catch(() => null);
             return;
         }
-
-        if (profile.email && profile.email !== email) {
-            await message.reply(`This verification code has already been used with a different email.\n[${profile.email}]`).catch(() => null);
+        
+        if (profile.email) {
+            await message.reply(`This user already has an email tied to their account.\n[${profile.email}]`).catch(() => null);
             return;
         }
 
@@ -149,7 +149,7 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
         .setDescription(
             `Mailen du försökte verifiera med är inte en giltig LBS-mail.\n\n` +
             `\`${email}\` Slutar inte med @lbs.se, byt konto och försök igen!` +
-            supportChannel ? `\n\n*Problem? Skapa en ticket i <#${supportChannel}>.*` : ""
+            (supportChannel ? `\n\n*Problem? Skapa en ticket i <#${supportChannel}>.*` : "")
         )
         .setColor(0xFF0000);
 

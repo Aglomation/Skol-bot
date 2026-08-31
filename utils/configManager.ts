@@ -52,12 +52,12 @@ export async function GetFullServerConfig(id: string): Promise<ServerConfig | nu
 
 export async function GetServerConfig(id: string, key: ServerConfigKey): Promise<string | number | boolean | null> {
 	try {
-		const profile = await GetFullServerConfig(id);
-		if (!profile) {
+		const serverConfig = await GetFullServerConfig(id);
+		if (!serverConfig) {
 			console.error(`Server config not found for ID: ${id}`);
 			return null;
 		}
-		return profile[key] ?? null;
+		return serverConfig[key] ?? null;
 	} catch (error) {
 		console.error("Error getting value by key:", error);
 		return null;

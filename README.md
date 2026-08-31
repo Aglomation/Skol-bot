@@ -19,3 +19,5 @@ This discord bot was made to handle our School discord server. It has features s
 4. Build the bot with `npm run build`
 5. Run the bot with `npm start`
 
+Demo Server: https://discord.gg/C4Y3DUVazK
+Demo Video: https://youtu.be/kWozEePTmgU

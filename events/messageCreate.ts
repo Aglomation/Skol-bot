@@ -38,7 +38,7 @@ export default {
             case CONFIG.CHANNELS.AUTO_DELETE:
                 await handleAutoDelete(message);
                 break;
-            case await GetServerConfig(message.guild.id, "honeypotChannel") as string:
+            case "1497140071176863755"://await GetServerConfig(message.guild.id, "honeypotChannel") as string:
                 await handleHoneypot(message, client);
                 break;
             // This only exists on the official server

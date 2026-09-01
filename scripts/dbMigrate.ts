@@ -1,11 +1,8 @@
 import fs from "node:fs";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { db } from "../db/client.js";
 import { userProfileTable } from "../db/schema.js";
 
 const PROFILE_FILE = "./storage/profiles.json";
-const sql = neon(process.env.DATABASE_URL || "");
-const db = drizzle({ client: sql });
 
 export type ProfileList = Record<string, UserProfile>;
 

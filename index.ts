@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { neon } from "@neondatabase/serverless";
 import type { RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
 import {
 	Client,
@@ -12,8 +11,7 @@ import {
 	Routes,
 } from "discord.js";
 import dotenv from "dotenv";
-import { drizzle } from "drizzle-orm/neon-http";
-import { relations } from "./db/relations.js";
+import { db } from "./db/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -48,14 +46,6 @@ const fileFilter = (file: string) =>
 
 async function startBot() {
 	// --- Database connection ---
-	if (!process.env.DATABASE_URL) {
-		console.error("DATABASE_URL is not set in environment variables.");
-		return;
-	}
-
-	const sql = neon(process.env.DATABASE_URL);
-	const db = drizzle({ client: sql, relations });
-
 	await db.query.serverConfigTable
 		.findFirst({
 			where: {

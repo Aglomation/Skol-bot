@@ -20,7 +20,7 @@ This discord bot was made to handle our School discord server. It has features s
 5. Build the bot with `npm run build`
 6. Run the bot with `npm start`
 
-Or run the bot with `docker compose up -d`. It expects an existing PostgreSQL server reachable at `DATABASE_URL` — if that's another container, put them on the same docker network and use its container name as the host.
+Or run the bot with `docker compose up -d`. It expects an existing PostgreSQL server reachable at `DATABASE_URL` if that's another container, put them on the same docker network and use its container name as the host.
 
 Demo Server: https://discord.gg/C4Y3DUVazK
 Demo Video: https://youtu.be/kWozEePTmgU

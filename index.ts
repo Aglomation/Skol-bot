@@ -13,6 +13,7 @@ import {
 import dotenv from "dotenv";
 import { db } from "./db/client.js";
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 dotenv.config({ path: path.join(process.cwd(), ".env"), quiet: true });

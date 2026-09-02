@@ -61,7 +61,7 @@ async function startBot() {
 				return;
 			}
 			console.log("Server configuration loaded:", data.id);
-			console.log("Number of members in the db:", data.members.length);
+			console.log("Members in the db:", data.members.length);
 		});
 
 	// --- 1. Load Events ---

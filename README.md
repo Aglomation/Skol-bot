@@ -24,4 +24,5 @@ Or run the bot with `docker compose up -d`. It expects an existing PostgreSQL se
 
 ### Demo
 Demo Server: https://discord.gg/C4Y3DUVazK
+<br/>
 Demo Video: https://youtu.be/kWozEePTmgU

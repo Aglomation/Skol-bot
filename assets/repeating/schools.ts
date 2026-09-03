@@ -95,16 +95,20 @@ const SchoolList: Schools[] = [
 
 const repeating: Repeating = {
 	data: {
-		immediate: false,
+		immediate: true,
 		repeating: true,
-		time: 24 * 60 * 60 * 1000,
-		clockTime: null,
+		time: null,
+		clockTime: "00:00",
 	},
 	async execute(_client: Client) {
+		// Only run when the bot starts if the cache is empty
+		if (fs.existsSync("./cache/schools.json") && new Date().getHours() !== 0) return;
+
 		getAllSchoolData().then((schoolData) => {
+			fs.mkdirSync("./cache", { recursive: true });
 			fs.writeFileSync(
 				"./cache/schools.json",
-				JSON.stringify(schoolData, null, 4),
+				JSON.stringify(schoolData, null, 4)
 			);
 		});
 	},

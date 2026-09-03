@@ -1,0 +1,10 @@
+services:
+  skol-bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - bot-cache:/app/cache
+
+volumes:
+  bot-cache:

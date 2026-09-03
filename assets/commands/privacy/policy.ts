@@ -31,7 +31,7 @@ export default async function command(
             "**- Moderation History:** Collected under **Legitimate Interests** (Art. 6(1)(f)) to enforce rules and prevent abuse.\n\n" +
 
             "## Storage & Third-Party Processors\n" +
-            "Your data is securely stored using [Neon](https://neon.tech/privacy-policy) (our database provider) on servers located in London, UK (protected under the EU-UK data adequacy decision).\n" +
+            "Your data is securely stored in our own self-hosted PostgreSQL database, which we operate ourselves — no third-party database provider has access to it.\n" +
             "We also use [Google Forms](https://policies.google.com/privacy) as a third-party processor for the initial email verification. We **never** sell your data or share it with unauthorized third parties.\n\n" +
 
             "## Data Retention\n" +

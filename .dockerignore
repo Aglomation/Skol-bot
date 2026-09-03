@@ -1,0 +1,8 @@
+node_modules
+builds
+cache
+.env
+.git
+.github
+*.md
+package-lock.json

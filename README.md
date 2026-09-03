@@ -15,9 +15,14 @@ This discord bot was made to handle our School discord server. It has features s
 1. Clone the repository
 2. Install dependencies with `npm install`
 3. Create a `.env` file in the root directory and add your bot token, an example is provided in `.env.example`
-   A large part of the bot uses a database to store information, so you will need to set up a neon database and add the connection string to your `.env` file as well.
-4. Build the bot with `npm run build`
-5. Run the bot with `npm start`
+   A large part of the bot uses a database to store information, so you will need a PostgreSQL server and its connection string in `DATABASE_URL`.
+4. Push the schema with `bunx drizzle-kit push` (or `migrate` if you keep migrations)
+5. Build the bot with `npm run build`
+6. Run the bot with `npm start`
 
+Or run the bot with `docker compose up -d`. It expects an existing PostgreSQL server reachable at `DATABASE_URL` if that's another container, put them on the same docker network and use its container name as the host.
+
+### Demo
 Demo Server: https://discord.gg/C4Y3DUVazK
+<br/>
 Demo Video: https://youtu.be/kWozEePTmgU

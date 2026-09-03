@@ -101,7 +101,6 @@ const repeating: Repeating = {
 		clockTime: "00:00",
 	},
 	async execute(_client: Client) {
-		// Only run when the bot starts if the cache is empty
 		if (fs.existsSync("./cache/schools.json") && new Date().getHours() !== 0) return;
 
 		getAllSchoolData().then((schoolData) => {

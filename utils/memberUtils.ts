@@ -24,7 +24,7 @@ export const getRoleUserCount = (
     guild: Guild | null, 
     primaryRole: string, 
     needOneSecondary: boolean = false, 
-    secondaryRoles?: string[]
+    secondaryRoles?: (string | null)[]
 ): number => {
     if (!guild) return 0;
 
@@ -35,13 +35,19 @@ export const getRoleUserCount = (
         return primaryRoleObj.members.size;
     }
     
+    const validSecondaryRoles = secondaryRoles.filter((roleId): roleId is string => roleId !== null);
+
+    if (validSecondaryRoles.length === 0) {
+        return primaryRoleObj.members.size;
+    }
+
     const count = primaryRoleObj.members.filter(member => {
         if (needOneSecondary) {
             // Member needs AT LEAST ONE of the secondary roles
-            return secondaryRoles.some((roleId) => member.roles.cache.has(roleId));
+            return validSecondaryRoles.some((roleId) => member.roles.cache.has(roleId));
         } else {
             // Member needs ALL of the secondary roles
-            return secondaryRoles.every((roleId) => member.roles.cache.has(roleId));
+            return validSecondaryRoles.every((roleId) => member.roles.cache.has(roleId));
         }
     }).size;
 

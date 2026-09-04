@@ -24,7 +24,7 @@ export const getRoleUserCount = (
     guild: Guild | null, 
     primaryRole: string, 
     needOneSecondary: boolean = false, 
-    secondaryRoles?: (string | null)[]
+    secondaryRoles?: string[]
 ): number => {
     if (!guild) return 0;
 

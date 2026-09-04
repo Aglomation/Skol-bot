@@ -81,23 +81,24 @@ const command: Command = {
         for (const [key, roleData] of Object.entries(schoolData)) {
             let activeCount = 0;
             const unverified = interaction.options.getBoolean("unverified", false) || false;
-            // This looks horrible but technically better than checking all years when we only want one.
+            const verifiedFilter = unverified ? [] : [Roles.verified];
+
             if (order === "all") {
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.åk26]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.åk25]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.åk24]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.verified, Roles.åk23]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.verified, Roles.åk22]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk26]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk25]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk24]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk23]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk22]);
             } else if (order === "current") {
                 // Current classes that go to lbs :3
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.verified, Roles.åk26]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.verified, Roles.åk25]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.verified, Roles.åk24]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk26]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk25]);
+                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk24]);
             } else {
                 // order is a specific year (åk26, åk25, etc.)
                 const specificRole = Roles[order as keyof typeof Roles];
                 if (specificRole) {
-                    activeCount = getRoleUserCount(interaction.guild, roleData.id, unverified, [unverified ? Roles.verified : null, Roles.verified, specificRole]);
+                    activeCount = getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, specificRole]);
                 }
             }
             

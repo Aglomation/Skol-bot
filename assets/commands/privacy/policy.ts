@@ -49,7 +49,7 @@ export default async function command(
             "*You have the right to lodge a complaint with the Swedish Authority for Privacy Protection (IMY).*",
         color: 0xEED202,
         footer: {
-            text: "Last updated: 2026-07-08",
+            text: "Last updated: 2026-09-01",
         },
     };
 

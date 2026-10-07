@@ -4,7 +4,7 @@
  * @returns Number of milliseconds or null if invalid
  */
 export function stringToDate(input: string): number | null {
-	if (!input) return null;
+	if (!input || input === "0") return null;
 
 	const cleaned = String(input).replace(/[()\s]/g, "");
 

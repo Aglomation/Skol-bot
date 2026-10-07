@@ -7,7 +7,7 @@ import { HasPermission } from "./shared.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
 		.setName("note")
-		.setDescription("Add a note to a user, only staff can see it (the user is not told)")
+		.setDescription("Add a staff-note (the user is not told)")
 		.addUserOption((option) =>
 			option.setName("user").setDescription("User to add the note to").setRequired(true),
 		)

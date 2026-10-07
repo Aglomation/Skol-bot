@@ -22,8 +22,6 @@ const command: Command = {
 				"serverId",
 				"verifycode",
 				"email",
-				"banreason",
-				"banduration",
 			] as const satisfies readonly UserProfileKey[];
 			return option
 				.setName("lookup")
@@ -73,12 +71,15 @@ const command: Command = {
 			.setColor("DarkNavy");
 
 		for (const [key, val] of Object.entries(result)) {
+			// the moderation list can get way too long for an embed
 			const displayValue =
-				typeof val === "object" && val !== null
-					? JSON.stringify(val, null, 2)
-					: String(val);
+				key === "moderation" && Array.isArray(val)
+					? `${val.length} entries (use /moderation history)`
+					: typeof val === "object" && val !== null
+						? JSON.stringify(val, null, 2)
+						: String(val);
 			if (displayValue === "null" || displayValue === "undefined") continue;
-			embed.addFields({ name: key, value: displayValue, inline: false });
+			embed.addFields({ name: key, value: displayValue.slice(0, 1024), inline: false });
 		}
 
 		await interaction.editReply({

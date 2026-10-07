@@ -1,7 +1,8 @@
 import type { Client, GuildMember, TextChannel } from "discord.js";
 import { EmbedBuilder, Events, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
-import { GetProfile, UpdateProfile } from "../utils/profileManager.js";
+import { GetActiveBan } from "../utils/moderationManager.js";
+import { GetProfile } from "../utils/profileManager.js";
 
 
 export default {
@@ -19,23 +20,11 @@ export default {
     },
 };
 
-async function handleSoftBanCheck(member: GuildMember, profile: UserProfile): Promise<boolean> {
-    // If there's no ban duration (or profile), the user isn't banned
-    if (!profile?.banduration) return false;
+async function handleSoftBanCheck(member: GuildMember, profile: UserProfile | null): Promise<boolean> {
+    // If there's no active ban (or profile), the user isn't banned
+    // expired and unbanned bans count as not active, they stay in the history
+    if (!GetActiveBan(profile)) return false;
 
-    const banExpiration = parseInt(profile?.banduration || "0", 10);
-
-    // Check if the current time is past the ban expiration
-    if (Date.now() > banExpiration) {
-        // Ban expired: clean up the database
-        await UpdateProfile(member.id, member.guild.id, {
-            banreason: null,
-            banduration: null,
-        });
-        return false; // User is no longer banned
-    }
-
-    // Ban is not yet expired
     try {
         await member.kick("User is softbanned");
         console.log(`Kicked ${member.user.tag} (ban list active)`);

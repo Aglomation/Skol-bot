@@ -12,7 +12,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetServerConfig } from "../../utils/configManager.js";
-import { UpdateProfile } from "../../utils/profileManager.js";
+import { AddModAction, UntilFromDuration } from "../../utils/moderationManager.js";
 import { purgeChannels } from "../../utils/purgeMessages.js";
 import { stringToDate } from "../../utils/stringConvert.js";
 
@@ -107,11 +107,11 @@ const command: Command = {
 				reason,
 			);
 
-			await UpdateProfile(user.id, interaction.guild.id, { timeout: Date.now() + date });
-
 			const expiresAt = Number.isFinite(date)
 				? Math.floor((Date.now() + date) / 1000)
 				: null;
+
+			let dmSent = true;
 			await user
 				.send(
 					`## You have been muted from ${interaction.guild?.name}\n` +
@@ -120,9 +120,20 @@ const command: Command = {
 						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
 						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.`,
 				)
-				.catch(() => {});
+				.catch(() => {
+					dmSent = false;
+				});
 
-			await interaction.editReply(`**${user.tag}** has been muted.`);
+			// save it in the moderation history
+			const caseNumber = await AddModAction(user.id, interaction.guild.id, {
+				type: "mute",
+				by: interaction.user.id,
+				reason,
+				until: UntilFromDuration(date),
+				...(dmSent ? {} : { dm: false }),
+			});
+
+			await interaction.editReply(`**${user.tag}** has been muted. (case #${caseNumber ?? "?"})`);
 
 			const logChannel = client.channels.cache.get(
 				await GetServerConfig(interaction.guild.id, "logChannel") as string
@@ -130,7 +141,7 @@ const command: Command = {
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason}`,
+					`${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`,
 				);
 			}
 

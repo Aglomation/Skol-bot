@@ -12,6 +12,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetServerConfig } from "../../utils/configManager.js";
+import { AddModAction } from "../../utils/moderationManager.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -67,6 +68,7 @@ const command: Command = {
 		) as TextChannel | undefined;
 
 		try {
+			let dmSent = true;
 			await targetUser
 				.send(
 					`## You have been warned from ${interaction.guild?.name}\n` +
@@ -77,14 +79,22 @@ const command: Command = {
 					console.warn(
 						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their warning.`,
 					);
-					return;
+					dmSent = false;
 				});
-            
-			await interaction.editReply(`**${targetUser.tag}** has been warned.`);
+
+			// save it in the moderation history
+			const caseNumber = await AddModAction(targetUser.id, interaction.guild.id, {
+				type: "warn",
+				by: interaction.user.id,
+				reason,
+				...(dmSent ? {} : { dm: false }),
+			});
+
+			await interaction.editReply(`**${targetUser.tag}** has been warned. (case #${caseNumber ?? "?"})`);
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has warned <@${targetUser.id}> for the reason: ${reason}`,
+					`${interaction.user.tag} has warned <@${targetUser.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`,
 				);
 			}
 		} catch (err) {

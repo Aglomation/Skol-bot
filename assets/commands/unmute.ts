@@ -11,7 +11,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetServerConfig } from "../../utils/configManager.js";
-import { UpdateProfile } from "../../utils/profileManager.js";
+import { AddModAction, IgnoreTimeoutChange } from "../../utils/moderationManager.js";
 
 
 const command: Command = {
@@ -67,21 +67,31 @@ const command: Command = {
 		}
 
 		try {
+			IgnoreTimeoutChange(user.id);
 			await member.timeout(
 				null,
 				`Unmuted by ${interaction.user.tag} for the reason: ${reason}`,
 			);
 
-			await UpdateProfile(user.id, interaction.guild.id, { timeout: Date.now() + 0 });
-
+			let dmSent = true;
 			await user
 				.send(
                     `## You have been unmuted from ${interaction.guild?.name}\n` +
                     `Reason: ${reason}`,
                 )
-				.catch(() => {});
+				.catch(() => {
+					dmSent = false;
+				});
 
-			await interaction.editReply(`**${user.tag}** has been unmuted.`);
+			// save it in the moderation history
+			const caseNumber = await AddModAction(user.id, interaction.guild.id, {
+				type: "unmute",
+				by: interaction.user.id,
+				reason,
+				...(dmSent ? {} : { dm: false }),
+			});
+
+			await interaction.editReply(`**${user.tag}** has been unmuted. (case #${caseNumber ?? "?"})`);
 
 			const logChannel = client.channels.cache.get(
 				await GetServerConfig(interaction.guild.id, "logChannel") as string
@@ -89,7 +99,7 @@ const command: Command = {
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has unmuted <@${user.id}> for the reason: ${reason}`,
+					`${interaction.user.tag} has unmuted <@${user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`,
 				);
 			}
 

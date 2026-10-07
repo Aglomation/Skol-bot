@@ -7,6 +7,7 @@ import type {
 } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
+import { AddModAction } from "../utils/moderationManager.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
 
@@ -33,13 +34,17 @@ export default {
             return; 
         }
 
+        // comes from the cache so it doesnt hit the database on every message
+        const honeypotChannel = await GetServerConfig(message.guild.id, "honeypotChannel") as string | null;
+        if (honeypotChannel && message.channel.id === honeypotChannel) {
+            await handleHoneypot(message, client);
+            return;
+        }
+
         switch (message.channel.id) {
             // Might make this a server config option later
             case CONFIG.CHANNELS.AUTO_DELETE:
                 await handleAutoDelete(message);
-                break;
-            case "1497140071176863755"://await GetServerConfig(message.guild.id, "honeypotChannel") as string:
-                await handleHoneypot(message, client);
                 break;
             // This only exists on the official server
             case CONFIG.CHANNELS.VERIFYBACKEND:
@@ -79,7 +84,18 @@ async function handleHoneypot(message: Message, client: Client) {
     }
 
     // Quarantine and delete
-    await message.member?.timeout(3 * 24 * 60 * 60 * 1000).catch(() => null);
+    const muteTime = 3 * 24 * 60 * 60 * 1000;
+    const timedOut = await message.member?.timeout(muteTime).catch(() => null);
+
+    // save it in the moderation history, the bot is the one that did it
+    if (timedOut) {
+        await AddModAction(compromisedUserId, message.guild.id, {
+            type: "mute",
+            by: client.user?.id ?? null,
+            reason: "Honeypot triggered",
+            until: Date.now() + muteTime,
+        });
+    }
     await message.delete().catch(() => null);
 
     // Purge logic

@@ -11,7 +11,7 @@ import {
     ComponentType,
     MessageFlags,
 } from "discord.js";
-import { DeleteProfile } from "../../../utils/profileManager.js";
+import { DeletePersonalData } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -73,10 +73,12 @@ export default async function command(
         const member = interaction.guild?.members.cache.get(interaction.user.id);
         if (!member) return;
 
-        await DeleteProfile(interaction.user.id, interaction.guild.id);
+        // moderation history is kept as the privacy policy allows, a full delete needs an admin
+        const keptHistory = await DeletePersonalData(interaction.user.id, interaction.guild.id);
 
         await interaction.editReply({
-            content: "Deletion request completed. Your data has been deleted and your access to the server will now be revoked.",
+            content: "Deletion request completed. Your data has been deleted and your access to the server will now be revoked." +
+                (keptHistory ? "\nYour moderation history is kept as described in the privacy policy, contact an admin if you want it removed." : ""),
             components: [],
         });
 

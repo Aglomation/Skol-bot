@@ -1,7 +1,7 @@
 import type { Client, GuildMember } from "discord.js";
 import { Events } from "discord.js";
 
-import { DeleteProfile, getValueByKey, UpdateProfile } from "../utils/profileManager.js";
+import { DeletePersonalData, getValueByKey, UpdateProfile } from "../utils/profileManager.js";
 
 const PRIVACY_PREFERENCE = {
     KEEP_ALL: 1,
@@ -17,7 +17,8 @@ export default {
 
         switch (preference) {
             case PRIVACY_PREFERENCE.DELETE_ALL:
-                await DeleteProfile(member.id, member.guild.id);
+                // moderation history is kept as the privacy policy allows
+                await DeletePersonalData(member.id, member.guild.id);
                 console.log(`Deleted all data for user ${member.user.tag} (${member.id}) due to privacy preference.`);
                 break;
 

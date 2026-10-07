@@ -7,6 +7,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 
+import { GetActiveBan } from "../../utils/moderationManager.js";
 import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
 
 const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=";
@@ -40,9 +41,7 @@ const button: Button = {
 		// In case the autoban failed, check an extra time
 		const profile = await GetProfile(interaction.user.id, interaction.guild.id) as UserProfile;
 
-		const banExpiration = parseInt(profile?.banduration || "0", 10);
-
-		if (banExpiration && Date.now() < banExpiration) {
+		if (GetActiveBan(profile)) {
 			const member = interaction.member as GuildMember;
 			if (!member) return;
 

@@ -1,6 +1,7 @@
 import type { Client } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
 import "dotenv/config";
+import { GetMuteExpiry, IgnoreTimeoutChange } from "../../utils/moderationManager.js";
 import { GetProfile } from "../../utils/profileManager.js";
 
 const repeating: Repeating = {
@@ -34,14 +35,17 @@ const repeating: Repeating = {
 
 			timedOutMembers.forEach(async (member) => {
 				const profile = await GetProfile(member.id, guildId);
-				if (!profile?.timeout) return;
+				// when the mute ends (Infinity = never, 0 = unmuted), null means we have no record of a mute
+				const expiry = GetMuteExpiry(profile);
+				if (expiry === null) return;
 
 				console.log(
 					`- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`,
 				);
-				const timeLeft = profile.timeout - Date.now();
+				const timeLeft = expiry - Date.now();
 				const MAX_TIMEOUT_MS = 2419199000; // 28 days - 1s in milliseconds
 				if (timeLeft <= 0) {
+					IgnoreTimeoutChange(member.id);
 					member.timeout(null, "Timeout should already have been cleared by discord?")
 						.catch((err) => console.error(`Failed to remove timeout for ${member.user.tag}:`, err));
 					return;
@@ -51,7 +55,7 @@ const repeating: Repeating = {
 				member
 					.timeout(
 						Math.min(timeLeft, MAX_TIMEOUT_MS),
-						`Refreshing timeout, Expires at: ${new Date(profile.timeout).toISOString()}`,
+						`Refreshing timeout, Expires at: ${Number.isFinite(expiry) ? new Date(expiry).toISOString() : "never"}`,
 					)
 					.catch((err) => {
 						console.error(

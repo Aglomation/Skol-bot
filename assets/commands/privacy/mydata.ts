@@ -4,7 +4,7 @@ import type {
     SlashCommandSubcommandBuilder,
 } from "discord.js";
 
-import { MessageFlags } from "discord.js";
+import { AttachmentBuilder, MessageFlags } from "discord.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -30,7 +30,18 @@ export default async function command(
         return;
     }
 
+    const json = JSON.stringify(profile, null, 2);
+
+    // discord only allows 2000 characters in a message, the moderation history can be longer than that
+    if (json.length > 1800) {
+        await interaction.editReply({
+            content: "Your raw data is too long for a message, here it is as a file:",
+            files: [new AttachmentBuilder(Buffer.from(json), { name: "mydata.json" })],
+        });
+        return;
+    }
+
     await interaction.editReply({
-        content: `Your raw data:\n\`\`\`json\n${JSON.stringify(profile, null, 2)}\n\`\`\``,
+        content: `Your raw data:\n\`\`\`json\n${json}\n\`\`\``,
     });
 }

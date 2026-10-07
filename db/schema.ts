@@ -1,4 +1,18 @@
-import { bigint, boolean, pgTable, text, unique, varchar } from "drizzle-orm/pg-core";
+import { bigint, boolean, jsonb, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+
+// Everything the moderators do to a user gets saved as one of these in user_profiles.moderation
+// The case number is just the position in the list (#1 is the first one), entries are never deleted so the numbers stay the same
+export type ModActionType = "warn" | "mute" | "unmute" | "softban" | "unban" | "note";
+
+export type ModAction = {
+	type: ModActionType;
+	at: number; // when it happened
+	by: string | null; // discord id of the moderator, null if it was done by the system
+	reason: string;
+	until?: number | null; // only mute and softban, when it ends. null = never
+	dm?: boolean; // only saved if the dm failed (false)
+	voided?: { by: string; at: number; reason: string }; // set if a mod voided the case
+};
 
 export const serverConfigTable = pgTable("server_config", {
 	id: varchar("id", { length: 255 }).primaryKey().notNull(),
@@ -28,10 +42,7 @@ export const userProfileTable = pgTable("user_profiles", {
 	serverId: varchar("server_id", { length: 255 }).notNull(),
 	verifycode: varchar("verifycode", { length: 5 }).unique(),
 	email: varchar("email", { length: 255 }).unique(),
-	timeout: bigint({ mode: "number" }),
-	banned: boolean("banned").notNull().default(false),
-	banreason: text("banreason"),
-	banduration: text("banduration"),
+	moderation: jsonb("moderation").$type<ModAction[]>().notNull().default([]),
 	birthday: bigint({ mode: "number" }),
 	privacyOption: bigint({ mode: "number" }).notNull().default(2),
 }, (t) => [

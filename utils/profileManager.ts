@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../db/client.js";
+import type { ModAction } from "../db/schema.js";
 import { userProfileTable } from "../db/schema.js";
 
 export type UserProfile = typeof userProfileTable.$inferSelect;
@@ -59,7 +60,7 @@ export async function GetProfile(userId: string, serverId: string): Promise<User
 	}
 }
 
-export async function getValueByKey(userId: string, serverId: string, key: UserProfileKey): Promise<string | number | boolean | null> {
+export async function getValueByKey(userId: string, serverId: string, key: UserProfileKey): Promise<string | number | boolean | ModAction[] | null> {
 	try {
 		const profile = await GetProfile(userId, serverId);
 		if (!profile) {
@@ -144,7 +145,31 @@ export async function FindAllNonNullKeys(
 }
 
 /**
- * Remove a profile
+ * Deletes a users personal data (email, verify code, birthday)
+ * The moderation history is kept as the privacy policy allows, so the row stays if there is any
+ * Profiles without moderation history are deleted completely
+ * @returns true if the moderation history was kept
+ */
+export async function DeletePersonalData(userId: string, serverId: string): Promise<boolean> {
+	try {
+		const profile = await GetProfile(userId, serverId);
+		if (profile && profile.moderation.length > 0) {
+			await db.update(userProfileTable)
+				.set({ email: null, verifycode: null, birthday: null })
+				.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)));
+			return true;
+		}
+	} catch (error) {
+		console.error("Error deleting personal data:", error);
+		return false;
+	}
+
+	await DeleteProfile(userId, serverId);
+	return false;
+}
+
+/**
+ * Remove a profile completely, including the moderation history
  */
 export async function DeleteProfile(userId: string, serverId: string): Promise<void> {
 	try {

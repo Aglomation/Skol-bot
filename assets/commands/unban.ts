@@ -12,7 +12,8 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetServerConfig } from "../../utils/configManager.js";
-import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
+import { AddModAction, GetActiveBan } from "../../utils/moderationManager.js";
+import { GetProfile } from "../../utils/profileManager.js";
 
 
 const command: Command = {
@@ -57,19 +58,20 @@ const command: Command = {
 			return;
 		}
 
-		if (!profile?.banned) {
+		if (!GetActiveBan(profile)) {
 			await interaction.editReply("That user is not on the ban list.");
 			return;
 		}
 
-		await UpdateProfile(user.id, interaction.guild.id, {
-			banned: false,
-			banreason: null,
-			banduration: null,
+		// save it in the moderation history
+		const caseNumber = await AddModAction(user.id, interaction.guild.id, {
+			type: "unban",
+			by: interaction.user.id,
+			reason,
 		});
 
 		await interaction.editReply(
-			`**${user.tag}** has been removed from the ban list.`,
+			`**${user.tag}** has been removed from the ban list. (case #${caseNumber ?? "?"})`,
 		);
 
 		const logChannel = client.channels.cache.get(
@@ -77,7 +79,7 @@ const command: Command = {
 		) as TextChannel | undefined;
 		if (logChannel) {
 			await logChannel.send(
-				`${interaction.user.tag} has unbanned <@${user.id}> for the reason: ${reason}`,
+				`${interaction.user.tag} has unbanned <@${user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`,
 			);
 		}
 	},

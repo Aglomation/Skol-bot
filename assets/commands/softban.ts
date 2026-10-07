@@ -13,7 +13,8 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetServerConfig } from "../../utils/configManager.js";
-import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
+import { AddModAction, GetActiveBan, UntilFromDuration } from "../../utils/moderationManager.js";
+import { GetProfile } from "../../utils/profileManager.js";
 import { purgeChannels } from "../../utils/purgeMessages.js";
 import { stringToDate } from "../../utils/stringConvert.js";
 
@@ -105,15 +106,17 @@ const command: Command = {
 			return;
 		}
 
-		if (profile?.banned) {
-			await interaction.editReply(
-				"User is already on the ban list. Editing their ban instead.",
-			);
-			await UpdateProfile(targetUser.id, interaction.guild.id, {
-				banned: true,
-				banreason: reason,
-				banduration: String(Date.now() + date),
+		// already banned, the new ban replaces the old one (the old one stays in the history)
+		if (GetActiveBan(profile)) {
+			const editNumber = await AddModAction(targetUser.id, interaction.guild.id, {
+				type: "softban",
+				by: interaction.user.id,
+				reason,
+				until: UntilFromDuration(date),
 			});
+			await interaction.editReply(
+				`User is already on the ban list. Edited their ban instead. (case #${editNumber ?? "?"})`,
+			);
 			return;
 		}
 
@@ -124,15 +127,11 @@ const command: Command = {
 			return;
 		}
 		try {
-			await UpdateProfile(targetUser.id, interaction.guild.id, {
-				banned: true,
-				banreason: reason,
-				banduration: String(Date.now() + date),
-			});
-
 			const expiresAt = Number.isFinite(date)
 				? Math.floor((Date.now() + date) / 1000)
 				: null;
+
+			let dmSent = true;
 			await targetUser
 				.send(
 					`## You have been banned from ${interaction.guild?.name}\n` +
@@ -146,17 +145,26 @@ const command: Command = {
 					console.warn(
 						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their softban.`,
 					);
-					return;
+					dmSent = false;
 				});
+
+			// save it in the moderation history (before the kick so they cant rejoin in between)
+			const caseNumber = await AddModAction(targetUser.id, interaction.guild.id, {
+				type: "softban",
+				by: interaction.user.id,
+				reason,
+				until: UntilFromDuration(date),
+				...(dmSent ? {} : { dm: false }),
+			});
 
 			// Kicks instead of banning to avoid IP-ban
 			if (targetMember) await targetMember.kick(reason);
 
-			await interaction.editReply(`**${targetUser.tag}** has been banned.`);
+			await interaction.editReply(`**${targetUser.tag}** has been banned. (case #${caseNumber ?? "?"})`);
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has softbanned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason}`,
+					`${interaction.user.tag} has softbanned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`,
 				);
 			}
 

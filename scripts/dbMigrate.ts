@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { db } from "../db/client.js";
 import { userProfileTable } from "../db/schema.js";
+import { LegacyToActions } from "../utils/moderationManager.js";
 
 const PROFILE_FILE = "./storage/profiles.json";
 
@@ -29,10 +30,8 @@ fs.readFile(PROFILE_FILE, "utf-8", (err, data) => {
 				const newData: UserProfile = {
 					verifycode: profile.verifycode ?? null,
 					email: profile.email ?? null,
-					timeout: profile.timeout ?? null,
-					banned: profile.banned ?? false,
-					banreason: profile.banreason ?? null,
-					banduration: profile.banduration ?? null,
+					// the old timeout/banned/banreason/banduration turns into moderation entries
+					moderation: LegacyToActions(profile as Parameters<typeof LegacyToActions>[0]),
 					birthday: profile.birthday ?? null,
 				};
 

@@ -45,7 +45,6 @@ const command: Command = {
 				.setDescription("Whether to delete the user's messages")
 				.setRequired(false)
 				.setChoices(
-					{ name: "None", value: "0" },
 					{ name: "1 Hour", value: "1h" },
 					{ name: "3 Hours", value: "3h" },
 					{ name: "6 Hours", value: "6h" },
@@ -115,11 +114,10 @@ const command: Command = {
 			let dmSent = true;
 			await user
 				.send(
-					`## You have been muted from ${interaction.guild?.name}\n` +
-						`For: ${reason}\n` +
-						`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
-						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
-						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.`,
+					`## You have been muted in ${interaction.guild?.name}\n` +
+					`**Reason:** ${reason}\n` +
+					`**Ends:** ${expiresAt ? `<t:${expiresAt}:F> (<t:${expiresAt}:R>)` : "Never (permanent)"}\n\n` +
+					`Until then you can't send messages, react or speak in voice channels. If you think this is a mistake, reply to this message and the staff team will see it.`,
 				)
 				.catch(() => {
 					dmSent = false;

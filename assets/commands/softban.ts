@@ -113,11 +113,28 @@ const command: Command = {
 
 		// already banned, the new ban replaces the old one (the old one stays in the history)
 		if (GetActiveBan(profile)) {
+			// dm first so we know if it arrived before saving the case
+			let editDmSent = true;
+			await targetUser
+				.send(
+					`## Your ban on ${interaction.guild?.name} has been changed\n` +
+					`**New reason:** ${reason}\n` +
+					`**Now ends:** ${expiresAt ? `<t:${expiresAt}:F> (<t:${expiresAt}:R>)` : "Never (permanent)"}\n\n` +
+					`You still can't join the server while the ban is active. If you think this is a mistake, reply to this message and the staff team will see it.`,
+				)
+				.catch(() => {
+					console.warn(
+						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their softban.`,
+					);
+					editDmSent = false;
+				});
+
 			const editNumber = await AddModAction(targetUser.id, interaction.guild.id, {
 				type: "softban",
 				by: interaction.user.id,
 				reason,
 				until: UntilFromDuration(date),
+				...(editDmSent ? {} : { dm: false }),
 			});
 			await interaction.editReply(
 				`User is already on the ban list. Edited their ban instead. (case #${editNumber ?? "?"})`,
@@ -131,6 +148,7 @@ const command: Command = {
 			return;
 		}
 
+		// no member means they arent in the server, thats fine, its a preban and they get kicked when they join
 		if (targetMember && !targetMember.kickable) {
 			await interaction.editReply(
 				"I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.",
@@ -143,11 +161,10 @@ const command: Command = {
 			await targetUser
 				.send(
 					`## You have been banned from ${interaction.guild?.name}\n` +
-						`For: ${reason}\n` +
-						`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
-						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
-						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.\n` +
-						`Invite: https://discord.gg/dUYHv8Dv94`,
+					`**Reason:** ${reason}\n` +
+					`**Ends:** ${expiresAt ? `<t:${expiresAt}:F> (<t:${expiresAt}:R>)` : "Never (permanent)"}\n\n` +
+					`You can't join the server while the ban is active. If you think this is a mistake, reply to this message and the staff team will see it.` +
+					(expiresAt ? `\nYou can rejoin when it ends: https://discord.gg/dUYHv8Dv94` : ""),
 				)
 				.catch(() => {
 					console.warn(

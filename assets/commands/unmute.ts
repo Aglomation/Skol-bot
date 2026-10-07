@@ -75,9 +75,10 @@ const command: Command = {
 			let dmSent = true;
 			await user
 				.send(
-                    `## You have been unmuted from ${interaction.guild?.name}\n` +
-                    `Reason: ${reason}`,
-                )
+					`## You have been unmuted in ${interaction.guild?.name}\n` +
+					`**Reason:** ${reason}\n\n` +
+					`You can talk again :D`,
+				)
 				.catch(() => {
 					dmSent = false;
 				});

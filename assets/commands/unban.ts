@@ -63,11 +63,23 @@ const command: Command = {
 			return;
 		}
 
+		let dmSent = true;
+		await user
+			.send(
+				`## Your ban from ${interaction.guild?.name} has been lifted\n` +
+					`**Reason:** ${reason}\n\n` +
+					`You can join the server again: https://discord.gg/dUYHv8Dv94`,
+			)
+			.catch(() => {
+				dmSent = false;
+			});
+
 		// save it in the moderation history
 		const caseNumber = await AddModAction(user.id, interaction.guild.id, {
 			type: "unban",
 			by: interaction.user.id,
 			reason,
+			...(dmSent ? {} : { dm: false }),
 		});
 
 		await interaction.editReply(

@@ -71,9 +71,9 @@ const command: Command = {
 			let dmSent = true;
 			await targetUser
 				.send(
-					`## You have been warned from ${interaction.guild?.name}\n` +
-						`For: ${reason}\n` +
-                        `Please make sure to follow the server rules to avoid further action. If you have any questions, feel free to reach out to the staff team.`,
+					`## You have received a warning in ${interaction.guild?.name}\n` +
+					`**Reason:** ${reason}\n\n` +
+					`This is only a warning, but please follow the server rules to avoid further action. If you have any questions, reply to this message and the staff team will see it.`,
 				)
 				.catch(() => {
 					console.warn(

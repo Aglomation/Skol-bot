@@ -131,7 +131,6 @@ const command: Command = {
 			return;
 		}
 
-		// no member means they arent in the server, thats fine, its a preban and they get kicked when they join
 		if (targetMember && !targetMember.kickable) {
 			await interaction.editReply(
 				"I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.",

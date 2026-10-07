@@ -11,7 +11,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { GetServerConfig } from "../../utils/configManager.js";
-import { AddModAction, IgnoreTimeoutChange } from "../../utils/moderationManager.js";
+import { AddModAction } from "../../utils/moderationManager.js";
 
 
 const command: Command = {
@@ -67,7 +67,6 @@ const command: Command = {
 		}
 
 		try {
-			IgnoreTimeoutChange(user.id);
 			await member.timeout(
 				null,
 				`Unmuted by ${interaction.user.tag} for the reason: ${reason}`,

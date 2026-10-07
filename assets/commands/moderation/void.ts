@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
-import { GetActiveMute, IgnoreTimeoutChange, VoidModAction } from "../../../utils/moderationManager.js";
+import { GetActiveMute, VoidModAction } from "../../../utils/moderationManager.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 import { HasPermission, TYPE_INFO } from "./shared.js";
 
@@ -66,7 +66,6 @@ export default async function command(
 	let extra = "";
 	if (wasActiveMute) {
 		const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-		IgnoreTimeoutChange(user.id);
 		const removed = await member?.timeout(null, `Mute voided by ${interaction.user.tag}`).then(() => true).catch(() => false);
 		extra = removed ? "\nTheir timeout was removed too." : "\nI couldn't remove their timeout, use /unmute if they are still muted.";
 	}

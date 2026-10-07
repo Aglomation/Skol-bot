@@ -8,23 +8,6 @@ export type { ModAction, ModActionType };
 // Anything with a moderation list works, so a full profile can be passed in directly
 type HasModeration = { moderation?: ModAction[] | null } | null | undefined;
 
-// Timeout removals done by the bot itself (unmute, void...) so the guildMemberUpdate event doesnt log them a second time
-const ignoredTimeoutChanges = new Map<string, number>();
-
-/**
- * Call this right before the bot removes a timeout itself
- */
-export function IgnoreTimeoutChange(userId: string): void {
-	ignoredTimeoutChanges.set(userId, Date.now() + 15 * 1000);
-}
-
-export function IsTimeoutChangeIgnored(userId: string): boolean {
-	const expires = ignoredTimeoutChanges.get(userId);
-	if (!expires) return false;
-	ignoredTimeoutChanges.delete(userId);
-	return expires > Date.now();
-}
-
 export type NumberedAction = { number: number; action: ModAction };
 export type ServerAction = NumberedAction & { userId: string };
 
@@ -224,7 +207,7 @@ export function LegacyToActions(
 			type: "mute",
 			at: now,
 			by: null,
-			reason: "(Migrated)",
+			reason: "Migrated from the old data",
 			until: old.timeout,
 		});
 	}

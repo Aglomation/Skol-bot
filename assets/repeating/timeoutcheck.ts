@@ -1,7 +1,7 @@
 import type { Client } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
 import "dotenv/config";
-import { GetMuteExpiry, IgnoreTimeoutChange } from "../../utils/moderationManager.js";
+import { GetMuteExpiry } from "../../utils/moderationManager.js";
 import { GetProfile } from "../../utils/profileManager.js";
 
 const repeating: Repeating = {
@@ -45,7 +45,6 @@ const repeating: Repeating = {
 				const timeLeft = expiry - Date.now();
 				const MAX_TIMEOUT_MS = 2419199000; // 28 days - 1s in milliseconds
 				if (timeLeft <= 0) {
-					IgnoreTimeoutChange(member.id);
 					member.timeout(null, "Timeout should already have been cleared by discord?")
 						.catch((err) => console.error(`Failed to remove timeout for ${member.user.tag}:`, err));
 					return;

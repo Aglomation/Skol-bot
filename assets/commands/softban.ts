@@ -107,6 +107,10 @@ const command: Command = {
 			return;
 		}
 
+		const expiresAt = Number.isFinite(date)
+			? Math.floor((Date.now() + date) / 1000)
+			: null;
+
 		// already banned, the new ban replaces the old one (the old one stays in the history)
 		if (GetActiveBan(profile)) {
 			const editNumber = await AddModAction(targetUser.id, interaction.guild.id, {
@@ -118,20 +122,24 @@ const command: Command = {
 			await interaction.editReply(
 				`User is already on the ban list. Edited their ban instead. (case #${editNumber ?? "?"})`,
 			);
+
+			if (logChannel) {
+				await logChannel.send(
+					`${interaction.user.tag} has edited the softban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber ?? "?"})`,
+				);
+			}
 			return;
 		}
 
-		if (!targetMember?.kickable) {
+		// no member means they arent in the server, thats fine, its a preban and they get kicked when they join
+		if (targetMember && !targetMember.kickable) {
 			await interaction.editReply(
 				"I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.",
 			);
 			return;
 		}
-		try {
-			const expiresAt = Number.isFinite(date)
-				? Math.floor((Date.now() + date) / 1000)
-				: null;
 
+		try {
 			let dmSent = true;
 			await targetUser
 				.send(
@@ -139,7 +147,7 @@ const command: Command = {
 						`For: ${reason}\n` +
 						`Duration: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"}\n` +
 						`Expires: ${expiresAt ? `<t:${expiresAt}:R>` : "Indefinite"}\n` +
-						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.` +
+						`This dm can be used as a way to appeal, any messages sent will be seen by the staff team.\n` +
 						`Invite: https://discord.gg/dUYHv8Dv94`,
 				)
 				.catch(() => {
@@ -148,6 +156,14 @@ const command: Command = {
 					);
 					dmSent = false;
 				});
+
+			// get the channels to purge before the kick, after it we cant check what they could see
+			const channelsToPurge =
+				targetMember && deleteMessagesDuration && deleteMessagesDuration > 0
+					? targetMember.guild.channels.cache
+							.filter((ch) => ch.isTextBased() && ch.permissionsFor(targetMember)?.has("ViewChannel"))
+							.map((c) => c as GuildTextBasedChannel)
+					: [];
 
 			// save it in the moderation history (before the kick so they cant rejoin in between)
 			const caseNumber = await AddModAction(targetUser.id, interaction.guild.id, {
@@ -161,7 +177,10 @@ const command: Command = {
 			// Kicks instead of banning to avoid IP-ban
 			if (targetMember) await targetMember.kick(reason);
 
-			await interaction.editReply(`**${targetUser.tag}** has been banned. (case #${caseNumber ?? "?"})`);
+			await interaction.editReply(
+				`**${targetUser.tag}** has been banned. (case #${caseNumber ?? "?"})` +
+					(targetMember ? "" : "\nThey are not in the server, they will be kicked if they join."),
+			);
 
 			if (logChannel) {
 				await logChannel.send(
@@ -170,20 +189,9 @@ const command: Command = {
 			}
 
 			// Purge messages if option is set
-			if (
-				deleteMessagesDuration &&
-				deleteMessagesDuration > 0 &&
-				targetMember
-			) {
-				const channels = targetMember.guild.channels.cache.filter(
-					(ch): ch is TextChannel =>
-						ch.isTextBased() &&
-						ch.permissionsFor(targetMember).has("ViewChannel"),
-				);
-				const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
-
+			if (channelsToPurge.length > 0 && deleteMessagesDuration) {
 				const results = await purgeChannels(
-					channelsArray,
+					channelsToPurge,
 					targetUser.id,
 					deleteMessagesDuration,
 				);

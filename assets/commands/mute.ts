@@ -45,12 +45,15 @@ const command: Command = {
 				.setDescription("Whether to delete the user's messages")
 				.setRequired(false)
 				.setChoices(
+					{ name: "None", value: "0" },
 					{ name: "1 Hour", value: "1h" },
 					{ name: "3 Hours", value: "3h" },
 					{ name: "6 Hours", value: "6h" },
 					{ name: "12 Hours", value: "12h" },
-					{ name: "1 Day", value: "24h" },
-					{ name: "2 Days", value: "48h" },
+					{ name: "1 Day", value: "1d" },
+					{ name: "2 Days", value: "2d" },
+					{ name: "4 Days", value: "4d" },
+					{ name: "1 Week", value: "1w" },
 				),
 		)
 		.addBooleanOption((option) =>

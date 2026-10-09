@@ -21,12 +21,12 @@ import { stringToDate } from "../../utils/stringConvert.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
-		.setName("softban")
-		.setDescription("Bans a user from the server (Softban)")
+		.setName("ban")
+		.setDescription("Bans a user from the server (ban)")
 		.addUserOption((option) =>
 			option
 				.setName("user")
-				.setDescription("User to softban")
+				.setDescription("User to ban")
 				.setRequired(true),
 		)
 		.addStringOption((option) =>
@@ -124,7 +124,7 @@ const command: Command = {
 				)
 				.catch(() => {
 					console.warn(
-						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their softban.`,
+						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their ban.`,
 					);
 					editDmSent = false;
 				});
@@ -142,7 +142,7 @@ const command: Command = {
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has edited the softban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber ?? "?"})`,
+					`${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber ?? "?"})`,
 				);
 			}
 			return;
@@ -151,7 +151,7 @@ const command: Command = {
 		// no member means they arent in the server, thats fine, its a preban and they get kicked when they join
 		if (targetMember && !targetMember.kickable) {
 			await interaction.editReply(
-				"I cannot softban this user. Their role is higher than or equal to my highest role, or they are the server owner.",
+				"I cannot ban this user. Their role is higher than or equal to my highest role, or they are the server owner.",
 			);
 			return;
 		}
@@ -168,7 +168,7 @@ const command: Command = {
 				)
 				.catch(() => {
 					console.warn(
-						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their softban.`,
+						`Could not send DM to ${targetUser.tag} (${targetUser.id}) about their ban.`,
 					);
 					dmSent = false;
 				});
@@ -200,7 +200,7 @@ const command: Command = {
 
 			if (logChannel) {
 				await logChannel.send(
-					`${interaction.user.tag} has softbanned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`,
+					`${interaction.user.tag} has banned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`,
 				);
 			}
 
@@ -214,13 +214,13 @@ const command: Command = {
 
 				if (logChannel)
 					await logChannel.send(
-						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${targetUser.id}> as part of the softban.`,
+						`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${targetUser.id}> as part of the ban.`,
 					);
 			}
 		} catch (err) {
 			console.error(err);
 			await interaction.editReply(
-				`An error occurred while trying to softban the user. Please ensure I have the appropriate permissions and try again.\nError: ${err instanceof Error ? err.message : String(err)}`,
+				`An error occurred while trying to ban the user. Please ensure I have the appropriate permissions and try again.\nError: ${err instanceof Error ? err.message : String(err)}`,
 			);
 		}
 	},

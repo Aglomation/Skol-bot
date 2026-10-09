@@ -24,6 +24,8 @@ export const serverConfigTable = pgTable("server_config", {
 	teacherRoleId: varchar("teacher_role_id", { length: 255 }),
 	tempvcCategory: varchar("tempvc_category", { length: 255 }),
 	tempVcMainChannel: varchar("tempvc_main_channel", { length: 255 }),
+	ticketCategory: varchar("ticket_category", { length: 255 }),
+	ticketChannel: varchar("ticket_channel", { length: 255 }),
 	logChannel: varchar("log_channel", { length: 255 }),
 	policeChannel: varchar("police_channel", { length: 255 }),
 	honeypotChannel: varchar("honeypot_channel", { length: 255 }),

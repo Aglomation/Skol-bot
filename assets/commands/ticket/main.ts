@@ -1,23 +1,23 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ChatInputCommandInteraction, Client } from "discord.js";
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import type { AutocompleteInteraction, ChatInputCommandInteraction, Client } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 
-import { builder as clearVerifyBuilder } from "./clearverify.js";
-import { builder as manualVerifyBuilder } from "./manualverify.js";
-import { builder as rulesBuilder } from "./rulesmessage.js";
-import { builder as verifyBuilder } from "./verifymessage.js";
+// import { builder as Option, autocomplete as optionAutocomplete } from "./options.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
-		.setName("mod")
-		.setDescription("mod commands")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+		.setName("tempvc")
+		.setDescription("Manages your temporary voice channel")
+        
+        // .addSubcommand(Option)
+    ,
+    async autocomplete(interaction: AutocompleteInteraction) {
+		// if (interaction.options.getSubcommand() === "options") {
+		// 	await optionAutocomplete(interaction, interaction.client);
+		// }
+    },
 
-        .addSubcommand(clearVerifyBuilder)
-		.addSubcommand(manualVerifyBuilder)
-		.addSubcommand(rulesBuilder)
-		.addSubcommand(verifyBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction, client: Client) {
 		if (!interaction.guild) {

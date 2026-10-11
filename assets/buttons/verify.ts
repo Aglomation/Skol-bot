@@ -5,8 +5,6 @@ import { GetActiveBan } from "../../utils/moderationManager.js";
 import { GetProfile } from "../../utils/profileManager.js";
 import { BuildStep } from "../../utils/verifyFlow.js";
 
-// "Verifiera Här!" only starts the questions (city, class, year, pronouns)
-// The rest (verify code, form link, roles for people with an email) happens in FinishVerify after the last answer
 const button: Button = {
 	data: {
 		customId: "verify",

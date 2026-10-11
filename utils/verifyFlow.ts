@@ -90,7 +90,7 @@ export function BuildStep(step: VerifyStep, state: string[], mode: "verify" | "r
 	const menu = new StringSelectMenuBuilder()
 		.setCustomId([`${mode}select`, step, ...state].join(":"))
 		.setPlaceholder(info.placeholder)
-		.addOptions(info.options.map((option) => ({ label: option.label, value: option.key })));
+		.addOptions(info.options.map((option) => ({ label: option.label, value: option.key, emoji: option.emoji })));
 
 	// pronouns can be more than one
 	if (step === "pronouns") menu.setMinValues(1).setMaxValues(info.options.length);
@@ -309,16 +309,15 @@ export async function FinishVerify(
 		? new EmbedBuilder()
 			.setTitle("Verifiering för alumner")
 			.setDescription(
-				`Du har valt ett år där de flesta har tagit studenten.\n\n` +
-				`Har du tagit studenten och inte längre har en skolmail: svara **Ja** på frågan om studenten i formuläret och skicka in bevis, så verifierar en moderator dig manuellt. Du får dina roller då.\n\n` +
-				`Går du fortfarande kvar på skolan: logga in med ditt **@*lbs.se**-konto och svara **Nej**.\n\n` +
+				`Du har valt en årskull som redan har tagit studenten.\n\n` +
+				`Välj "Nej" på frågan om du är inloggad på en skolmail, och välj sedan att du har tagit studenten.\n\n` +
 				`Din kod för formuläret är: \`${verificationCode}\``,
 			)
 			.setColor("#f2ff00")
 		: new EmbedBuilder()
 			.setTitle("⚠️ Viktigt")
 			.setDescription(
-				`Din webbläsare måste vara inloggad på ditt **@*lbs.se**-konto.\n\n` +
+				`Din webbläsare måste vara inloggad på ditt **@lbs.se**-konto.\n\n` +
 				`Din kod för formuläret är: \`${verificationCode}\``,
 			)
 			.setColor("#f2ff00");

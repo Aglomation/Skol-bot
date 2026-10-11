@@ -3,13 +3,17 @@ import type {
     Guild,
     GuildTextBasedChannel,
     Message,
+    Role,
     TextChannel,
 } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
 import { AddModAction } from "../utils/moderationManager.js";
+import type { PendingRoles } from "../utils/verifyFlow.js";
+import { ApplyVerifyRoles, NotifyNoRoleAnswers, TakePendingRoles } from "../utils/verifyFlow.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
+import { string } from "drizzle-orm/cockroach-core";
 
 const CONFIG = {
     CHANNELS: {
@@ -148,7 +152,8 @@ async function handleVerification(message: Message, client: Client) {
         }
 
         await UpdateProfile(userId, profile.serverId, { email });
-        await assignVerificationRoles(client.guilds.cache.get(profile.serverId), userId, email);
+        // the answers from the verify questions are only kept in memory, they are taken out here
+        await assignVerificationRoles(client.guilds.cache.get(profile.serverId), userId, email, TakePendingRoles(profile.serverId, userId));
         await message.delete().catch(() => null);
 
     } catch (error) {
@@ -174,17 +179,34 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
         .setEmoji("🔄")
         .setStyle(ButtonStyle.Link)
         .setURL(`https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=${verifyCode}`);
-
+    
     const member = message.guild?.members.cache.get(userId);
-    if (member) {
-        await member.send({ 
-            embeds: [embed], 
-            components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)] 
-        }).catch(() => null);
-    }
+    if (!member) return;
+
+    await member.send({ 
+        embeds: [embed], 
+        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)] 
+    }).catch(() => {
+        GetServerConfig(message.guild?.id as string, "verificationChannelId").then(async (channelId) => {
+            const channel = message.guild?.channels.cache.get(channelId as string) as TextChannel | undefined;
+            if (!channel) return;
+            const nonRevealingEmail = email.replace(/^([^@]+)(@.+)$/, (_, l, domain) => 
+                l.split('.').map((p: string) => p[0] + '*'.repeat(Math.max(p.length - 1, 0))).join('.') + domain
+            );
+            await channel.send({
+                content: `<@${userId}> Du har inte kunnat verifiera dig med mailen du skickade in. Mailen var ogiltig.\n\n` +
+                `\`${nonRevealingEmail}\` Slutar inte med @lbs.se, byt konto och försök igen!` +
+                (supportChannel ? `\n\n*Problem? Skapa en ticket i <#${supportChannel}>.*` : ""),
+                embeds: [embed],
+                components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)]
+            }).catch(() => null);
+        });
+
+    });	
+
 }
 
-async function assignVerificationRoles(guild: Guild | undefined, userId: string, email: string) {
+async function assignVerificationRoles(guild: Guild | undefined, userId: string, email: string, pending: PendingRoles | null) {
     if (!guild) return;
     let member = guild.members.cache.get(userId) || null;
     
@@ -196,6 +218,11 @@ async function assignVerificationRoles(guild: Guild | undefined, userId: string,
 
     const verifiedRole = guild.roles.cache.get(await GetServerConfig(guild.id, "verifiedRoleId") as string);
     if (verifiedRole) await member.roles.add(verifiedRole);
+    if (guild.id === "1497140069746741338") await member.roles.add(guild.roles.cache.get("1497140069805592742") as Role) // Seperator role
+
+    // city, class, year and pronouns from the verify questions, if they are gone the member gets told to pick them again
+    if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
+    else await NotifyNoRoleAnswers(member);
 
 	// Gives the teacher role automatically to teachers
     if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {

@@ -53,7 +53,6 @@ export default async function command(
 		return;
 	}
 
-	// check this before voiding, afterwards it doesnt count anymore
 	const wasActiveMute = GetActiveMute(profile)?.number === caseNumber;
 
 	const voided = await VoidModAction(user.id, interaction.guild.id, caseNumber, interaction.user.id, reason);
@@ -71,6 +70,18 @@ export default async function command(
 	}
 
 	await interaction.editReply(`Voided case #${caseNumber} (${TYPE_INFO[entry.type].label}) for **${user.tag}**.${extra}`);
+	await user
+		.send(
+			`## Your case has been voided in ${interaction.guild?.name}\n` +
+			`**Reason:** ${reason}\n` +
+			`**Case:** #${caseNumber}\n\n` +
+			`This case has been voided by ${interaction.user.tag} and will no longer count in your moderation history.`,
+		)
+		.catch(() => {
+			console.warn(
+				`Could not send DM to ${user.tag} (${user.id}) about their voided case.`,
+			);
+		});
 
 	const logChannel = client.channels.cache.get(
 		await GetServerConfig(interaction.guild.id, "logChannel") as string

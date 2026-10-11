@@ -99,6 +99,7 @@ const repeating: Repeating = {
         clockTime: null,
     },
     async execute(client: Client) { 
+        if (client?.user?.id === "1499931865723830392") return;
         if (isProcessing) {
             console.log("Polisen check skipped: Previous check is still running.");
             return;

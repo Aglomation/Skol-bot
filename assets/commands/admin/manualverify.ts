@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 import { FindByValue, UpdateProfile } from "../../../utils/profileManager.js";
+import { ApplyVerifyRoles, NotifyNoRoleAnswers, TakePendingRoles } from "../../../utils/verifyFlow.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -73,6 +74,12 @@ export default async function command(
     const verifyRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string | undefined;
     if (member && verifyRoleId) {
         await member.roles.add(verifyRoleId);
+    }
+    // the answers from the verify questions (only kept in memory), if they are gone the member gets told to pick them again
+    if (member) {
+        const pending = TakePendingRoles(interaction.guild.id, user.id);
+        if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
+        else await NotifyNoRoleAnswers(member);
     }
 
     await interaction.editReply({

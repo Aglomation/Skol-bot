@@ -1,27 +1,9 @@
 import type { ButtonInteraction, Client, GuildMember } from "discord.js";
-import {
-	ActionRowBuilder,
-	ButtonBuilder,
-	ButtonStyle,
-	EmbedBuilder,
-	MessageFlags,
-} from "discord.js";
+import { MessageFlags } from "discord.js";
 
 import { GetActiveBan } from "../../utils/moderationManager.js";
-import { GetProfile, UpdateProfile } from "../../utils/profileManager.js";
-
-const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=";
-
-function generateRandomString(length: number) {
-	// 36 ^ 5 = 60_466_176
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-	let result = "";
-	for (let i = 0; i < length; i++) {
-		const randomIndex = Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / (Math.pow(2, 32) / chars.length));
-		result += chars[randomIndex];
-	}
-	return result;
-}
+import { GetProfile } from "../../utils/profileManager.js";
+import { BuildStep } from "../../utils/verifyFlow.js";
 
 const button: Button = {
 	data: {
@@ -49,59 +31,7 @@ const button: Button = {
 			return;
 		}
 
-		// Give verified role immediately if the user already has an email connected
-		if (profile?.email) {
-			const member = interaction.member as GuildMember;
-			if (!member) return;
-			const role = interaction.guild?.roles.cache.get("1498832228145168514");
-
-			if (!role) {
-				await interaction.editReply({
-					content: `An error occurred while assigning the role, please contact an administrator.`,
-				});
-				return;
-			}
-
-			await member.roles.add(role);
-			await interaction.editReply({
-				content: `You have been verified successfully!\nLinked to: ${profile.email}`,
-			});
-			return;
-		}
-
-		// Generate a random 5 character verification code
-		const verificationCode = profile?.verifycode
-			? profile.verifycode
-			: generateRandomString(5);
-
-		// Store the verification code in the user's profile
-		const updateResult = await UpdateProfile(interaction.user?.id, interaction.guild.id, { verifycode: verificationCode });
-		if (updateResult === 1) {
-			await interaction.editReply({
-				content: `An error occurred while updating your profile. Please try again.`,
-			});
-			return;
-		}
-
-		const embed = new EmbedBuilder()
-			.setTitle("⚠️ Viktigt")
-			.setDescription(
-				`Din webbläsare måste vara inloggad på ditt **@*lbs.se**-konto.\n\n` +
-        		`Din kod för formuläret är: \`${verificationCode}\``
-			)
-			.setColor("#f2ff00");
-
-		const formLinkButton = new ButtonBuilder()
-			.setLabel("Gå till formuläret")
-			.setStyle(ButtonStyle.Link)
-			.setURL(
-				`${formURL}${verificationCode}`,
-			);
-
-		await interaction.editReply({
-			embeds: [embed],
-			components: [new ActionRowBuilder<ButtonBuilder>().addComponents(formLinkButton)],
-		});
+		await interaction.editReply(BuildStep("city", [], "verify"));
 	},
 };
 

@@ -45,6 +45,13 @@ declare global {
 			client: Client,
 		) => Promise<void>;
 	}
+	interface SelectMenu {
+		data: { customId: string };
+		execute: (
+			interaction: StringSelectMenuInteraction,
+			client: Client,
+		) => Promise<void>;
+	}
 	type UserProfile = typeof userProfileTable.$inferSelect;
 	type UserProfileKey = keyof UserProfile;
 }
@@ -55,6 +62,7 @@ declare module "discord.js" {
 		commands: Collection<string, Command>;
 		autocompletes: Collection<string, Autocomplete>;
 		buttons: Collection<string, Button>;
+		selectMenus: Collection<string, SelectMenu>;
 		repeating: Collection<
 			string,
 			{

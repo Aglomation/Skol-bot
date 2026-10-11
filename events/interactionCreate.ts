@@ -1,4 +1,4 @@
-import type { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Client, Interaction } from "discord.js";
+import type { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Client, Interaction, StringSelectMenuInteraction } from "discord.js";
 import { Events, MessageFlags } from "discord.js";
 
 export default {
@@ -17,6 +17,11 @@ export default {
 		
 		if (interaction.isButton()) {
 			await handleButton(interaction, client);
+			return;
+		}
+
+		if (interaction.isStringSelectMenu()) {
+			await handleSelectMenu(interaction, client);
 		}
 	},
 };
@@ -82,5 +87,24 @@ async function handleButton(interaction: ButtonInteraction, client: Client) {
 		await buttonCommand.execute(interaction, client);
 	} catch (error) {
 		console.error(`[Error] Executing button ${customId}:`, error);
+	}
+}
+
+
+async function handleSelectMenu(interaction: StringSelectMenuInteraction, client: Client) {
+	// custom ids look like <handler>:<step>:<earlier answers>, only the first part picks the handler
+	const customId = interaction.customId.split(":")[0];
+
+	const selectMenu = client.selectMenus.get(customId);
+
+	if (!selectMenu) {
+		console.warn(`[Warning] No select menu handler found for ${customId}.`);
+		return;
+	}
+
+	try {
+		await selectMenu.execute(interaction, client);
+	} catch (error) {
+		console.error(`[Error] Executing select menu ${customId}:`, error);
 	}
 }

@@ -15,6 +15,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         .addStringOption((option) =>
             option
                 .setName("language")
+                .setDescription("Choose language (Default: Svenska)")
                 .setDescriptionLocalization("en-US", "Choose language (Default: Svenska)")
                 .setDescriptionLocalization("sv-SE", "Välj språk (Standard: Svenska)")
                 .setRequired(false)

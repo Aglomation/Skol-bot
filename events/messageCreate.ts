@@ -8,6 +8,8 @@ import type {
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
 import { AddModAction } from "../utils/moderationManager.js";
+import type { PendingRoles } from "../utils/verifyFlow.js";
+import { ApplyVerifyRoles, NotifyNoRoleAnswers, TakePendingRoles } from "../utils/verifyFlow.js";
 import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
 
@@ -148,7 +150,8 @@ async function handleVerification(message: Message, client: Client) {
         }
 
         await UpdateProfile(userId, profile.serverId, { email });
-        await assignVerificationRoles(client.guilds.cache.get(profile.serverId), userId, email);
+        // the answers from the verify questions are only kept in memory, they are taken out here
+        await assignVerificationRoles(client.guilds.cache.get(profile.serverId), userId, email, TakePendingRoles(profile.serverId, userId));
         await message.delete().catch(() => null);
 
     } catch (error) {
@@ -184,7 +187,7 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
     }
 }
 
-async function assignVerificationRoles(guild: Guild | undefined, userId: string, email: string) {
+async function assignVerificationRoles(guild: Guild | undefined, userId: string, email: string, pending: PendingRoles | null) {
     if (!guild) return;
     let member = guild.members.cache.get(userId) || null;
     
@@ -196,6 +199,10 @@ async function assignVerificationRoles(guild: Guild | undefined, userId: string,
 
     const verifiedRole = guild.roles.cache.get(await GetServerConfig(guild.id, "verifiedRoleId") as string);
     if (verifiedRole) await member.roles.add(verifiedRole);
+
+    // city, class, year and pronouns from the verify questions, if they are gone the member gets told to pick them again
+    if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
+    else await NotifyNoRoleAnswers(member);
 
 	// Gives the teacher role automatically to teachers
     if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {

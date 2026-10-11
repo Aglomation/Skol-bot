@@ -41,6 +41,7 @@ const client = new Client({
 client.commands = new Collection();
 client.autocompletes = new Collection();
 client.buttons = new Collection();
+client.selectMenus = new Collection();
 
 const fileFilter = (file: string) =>
 	file.endsWith(".ts") || file.endsWith(".js");
@@ -114,6 +115,15 @@ async function startBot() {
 		const filePath = path.join(buttonsPath, file);
 		const { default: button } = await import(pathToFileURL(filePath).href);
 		client.buttons.set(button.data.customId, button);
+	}
+
+	const selectMenusPath = path.join(__dirname, "assets", "selectmenus");
+	const selectMenuFiles = fs.readdirSync(selectMenusPath).filter(fileFilter);
+
+	for (const file of selectMenuFiles) {
+		const filePath = path.join(selectMenusPath, file);
+		const { default: selectMenu } = await import(pathToFileURL(filePath).href);
+		client.selectMenus.set(selectMenu.data.customId, selectMenu);
 	}
 
 	const autocompletesPath = path.join(__dirname, "assets", "autocompletes");

@@ -7,7 +7,7 @@ import { SlashCommandBuilder } from "discord.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
-		.setName("tempvc")
+		.setName("ticket")
 		.setDescription("Manages your temporary voice channel")
         
         // .addSubcommand(Option)

@@ -3,8 +3,8 @@ import { InteractionContextType, PermissionFlagsBits, SlashCommandBuilder } from
 
 import { RunSubcommand } from "../../../utils/subcommands.js";
 
-import { builder as clearVerifyBuilder } from "./clearverify.js";
-import { builder as manualVerifyBuilder } from "./manualverify.js";
+import { builder as clearVerifyBuilder } from "./verify/clearverify.js";
+import { builder as manualVerifyBuilder } from "./verify/manualverify.js";
 import { builder as postBuilder } from "./post.js";
 
 const command: Command = {

@@ -6,7 +6,7 @@ import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../../utils/pro
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName("clearverify")
+		.setName("clear")
         .setDescription("Removes the email and the verify roles from the selected user")
         .addUserOption((option) =>
             option

@@ -3,7 +3,7 @@ import { InteractionContextType, PermissionFlagsBits, SlashCommandBuilder } from
 
 import { RunSubcommand } from "../../../utils/subcommands.js";
 
-import { builder as clearVerifyBuilder } from "./verify/clearverify.js";
+import { builder as clearVerifyBuilder } from "./verify/clear.js";
 import { builder as lookupBuilder } from "./lookup.js";
 import { builder as verifyBuilder } from "./verify.js";
 import { builder as postBuilder } from "./post.js";

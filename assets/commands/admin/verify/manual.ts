@@ -7,7 +7,7 @@ import { CompleteVerification } from "../../../../utils/verifyFlow.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName("manualverify")
+		.setName("manual")
 		.setDescription("Manually verifies a user by setting their email and giving them the verify role")
         .addUserOption((option) =>
             option

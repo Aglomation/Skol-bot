@@ -14,7 +14,7 @@ import dotenv from "dotenv";
 import { sql } from "drizzle-orm";
 import { db } from "./db/client.js";
 import { serverConfigTable } from "./db/schema.js";
-import { fullyworkingticketsystem } from "opsec.ts"
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 dotenv.config({ path: path.join(process.cwd(), ".env"), quiet: true });

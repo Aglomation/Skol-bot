@@ -1,6 +1,6 @@
 import type { SlashCommandSubcommandGroupBuilder } from "discord.js";
-import { builder as clearVerifyBuilder } from "./verify/clearverify.js";
-import { builder as manualVerifyBuilder } from "./verify/manualverify.js";
+import { builder as clearVerifyBuilder } from "./verify/clear.js";
+import { builder as manualVerifyBuilder } from "./verify/manual.js";
 
 export const builder = (group: SlashCommandSubcommandGroupBuilder) =>
     group

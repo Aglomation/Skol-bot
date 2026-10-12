@@ -1,10 +1,9 @@
-import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import {
     MessageFlags,
     PermissionFlagsBits,
-    PermissionsBitField,
 } from "discord.js";
-import { GetServerConfig } from "../../../../utils/configManager.js";
+import { HasPermission } from "../../../../utils/permissions.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -16,13 +15,8 @@ export default async function command(
 ) {
     if (!interaction.guild) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    // Check if the user has the "Ban Members" permission, which assumes you're a moderator or admin
-    const executor = interaction.member as GuildMember;
 
-    if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers) && await GetServerConfig(interaction.guild.id, "isDevServer") === false) {
-        await interaction.editReply("You don't have permission to use this.");
-        return;
-    }
+	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
         
 

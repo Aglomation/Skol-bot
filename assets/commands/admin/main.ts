@@ -4,7 +4,8 @@ import { InteractionContextType, PermissionFlagsBits, SlashCommandBuilder } from
 import { RunSubcommand } from "../../../utils/subcommands.js";
 
 import { builder as clearVerifyBuilder } from "./verify/clearverify.js";
-import { builder as manualVerifyBuilder } from "./verify/manualverify.js";
+import { builder as lookupBuilder } from "./lookup.js";
+import { builder as verifyBuilder } from "./verify.js";
 import { builder as postBuilder } from "./post.js";
 
 const command: Command = {
@@ -15,8 +16,9 @@ const command: Command = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
         .addSubcommand(clearVerifyBuilder)
-		.addSubcommand(manualVerifyBuilder)
-		.addSubcommandGroup(postBuilder),
+		.addSubcommand(lookupBuilder)
+		.addSubcommandGroup(postBuilder)
+		.addSubcommandGroup(verifyBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await RunSubcommand(import.meta.url, interaction);

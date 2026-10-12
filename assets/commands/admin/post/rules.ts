@@ -1,5 +1,7 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import {
+    Colors,
+    EmbedBuilder,
     MessageFlags,
     PermissionFlagsBits,
     PermissionsBitField,
@@ -108,7 +110,7 @@ export default async function command(
         await interaction.editReply("I don't have permission to send messages in this channel.");
         return;
     }
-    
+
     await channel.send({ embeds: [rulesEmbed] });
     await channel.send("**Channels mentioned in the rules:**\n§2.2: <#1497140071391039520>\n§3.4: <#1497140071864864769>\nFooter: <#1499885683995840683>");
 

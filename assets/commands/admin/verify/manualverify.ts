@@ -1,9 +1,9 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { SendLog } from "../../../utils/logChannel.js";
-import { HasPermission } from "../../../utils/permissions.js";
-import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../../../utils/profileManager.js";
-import { CompleteVerification } from "../../../utils/verifyFlow.js";
+import { SendLog } from "../../../../utils/logChannel.js";
+import { HasPermission } from "../../../../utils/permissions.js";
+import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../../../../utils/profileManager.js";
+import { CompleteVerification } from "../../../../utils/verifyFlow.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -29,8 +29,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         );
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
-	client: Client,
+	interaction: ChatInputCommandInteraction
 ) {
     if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -79,5 +78,5 @@ export default async function command(
             : "The email was saved, but they aren't in the server so no roles were given.",
     });
 
-    await SendLog(client, interaction.guild.id, `<@${user.id}> has been manually verified by <@${interaction.user.id}>.`);
-    }
+    await SendLog(interaction.client, interaction.guild.id, `<@${user.id}> has been manually verified by <@${interaction.user.id}>.`);
+}

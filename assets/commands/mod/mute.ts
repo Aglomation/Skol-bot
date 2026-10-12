@@ -9,10 +9,10 @@ import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { AddModAction, UntilFromDuration } from "../../../utils/moderationManager.js";
 import { purgeChannels } from "../../../utils/purgeMessages.js";
 import { parseDuration } from "../../../utils/stringConvert.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -132,15 +132,7 @@ export default async function command(
 
 		await interaction.editReply(`**${user.tag}** has been muted. (case #${caseNumber ?? "?"})`);
 
-		const logChannel = interaction.client.channels.cache.get(
-			await GetServerConfig(interaction.guild.id, "logChannel") as string
-		) as TextChannel | undefined;
-
-		if (logChannel) {
-			await logChannel.send(
-				`${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`,
-			);
-		}
+		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 
 		// Purge messages if option is set
 		if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
@@ -156,10 +148,7 @@ export default async function command(
 				deleteMessagesDuration,
 			);
 
-			if (logChannel)
-				await logChannel.send(
-					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the mute.`,
-				);
+			await SendLog(interaction.client, interaction.guild.id, `Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the mute.`);
 		}
 	} catch (err) {
 		console.error(err);

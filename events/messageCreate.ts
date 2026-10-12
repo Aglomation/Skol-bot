@@ -2,7 +2,6 @@ import type {
     Client,
     GuildTextBasedChannel,
     Message,
-    TextChannel,
 } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
@@ -60,12 +59,8 @@ async function handleDMLogging(message: Message) {
 
     // dms only goes to the private log channel
     const serverlog = CONFIG.CHANNELS.PRIVATELOG;
-    const logChannel = client.channels.cache.get(serverlog) as TextChannel | undefined;
-    if (!logChannel) return;
 
-    await logChannel.send(
-        `DM received from ${message.author.username} (${message.author.id}):\n${message.content}`
-    );
+    await SendLog(client, serverlog, `DM received from ${message.author.username} (${message.author.id}):\n${message.content}`);
 }
 
 async function handleAutoDelete(message: Message) {

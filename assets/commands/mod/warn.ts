@@ -8,8 +8,8 @@ import {
 	MessageFlags,
 	PermissionsBitField,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { AddModAction } from "../../../utils/moderationManager.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -60,10 +60,6 @@ export default async function command(
 	const targetUser = interaction.options.getUser("user", true);
 	const reason = interaction.options.getString("reason", true);
 
-	const logChannel = interaction.client.channels.cache.get(
-		await GetServerConfig(interaction.guild.id, "logChannel") as string
-	) as TextChannel | undefined;
-
 	try {
 		let dmSent = true;
 		await targetUser
@@ -88,12 +84,8 @@ export default async function command(
 		});
 
 		await interaction.editReply(`**${targetUser.tag}** has been warned. (case #${caseNumber ?? "?"})`);
-
-		if (logChannel) {
-			await logChannel.send(
-				`${interaction.user.tag} has warned <@${targetUser.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`,
-			);
-		}
+		
+		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has warned <@${targetUser.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 	} catch (err) {
 		console.error(err);
 		await interaction.editReply(

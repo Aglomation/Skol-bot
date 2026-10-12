@@ -1,8 +1,8 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { AddModAction } from "../../../utils/moderationManager.js";
 import { HasPermission } from "./shared.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -42,13 +42,5 @@ export default async function command(
 
 	await interaction.editReply(`Added a note to **${user.tag}**. (case #${caseNumber})`);
 
-	const logChannel = interaction.client.channels.cache.get(
-		await GetServerConfig(interaction.guild.id, "logChannel") as string
-	) as TextChannel | undefined;
-
-	if (logChannel) {
-		await logChannel.send(
-			`${interaction.user.tag} added a note to <@${user.id}>: ${note} (case #${caseNumber})`,
-		);
-	}
+	await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} added a note to <@${user.id}>: ${note} (case #${caseNumber})`);
 }

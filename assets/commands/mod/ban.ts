@@ -9,11 +9,11 @@ import {
 	MessageFlags,
 	PermissionsBitField,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { AddModAction, GetActiveBan, UntilFromDuration } from "../../../utils/moderationManager.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 import { purgeChannels } from "../../../utils/purgeMessages.js";
 import { parseDuration } from "../../../utils/stringConvert.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -93,11 +93,6 @@ export default async function command(
 		interaction.options.getString("deletemessages", false) || "",
 	);
 
-	const logChannel = interaction.client.channels.cache.get(
-		await GetServerConfig(interaction.guild.id, "logChannel") as string
-	) as TextChannel | undefined;
-	
-
 	const profile = await GetProfile(targetUser.id, interaction.guild.id);
 
 	if (!date) {
@@ -138,11 +133,7 @@ export default async function command(
 			`User is already on the ban list. Edited their ban instead. (case #${editNumber ?? "?"})`,
 		);
 
-		if (logChannel) {
-			await logChannel.send(
-				`${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber ?? "?"})`,
-			);
-		}
+		SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber ?? "?"})`);
 		return;
 	}
 
@@ -196,11 +187,7 @@ export default async function command(
 				(targetMember ? "" : "\nThey are not in the server, they will be kicked if they join."),
 		);
 
-		if (logChannel) {
-			await logChannel.send(
-				`${interaction.user.tag} has banned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`,
-			);
-		}
+		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has banned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 
 		// Purge messages if option is set
 		if (channelsToPurge.length > 0 && deleteMessagesDuration) {
@@ -210,10 +197,7 @@ export default async function command(
 				deleteMessagesDuration,
 			);
 
-			if (logChannel)
-				await logChannel.send(
-					`Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${targetUser.id}> as part of the ban.`,
-				);
+			await SendLog(interaction.client, interaction.guild.id, `Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${targetUser.id}> as part of the ban.`);
 		}
 	} catch (err) {
 		console.error(err);

@@ -8,8 +8,8 @@ import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { AddModAction } from "../../../utils/moderationManager.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -90,15 +90,7 @@ export default async function command(
 
 		await interaction.editReply(`**${user.tag}** has been unmuted. (case #${caseNumber ?? "?"})`);
 
-		const logChannel = interaction.client.channels.cache.get(
-			await GetServerConfig(interaction.guild.id, "logChannel") as string
-		) as TextChannel | undefined;
-
-		if (logChannel) {
-			await logChannel.send(
-				`${interaction.user.tag} has unmuted <@${user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`,
-			);
-		}
+		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has unmuted <@${user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 
 	} catch (err) {
 		console.error(err);

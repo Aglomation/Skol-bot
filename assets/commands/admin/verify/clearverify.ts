@@ -1,8 +1,8 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
-import { HasPermission } from "../../../utils/permissions.js";
-import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
+import { GetServerConfig } from "../../../../utils/configManager.js";
+import { HasPermission } from "../../../../utils/permissions.js";
+import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand

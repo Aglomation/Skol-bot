@@ -8,9 +8,9 @@ import {
 	MessageFlags,
 	PermissionsBitField,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { AddModAction, GetActiveBan } from "../../../utils/moderationManager.js";
 import { GetProfile } from "../../../utils/profileManager.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -83,12 +83,5 @@ export default async function command(
 		`**${user.tag}** has been removed from the ban list. (case #${caseNumber ?? "?"})`,
 	);
 
-	const logChannel = interaction.client.channels.cache.get(
-		await GetServerConfig(interaction.guild.id, "logChannel") as string
-	) as TextChannel | undefined;
-	if (logChannel) {
-		await logChannel.send(
-			`${interaction.user.tag} has unbanned <@${user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`,
-		);
-	}
+	await SendLog(interaction.client, interaction.guild.id, `<@${user.id}> has been unbanned by <@${interaction.user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 };

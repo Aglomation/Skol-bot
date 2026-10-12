@@ -1,9 +1,9 @@
-import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
 import { GetActiveMute, VoidModAction } from "../../../utils/moderationManager.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 import { HasPermission, TYPE_INFO } from "./shared.js";
+import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -82,13 +82,5 @@ export default async function command(
 			);
 		});
 
-	const logChannel = interaction.client.channels.cache.get(
-		await GetServerConfig(interaction.guild.id, "logChannel") as string
-	) as TextChannel | undefined;
-
-	if (logChannel) {
-		await logChannel.send(
-			`${interaction.user.tag} voided case #${caseNumber} (${TYPE_INFO[entry.type].label}) for <@${user.id}> for the reason: ${reason}`,
-		);
-	}
+	await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} voided case #${caseNumber} (${TYPE_INFO[entry.type].label}) for <@${user.id}> for the reason: ${reason}`);
 }

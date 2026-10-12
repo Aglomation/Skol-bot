@@ -4,7 +4,6 @@ import {
     EmbedBuilder,
     MessageFlags,
     PermissionFlagsBits,
-    PermissionsBitField,
 } from "discord.js";
 import { HasPermission } from "../../../../utils/permissions.js";
 

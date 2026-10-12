@@ -1,4 +1,4 @@
-import type { ButtonInteraction, Client } from "discord.js";
+import type { ButtonInteraction } from "discord.js";
 import { FinishRoles, SetPronouns } from "../../utils/verifyFlow.js";
 
 // The button under the pronoun question in /roles
@@ -7,7 +7,7 @@ const button: Button = {
 	data: {
 		customId: "rolesskip",
 	},
-	async execute(interaction: ButtonInteraction, _client: Client) {
+	async execute(interaction: ButtonInteraction) {
 		const [, city, schoolClass, year] = interaction.customId.split(":");
 
 		if (city === "clear") {

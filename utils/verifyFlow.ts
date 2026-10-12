@@ -7,7 +7,7 @@ import {
 	StringSelectMenuBuilder,
 } from "discord.js";
 import { GetServerConfig } from "./configManager.js";
-import { GetProfile, UpdateProfile } from "./profileManager.js";
+import { GetProfile, PROFILE_DUPLICATE, UpdateProfile } from "./profileManager.js";
 import type { VerifyOption } from "./verifyOptions.js";
 import { CITIES, CLASSES, PRONOUNS, ROLE_GROUPS, YEARS } from "./verifyOptions.js";
 
@@ -71,7 +71,7 @@ function GenerateRandomString(length: number) {
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
 	let result = "";
 	for (let i = 0; i < length; i++) {
-		const randomIndex = Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / (Math.pow(2, 32) / chars.length));
+		const randomIndex = Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / (2 ** 32 / chars.length));
 		result += chars[randomIndex];
 	}
 	return result;
@@ -90,7 +90,7 @@ export function BuildStep(step: VerifyStep, state: string[], mode: "verify" | "r
 	const menu = new StringSelectMenuBuilder()
 		.setCustomId([`${mode}select`, step, ...state].join(":"))
 		.setPlaceholder(info.placeholder)
-		.addOptions(info.options.map((option) => ({ label: option.label, value: option.key, emoji: option.emoji })));
+		.addOptions(info.options.map((option) => ({ label: option.label, value: option.key })));
 
 	// pronouns can be more than one
 	if (step === "pronouns") menu.setMinValues(1).setMaxValues(info.options.length);
@@ -252,6 +252,30 @@ export async function SetPronouns(
 }
 
 /**
+ * Gives a member everything they get for verifying: the verified role, the roles from the verify questions and the teacher role for teachers
+ * Used when the form comes in (messageCreate) and by /admin manualverify
+ */
+export async function CompleteVerification(member: GuildMember, email: string): Promise<void> {
+	const guild = member.guild;
+
+	const verifiedRoleId = await GetServerConfig(guild.id, "verifiedRoleId");
+	const verifiedRole = verifiedRoleId ? guild.roles.cache.get(verifiedRoleId) : undefined;
+	if (verifiedRole) await member.roles.add(verifiedRole);
+
+	// city, class, year and pronouns from the verify questions, if they are gone the member gets told to pick them again
+	const pending = TakePendingRoles(guild.id, member.id);
+	if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
+	else await NotifyNoRoleAnswers(member);
+
+	// Gives the teacher role automatically to teachers
+	if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {
+		const teacherRoleId = await GetServerConfig(guild.id, "teacherRoleId");
+		const teacherRole = teacherRoleId ? guild.roles.cache.get(teacherRoleId) : undefined;
+		if (teacherRole) await member.roles.add(teacherRole);
+	}
+}
+
+/**
  * Called after the last question, saves the answers with the verify code and shows the form
  * If they already have an email they are verified straight away
  */
@@ -274,7 +298,8 @@ export async function FinishVerify(
 		const member = interaction.member as GuildMember | null;
 		if (!member) return;
 
-		const verifiedRole = interaction.guild.roles.cache.get(await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string);
+		const verifiedRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId");
+		const verifiedRole = verifiedRoleId ? interaction.guild.roles.cache.get(verifiedRoleId) : undefined;
 		if (verifiedRole) await member.roles.add(verifiedRole);
 		await ApplyVerifyRoles(member, roleIds, asked);
 
@@ -289,10 +314,15 @@ export async function FinishVerify(
 	// Generate a random 5 character verification code, only saved if they don't have one already
 	let verificationCode = profile?.verifycode ?? null;
 	if (!verificationCode) {
-		verificationCode = GenerateRandomString(5);
+		for (let attempt = 0; attempt < 5 && !verificationCode; attempt++) {
+			const code = GenerateRandomString(5);
+			const updateResult = await UpdateProfile(interaction.user.id, interaction.guild.id, { verifycode: code });
 
-		const updateResult = await UpdateProfile(interaction.user.id, interaction.guild.id, { verifycode: verificationCode });
-		if (updateResult === 1) {
+			if (updateResult === null) verificationCode = code;
+			else if (updateResult !== PROFILE_DUPLICATE) break;
+		}
+
+		if (!verificationCode) {
 			await interaction.update({
 				content: `An error occurred while updating your profile. Please try again.`,
 				embeds: [],
@@ -309,15 +339,16 @@ export async function FinishVerify(
 		? new EmbedBuilder()
 			.setTitle("Verifiering för alumner")
 			.setDescription(
-				`Du har valt en årskull som redan har tagit studenten.\n\n` +
-				`Välj "Nej" på frågan om du är inloggad på en skolmail, och välj sedan att du har tagit studenten.\n\n` +
+				`Du har valt ett år där de flesta har tagit studenten.\n\n` +
+				`Har du tagit studenten och inte längre har en skolmail: svara **Ja** på frågan om studenten i formuläret och skicka in bevis, så verifierar en moderator dig manuellt. Du får dina roller då.\n\n` +
+				`Går du fortfarande kvar på skolan: logga in med ditt **@*lbs.se**-konto och svara **Nej**.\n\n` +
 				`Din kod för formuläret är: \`${verificationCode}\``,
 			)
 			.setColor("#f2ff00")
 		: new EmbedBuilder()
 			.setTitle("⚠️ Viktigt")
 			.setDescription(
-				`Din webbläsare måste vara inloggad på ditt **@lbs.se**-konto.\n\n` +
+				`Din webbläsare måste vara inloggad på ditt **@*lbs.se**-konto.\n\n` +
 				`Din kod för formuläret är: \`${verificationCode}\``,
 			)
 			.setColor("#f2ff00");

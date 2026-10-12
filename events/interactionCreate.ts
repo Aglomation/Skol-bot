@@ -17,11 +17,11 @@ export default {
 		
 		if (interaction.isButton()) {
 			await handleButton(interaction, client);
-			return;
-		}
+            return;
+        }
 
-		if (interaction.isStringSelectMenu()) {
-			await handleSelectMenu(interaction, client);
+        if (interaction.isStringSelectMenu()) {
+            await handleSelectMenu(interaction, client);
 		}
 	},
 };
@@ -36,7 +36,7 @@ async function handleChatInputCommand(interaction: ChatInputCommandInteraction, 
     }
 
     try {
-        await command.execute(interaction, client);
+        await command.execute(interaction);
     } catch (error) {
         console.error(`[Error] Executing command ${interaction.commandName}:`, error);
 
@@ -53,7 +53,7 @@ async function handleAutocomplete(interaction: AutocompleteInteraction, client: 
     
     if (standaloneAutocomplete) {
         try {
-            await standaloneAutocomplete.execute(interaction, client);
+            await standaloneAutocomplete.execute(interaction);
         } catch (error) {
             console.error(`[Error] Executing standalone autocomplete for ${interaction.commandName}:`, error);
         }
@@ -65,7 +65,7 @@ async function handleAutocomplete(interaction: AutocompleteInteraction, client: 
     if (!command || typeof command.autocomplete !== "function") return;
 
     try {
-        await command.autocomplete(interaction, client);
+        await command.autocomplete(interaction);
     } catch (error) {
         console.error(`[Error] Executing command autocomplete for ${interaction.commandName}:`, error);
     }
@@ -84,27 +84,40 @@ async function handleButton(interaction: ButtonInteraction, client: Client) {
 	}
 
 	try {
-		await buttonCommand.execute(interaction, client);
+		await buttonCommand.execute(interaction);
 	} catch (error) {
 		console.error(`[Error] Executing button ${customId}:`, error);
+        await ReplyWithError(interaction);
 	}
 }
 
 
 async function handleSelectMenu(interaction: StringSelectMenuInteraction, client: Client) {
-	// custom ids look like <handler>:<step>:<earlier answers>, only the first part picks the handler
-	const customId = interaction.customId.split(":")[0];
+    // custom ids look like <handler>:<step>:<earlier answers>, only the first part picks the handler
+    const customId = interaction.customId.split(":")[0];
 
-	const selectMenu = client.selectMenus.get(customId);
+    const selectMenu = client.selectMenus.get(customId);
 
-	if (!selectMenu) {
-		console.warn(`[Warning] No select menu handler found for ${customId}.`);
-		return;
-	}
+    if (!selectMenu) {
+        console.warn(`[Warning] No select menu handler found for ${customId}.`);
+        return;
+    }
 
-	try {
-		await selectMenu.execute(interaction, client);
-	} catch (error) {
-		console.error(`[Error] Executing select menu ${customId}:`, error);
-	}
+    try {
+        await selectMenu.execute(interaction);
+    } catch (error) {
+        console.error(`[Error] Executing select menu ${customId}:`, error);
+        await ReplyWithError(interaction);
+    }
+}
+
+// so the user gets an answer instead of "This interaction failed"
+async function ReplyWithError(interaction: ButtonInteraction | StringSelectMenuInteraction) {
+    const content = "There was an error while handling this, please try again.";
+
+    if (interaction.replied || interaction.deferred) {
+        await interaction.editReply({ content, embeds: [], components: [] }).catch(() => null);
+        return;
+    }
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral }).catch(() => null);
 }

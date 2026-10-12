@@ -6,8 +6,13 @@ import { userProfileTable } from "../db/schema.js";
 export type UserProfile = typeof userProfileTable.$inferSelect;
 export type UserProfileKey = keyof UserProfile;
 
+// What UpdateProfile returns, null means it saved
+export const PROFILE_DUPLICATE = 1; // a unique value (email or verify code) is already used by someone else
+export const PROFILE_FAILED = 2; // something else went wrong, it is in the console
+
 /**
  * Update a user's profile, if not exist make one
+ * @returns null if it saved, otherwise PROFILE_DUPLICATE or PROFILE_FAILED
  */
 export async function UpdateProfile(
     discordId: string,
@@ -37,6 +42,7 @@ export async function UpdateProfile(
         }
 
         console.error("Error upserting profile:", err);
+        return PROFILE_FAILED;
     }
     return null;
 }
@@ -78,17 +84,23 @@ export async function getValueByKey(userId: string, serverId: string, key: UserP
  * Find a user by a specific profile field
  * @param key The profile field to search by
  * @param value The value to search for
+ * @param serverId Only look in this server, leave empty to look in all of them
  * @returns The user profile matching the search
  */
 export async function FindByValue(
 	key: UserProfileKey,
 	value: string | null,
+	serverId?: string,
 ): Promise<UserProfile | null> {
 	try {
-		const query = db.select().from(userProfileTable).limit(1);
-		const result = await (value === null
-			? query.where(isNull(userProfileTable[key]))
-			: query.where(eq(userProfileTable[key], value)));
+		const condition = value === null
+			? isNull(userProfileTable[key])
+			: eq(userProfileTable[key], value);
+		const result = await db
+			.select()
+			.from(userProfileTable)
+			.where(serverId ? and(condition, eq(userProfileTable.serverId, serverId)) : condition)
+			.limit(1);
 		return result.length > 0 ? result[0] : null;
 	} catch (error) {
 		console.error("Error finding user by value:", error);
@@ -148,20 +160,16 @@ export async function FindAllNonNullKeys(
  * Deletes a users personal data (email, verify code, birthday)
  * The moderation history is kept as the privacy policy allows, so the row stays if there is any
  * Profiles without moderation history are deleted completely
+ * Throws if the database fails, so nobody is told their data is gone when it isnt
  * @returns true if the moderation history was kept
  */
 export async function DeletePersonalData(userId: string, serverId: string): Promise<boolean> {
-	try {
 		const profile = await GetProfile(userId, serverId);
 		if (profile && profile.moderation.length > 0) {
 			await db.update(userProfileTable)
 				.set({ email: null, verifycode: null, birthday: null })
 				.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)));
 			return true;
-		}
-	} catch (error) {
-		console.error("Error deleting personal data:", error);
-		return false;
 	}
 
 	await DeleteProfile(userId, serverId);
@@ -170,12 +178,9 @@ export async function DeletePersonalData(userId: string, serverId: string): Prom
 
 /**
  * Remove a profile completely, including the moderation history
+ * Throws if the database fails
  */
 export async function DeleteProfile(userId: string, serverId: string): Promise<void> {
-	try {
 		await db.delete(userProfileTable)
 			.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)));
-	} catch (error) {
-		console.error("Error deleting profile:", error);
-	}
 }

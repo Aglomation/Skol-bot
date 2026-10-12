@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 import { GetActiveMute, VoidModAction } from "../../../utils/moderationManager.js";
@@ -27,8 +27,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 		);
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
-	client: Client,
+	interaction: ChatInputCommandInteraction
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -83,7 +82,7 @@ export default async function command(
 			);
 		});
 
-	const logChannel = client.channels.cache.get(
+	const logChannel = interaction.client.channels.cache.get(
 		await GetServerConfig(interaction.guild.id, "logChannel") as string
 	) as TextChannel | undefined;
 

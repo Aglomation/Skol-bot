@@ -1,6 +1,6 @@
 import type { Client, Guild, TextChannel } from "discord.js";
 import { EmbedBuilder, PermissionFlagsBits } from "discord.js";
-import { FindAllNonNullKeysConfig } from "../../utils/configManager.js";
+import { FindAllNonNullKeysConfig, GetServerConfig } from "../../utils/configManager.js";
 import { getDisplayName } from "../../utils/memberUtils.js";
 import { FindAllNonNullKeys } from "../../utils/profileManager.js";
 
@@ -40,6 +40,55 @@ const isBirthdayToday = (birthday: Date | null, date: Date): boolean => {
     return false;
 };
 
+// "server:user:month-day" of everyone that already got their message today, so setting a birthday on the day itself can't post it twice
+const announced = new Set<string>();
+
+/**
+ * Sends the happy birthday message for these members in the birthday channel of the server
+ * Anyone who already got one today is skipped
+ */
+export async function AnnounceBirthdays(client: Client, guild: Guild, members: UserProfile[]): Promise<void> {
+    const today = new Date();
+    const day = `${today.getMonth()}-${today.getDate()}`;
+
+    // forget the ones from earlier days
+    for (const key of announced) {
+        if (!key.endsWith(`:${day}`)) announced.delete(key);
+    }
+
+    const channelId = await GetServerConfig(guild.id, "birthdayChannel");
+    const birthdayChannel = channelId ? client.channels.cache.get(channelId) as TextChannel | undefined : undefined;
+    if (!client.user || !birthdayChannel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
+
+    const todaysBirthdays = members.filter((member) => !announced.has(`${guild.id}:${member.discordId}:${day}`));
+    if (todaysBirthdays.length === 0) return;
+
+    todaysBirthdays.sort((a, b) => {
+        const yearA = new Date((a.birthday as number) * 1000)?.getFullYear() || 0;
+        const yearB = new Date((b.birthday as number) * 1000)?.getFullYear() || 0;
+        return yearB - yearA; 
+    });
+
+    const descriptionLines = todaysBirthdays.map(member => 
+        formatBirthdayLine(guild, member, today.getFullYear())
+    );
+
+    const embed = new EmbedBuilder()
+        .setTitle("🎉 Happy Birthday! 🎉")
+        .setDescription(descriptionLines.join("\n"))
+        .setFooter({ text: "Use /birthday set to set your birthday!" })
+        .setColor(0xff0000);
+
+    const response = await birthdayChannel.send({
+        embeds: [embed],
+        allowedMentions: { users: [] },
+    });
+
+    for (const member of todaysBirthdays) announced.add(`${guild.id}:${member.discordId}:${day}`);
+
+    response.react("🎉").catch(() => null);
+}
+
 const repeating: Repeating = {
 	data: {
 		immediate: false,
@@ -51,12 +100,7 @@ const repeating: Repeating = {
 		const today = new Date();
         const servers = await FindAllNonNullKeysConfig("birthdayChannel");
 
-        console.log(servers)
-
         for (const server of servers){
-            const birthdayChannel = client.channels.cache.get(server.birthdayChannel as string) as TextChannel | undefined;
-            if (!client?.user || !birthdayChannel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) continue;
-            
             const guild = client.guilds.cache.get(server.id);
             if (!guild) continue;
 
@@ -74,30 +118,7 @@ const repeating: Repeating = {
                 return isBirthdayToday(birthdayDate, today);
             });
 
-            if (todaysBirthdays.length === 0) continue;
-
-            todaysBirthdays.sort((a, b) => {
-                const yearA = new Date((a.birthday as number) * 1000)?.getFullYear() || 0;
-                const yearB = new Date((b.birthday as number) * 1000)?.getFullYear() || 0;
-                return yearB - yearA; 
-            });
-
-            const descriptionLines = todaysBirthdays.map(member => 
-                formatBirthdayLine(guild, member, today.getFullYear())
-            );
-
-            const embed = new EmbedBuilder()
-                .setTitle("🎉 Happy Birthday! 🎉")
-                .setDescription(descriptionLines.join("\n"))
-                .setFooter({ text: "Use /birthday set to set your birthday!" })
-                .setColor(0xff0000);
-
-            const response = await birthdayChannel.send({
-                embeds: [embed],
-                allowedMentions: { users: [] },
-            });
-
-            response.react("🎉").catch(() => null);
+            await AnnounceBirthdays(client, guild, todaysBirthdays);
         }
 	},
 };

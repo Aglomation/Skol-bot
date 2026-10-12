@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder, User } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, User } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
 import { getDisplayName } from "../../../utils/memberUtils.js";
 import { GetProfile } from "../../../utils/profileManager.js";
@@ -21,7 +21,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function get(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 	const user = interaction.options.getUser("user") || interaction.user as User;
@@ -34,12 +33,15 @@ export default async function get(
 
 	if (!birthday)
 		return await interaction.editReply({
-			content: "User haven't set their birthday yet.",
+			content: "That user hasn't set their birthday yet.",
 		});
 
+	// the name is only found for members the bot has cached
+	const name = getDisplayName(interaction.guild, user.id) ?? user.displayName;
+
 	const embed = new EmbedBuilder()
-		.setTitle(`${getDisplayName(interaction.guild, user.id)}'s Birthday`)
-		.setDescription(`${getDisplayName(interaction.guild, user.id)}'s birthday is set to <t:${birthday}:D>`)
+		.setTitle(`${name}'s Birthday`)
+		.setDescription(`${name}'s birthday is set to <t:${birthday}:D>`)
 		.setThumbnail(user.displayAvatarURL())
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` });

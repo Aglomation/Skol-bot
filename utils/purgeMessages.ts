@@ -15,6 +15,7 @@ export async function purgeMessages(
 	try {
 		const cutoffTimestamp = Date.now() - deleteOlderThanMs;
 		let fetchedMessages = await channel.messages.fetch({ limit: 100 });
+		if (fetchedMessages.size === 0) return 0;
 		let oldestFetchedMessage = fetchedMessages.reduce(
 			(oldest, message) =>
 				message.createdTimestamp < oldest.createdTimestamp ? message : oldest,
@@ -50,8 +51,10 @@ export async function purgeMessages(
 		);
 
 		// Delete messages if found
-		if (messagesToDelete.size > 0) {
-			await channel.bulkDelete(messagesToDelete, true);
+		// bulkDelete takes 100 messages at most, sending more fails and deletes nothing
+		const ids = [...messagesToDelete.keys()];
+		for (let i = 0; i < ids.length; i += 100) {
+			await channel.bulkDelete(ids.slice(i, i + 100), true);
 		}
 
 		return messagesToDelete.size;

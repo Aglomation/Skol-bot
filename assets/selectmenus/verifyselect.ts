@@ -1,4 +1,4 @@
-import type { Client, StringSelectMenuInteraction } from "discord.js";
+import type { StringSelectMenuInteraction } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { BuildStep, FinishVerify } from "../../utils/verifyFlow.js";
 
@@ -8,7 +8,7 @@ const selectMenu: SelectMenu = {
 	data: {
 		customId: "verifyselect",
 	},
-	async execute(interaction: StringSelectMenuInteraction, _client: Client) {
+	async execute(interaction: StringSelectMenuInteraction) {
 		if (!interaction.guild) return;
 
 		const [, step, ...state] = interaction.customId.split(":");

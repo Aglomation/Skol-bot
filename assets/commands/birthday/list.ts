@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, Guild, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, Guild, SlashCommandSubcommandBuilder } from "discord.js";
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -6,9 +6,9 @@ import {
 	EmbedBuilder,
 	MessageFlags,
 } from "discord.js";
+import { GetNextBirthdays, sortedList } from "../../../utils/birthdayUtils.js";
 import { getDisplayName } from "../../../utils/memberUtils.js";
 import { numToMonth } from "../../../utils/stringConvert.js";
-import { sortedList } from "./main.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -40,6 +40,7 @@ const getSuffix = (day: number) => {
 		default: return "th";
 	}
 };
+
 export const generateBirthdayPage = async (
 	page: number,
 	guild: Guild | null,
@@ -66,22 +67,7 @@ export const generateBirthdayPage = async (
 	const currentDay = today.getDate();
 	const currentYear = today.getFullYear();
 
-	const nextBirthday =
-		formattedList.find(({ birthday }) => {
-			if (!birthday) return false;
-			return (
-				birthday.month > currentMonth ||
-				(birthday.month === currentMonth && birthday.day > currentDay)
-			);
-		}) || formattedList.find((entry) => !!entry.birthday);
-
-	const nextBirthdayGroup = nextBirthday?.birthday
-		? formattedList.filter(({ birthday }) =>
-			!!birthday &&
-			birthday.month === nextBirthday.birthday.month &&
-			birthday.day === nextBirthday.birthday.day,
-		)
-		: [];
+	const next = GetNextBirthdays(formattedList, today);
 
 	const descLines: string[] = [];
 	let hasInsertedYearSeparator = false;
@@ -96,15 +82,13 @@ export const generateBirthdayPage = async (
 		if (!name) continue;
 		
         const prevItem = pageItems[i - 1];
-        // const nextItem = pageItems[i + 1];
 
         const isFirstOfMonth = !prevItem || prevItem.birthday?.month !== birthday.month;
-        // const isLastOfMonth = !nextItem || nextItem.birthday?.month !== birthday.month;
         
         const isNextUp =
-            !!nextBirthday?.birthday &&
-            nextBirthday.birthday.month === birthday.month &&
-            nextBirthday.birthday.day === birthday.day;
+			!!next &&
+			next.month === birthday.month &&
+			next.day === birthday.day;
 
         if (isFirstOfMonth) {
             descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
@@ -126,28 +110,13 @@ export const generateBirthdayPage = async (
 	}
 
 	let nextBirthdayValue = "No upcoming birthdays";
-	let nextBdayTime: number | null = null;
-	if (nextBirthday?.birthday) {
-		const displayNames = nextBirthdayGroup
+	if (next) {
+		const displayNames = next.group
 			.map((entry) => getDisplayName(guild, entry.user.discordId))
 			.filter((name): name is string => Boolean(name));
 
-		const displayYear =
-			nextBirthday.birthday.month < currentMonth
-				? currentYear + 1
-				: currentYear;
-
-		nextBdayTime = Math.floor(
-			new Date(
-				displayYear,
-				nextBirthday?.birthday.month - 1,
-				nextBirthday.birthday.day,
-			).getTime() / 1000,
-		);
-
 		nextBirthdayValue = displayNames.map(name => `• ${name}`).join(`\n`);
 	}
-	console.log(nextBirthdayValue, nextBdayTime);
 
 	const embed = new EmbedBuilder()
 		.setTitle(
@@ -161,7 +130,7 @@ export const generateBirthdayPage = async (
 		.setDescription(descLines.join(""))
 		.setFields([
 			{
-                name: `Next Upcoming Birthday (<t:${nextBdayTime}:R>)`,
+				name: next ? `Next Upcoming Birthday (<t:${next.timestamp}:R>)` : "Next Upcoming Birthday",
                 value: nextBirthdayValue,
             },
 		]);
@@ -178,7 +147,7 @@ export const generateBirthdayPage = async (
 		.setCustomId(`birthdaychangepage:${currentPage - 1}`)
 		.setDisabled(currentPage <= 1);
 
-	const next = new ButtonBuilder()
+	const nextPage = new ButtonBuilder()
 		.setEmoji("▶️")
 		.setStyle(ButtonStyle.Primary)
 		.setCustomId(`birthdaychangepage:${currentPage + 1}`)
@@ -193,7 +162,7 @@ export const generateBirthdayPage = async (
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
 		first,
 		prev,
-		next,
+		nextPage,
 		last,
 	);
 
@@ -205,8 +174,7 @@ export const generateBirthdayPage = async (
 
 export default async function list(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
-	page: number = 1,
+	page = 1,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral});
 	const pageData = await generateBirthdayPage(page, interaction.guild);

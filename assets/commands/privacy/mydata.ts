@@ -1,6 +1,5 @@
 import type {
     ChatInputCommandInteraction,
-    Client,
     SlashCommandSubcommandBuilder,
 } from "discord.js";
 
@@ -15,7 +14,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 

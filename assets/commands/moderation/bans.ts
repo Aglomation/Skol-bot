@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { FlattenActions, GetActiveBan, GetModProfiles } from "../../../utils/moderationManager.js";
 import { FormatAction, HasPermission, MakePages, SendPages } from "./shared.js";
@@ -16,7 +16,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });

@@ -24,6 +24,42 @@ export interface PolisenEvent {
     };
 }
 
+// only the newest are kept, otherwise the cache grows forever
+const MAX_CACHED_EVENTS = 2000;
+
+const SWEDISH_MONTHS = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+
+/**
+ * Reads the datetime of an event ("2026-10-07 18:30:20 +02:00")
+ * Not every runtime reads that format, so it is turned into ISO 8601 first
+ */
+export function ParsePolisenTime(datetime: string): Date {
+    return new Date(datetime.replace(" ", "T").replace(" ", ""));
+}
+
+/**
+ * When the event happened, that is in the name ("7 oktober 16.33, Trafikolycka, Uppsala")
+ * The datetime of the event is when it was published
+ * @returns null if the name has no time in it
+ */
+export function GetEventTime(event: PolisenEvent): Date | null {
+    const match = event.name.match(/^(\d{1,2}) (\p{L}+) (\d{1,2})\.(\d{2})/u);
+    const month = SWEDISH_MONTHS.indexOf(match?.[2].toLowerCase() ?? "");
+    if (!match || month === -1) return null;
+
+    const published = ParsePolisenTime(event.datetime);
+    const offset = event.datetime.slice(-6); // "+02:00"
+    const at = (year: number) => new Date(
+        `${year}-${String(month + 1).padStart(2, "0")}-${match[1].padStart(2, "0")}T${match[3].padStart(2, "0")}:${match[4]}:00${offset}`,
+    );
+
+    // it happened before it was published, so one that comes out later is from the year before (published on new years)
+    let time = at(Number(event.datetime.slice(0, 4)));
+    if (time.getTime() > published.getTime() + 24 * 60 * 60 * 1000) time = at(Number(event.datetime.slice(0, 4)) - 1);
+
+    return Number.isNaN(time.getTime()) ? null : time;
+}
+
 const hideTypes: Array<string> = [
     "rån", 
     "inbrott", 
@@ -72,7 +108,8 @@ function createEventMessage(item: PolisenEvent, isUpdate: boolean): { embeds: Em
             url: BASE_URL,
             iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
         })
-        .setFooter({ text: `Publicerad: ${new Date(item.datetime).toLocaleString()}` });
+        .setFooter({ text: "Publicerad" })
+        .setTimestamp(ParsePolisenTime(item.datetime));
 
     if (isUpdate) {
         embed.setDescription(`**Uppdaterad!**\n${description}`);
@@ -143,9 +180,9 @@ const repeating: Repeating = {
             // 5. Categorize the items using Anchor Logic
             for (let i = 0; i < uniqueApiData.length; i++) {
                 const item = uniqueApiData[i];
-                const isNew = cacheMap.has(item.id);
+                const isKnown = cacheMap.has(item.id);
 
-                if (!isNew) {
+                if (!isKnown) {
                     newEventsToSend.push(item);
                 } else if (anchorIndexInNew !== -1 && i < anchorIndexInNew) {
                     // If an old item jumps ahead of our Anchor, it was bumped to the top!
@@ -158,7 +195,6 @@ const repeating: Repeating = {
             if (updatedEventsToSend.length > MAX_UPDATES_PER_TICK) {
                 console.warn(`${updatedEventsToSend.length} items flagged as updated. Skipping`);
                 updatedEventsToSend.length = 0;
-                console.log(cacheMap, uniqueApiData, anchorEvent, anchorIndexInNew);
             }
 
             if (!isCacheEmpty) {
@@ -175,7 +211,7 @@ const repeating: Repeating = {
             }
 
             const historicalEvents = cachedEvents.filter(e => !seenApiIds.has(e.id));
-            const allEvents = [...uniqueApiData, ...historicalEvents];
+            const allEvents = [...uniqueApiData, ...historicalEvents].slice(0, MAX_CACHED_EVENTS);
             
             await saveCache(allEvents);
         } finally {

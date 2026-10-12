@@ -1,17 +1,26 @@
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
-export function getWeek(input: string | number): number {
-	const inputDate = new Date(input); // Convert input string to Date object
-	const inputYear = new Date(inputDate.getFullYear(), 0, 1); // Get January 1st of the same year
-	const Since1st = Math.floor(
-		(inputDate.getTime() - inputYear.getTime()) / 86400000,
-	); // Calculate the days passed since January 1st (1000 * 60 * 60 * 24 = 86400000)
-	const inputDay = inputYear.getDay();
-	const so = inputDay === 0 ? 6 : inputDay - 1; // Adjust Sunday (0) to 6 (ISO starts Monday)
-	const wn = Math.floor((Since1st + so) / 7) + 1;
+/**
+ * The ISO 8601 week number (what vecka.nu shows), for the date in Sweden and not wherever the server is
+ * Week 1 is the week with the first thursday of the year, so the first days of January can be week 52/53
+ */
+export function getWeek(input: string | number | Date = Date.now()): number {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone: "Europe/Stockholm",
+		year: "numeric",
+		month: "numeric",
+		day: "numeric",
+	}).formatToParts(new Date(input));
+	const part = (type: string) => Number(parts.find((p) => p.type === type)?.value);
 
-	return wn;
+	const date = new Date(Date.UTC(part("year"), part("month") - 1, part("day")));
+
+	// move to the thursday of this week (monday is 1, sunday is 7), the week belongs to the year of that thursday
+	date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+
+	const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+	return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
 const command: Command = {
@@ -19,7 +28,7 @@ const command: Command = {
 		.setName("week")
 		.setDescription("vecka.nu clone"),
 
-	async execute(interaction: ChatInputCommandInteraction, _client: Client) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.reply({
 			content: `Current week number: **${getWeek(Date.now())}**`,
 		});

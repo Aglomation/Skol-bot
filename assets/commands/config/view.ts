@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetFullServerConfig } from "../../../utils/configManager.js";
 import { Mention, SETTINGS } from "./settings.js";
@@ -10,7 +10,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });

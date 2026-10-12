@@ -1,12 +1,9 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
-import {
-	MessageFlags,
-    PermissionsBitField,
-} from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
-import { FindByValue, UpdateProfile } from "../../../utils/profileManager.js";
-import { ApplyVerifyRoles, NotifyNoRoleAnswers, TakePendingRoles } from "../../../utils/verifyFlow.js";
-
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
+import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import { SendLog } from "../../../utils/logChannel.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../../../utils/profileManager.js";
+import { CompleteVerification } from "../../../utils/verifyFlow.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -38,22 +35,19 @@ export default async function command(
     if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    // Check if the user has the "Ban Members" permission, which assumes you're a moderator or admin
-    const executor = interaction.member as GuildMember;
-
-    if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers) && await GetServerConfig(interaction.guild.id, "isDevServer") === false) {
-        await interaction.editReply("You don't have permission to use this.");
-        return;
-    }
+    // Ban Members assumes you're a moderator or admin
+    if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
     
     const user = interaction.options.getUser("user", true);
-    const email = interaction.options.getString("email", true);
+    // lowercase, emails are compared as typed so Name@lbs.se would be a different one from name@lbs.se
+    const email = interaction.options.getString("email", true).trim().toLowerCase();
     const force = interaction.options.getBoolean("force") ?? false;
-    const logChannel = client.channels.cache.get(
-        await GetServerConfig(interaction.guild.id, "logChannel") as string
-    ) as TextChannel | undefined;
     
-    if (await FindByValue("email", email)) {
+    // the email can belong to someone else (this is also how it is found again if it is already theirs)
+    const existingProfile = await FindByValue("email", email);
+    const isSameUser = existingProfile?.discordId === user.id && existingProfile.serverId === interaction.guild.id;
+
+    if (existingProfile && !isSameUser) {
         if (!force) {
             await interaction.editReply({
                 content: "This email is already associated with another account. Use the force option to override.",
@@ -61,34 +55,29 @@ export default async function command(
             return;
         }
 
-        const existingProfile = await FindByValue("email", email);
-        if (existingProfile) {
-            await UpdateProfile(existingProfile.id, interaction.guild.id, { email: null });
-        }
+        // the profile has to be found by the discord id and server, the id of the profile row is something else
+        await UpdateProfile(existingProfile.discordId, existingProfile.serverId, { email: null });
     }
 
-    await UpdateProfile(user.id, interaction.guild.id, { email });
+    const saved = await UpdateProfile(user.id, interaction.guild.id, { email });
+    if (saved === PROFILE_DUPLICATE) {
+        await interaction.editReply("That email is still in use by another account, nothing was changed.");
+        return;
+    }
+    if (saved !== null) {
+        await interaction.editReply("I couldn't save the email, check the console.");
+        return;
+    }
 
-    // gives the verify role
-    const member = interaction.guild?.members.cache.get(user.id);
-    const verifyRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId") as string | undefined;
-    if (member && verifyRoleId) {
-        await member.roles.add(verifyRoleId);
-    }
-    // the answers from the verify questions (only kept in memory), if they are gone the member gets told to pick them again
-    if (member) {
-        const pending = TakePendingRoles(interaction.guild.id, user.id);
-        if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
-        else await NotifyNoRoleAnswers(member);
-    }
+    // gives the roles, the verify answers are only kept in memory, if they are gone the member gets told to pick them again
+    const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+    if (member) await CompleteVerification(member, email);
 
     await interaction.editReply({
-        content: "User manually verified.",
+        content: member
+            ? "User manually verified."
+            : "The email was saved, but they aren't in the server so no roles were given.",
     });
 
-    if (logChannel) {
-        await logChannel.send({
-            content: `User ${user.tag} has been manually verified by ${interaction.user.tag}.`,
-        });
+    await SendLog(client, interaction.guild.id, `<@${user.id}> has been manually verified by <@${interaction.user.id}>.`);
     }
-}

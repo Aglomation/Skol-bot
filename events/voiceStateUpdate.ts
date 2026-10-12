@@ -1,56 +1,71 @@
-import type { Client, VoiceChannel, VoiceState } from "discord.js";
-import { ChannelType, Events } from "discord.js";
+import type { VoiceState } from "discord.js";
+import { ChannelType, Events, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
-import { getDisplayName } from "../utils/memberUtils.js";
-
-
-
 
 export default {
 	name: Events.VoiceStateUpdate,
 	once: false,
-	async execute(old_state: VoiceState, new_state: VoiceState, _client: Client) {
-        const guild = new_state.guild;
-        const voiceChannel = await guild.channels.fetch(old_state.channelId ? old_state.channelId : new_state.channelId || "", { force: true }) as VoiceChannel | null;
-        if (voiceChannel?.type !== ChannelType.GuildVoice) return;
+    async execute(oldState: VoiceState, newState: VoiceState) {
+        // muting, deafening and streaming also end up here, only joining, leaving and moving matters
+        if (oldState.channelId === newState.channelId) return;
         
-        const TEMP_CHANNEL = await GetServerConfig(guild.id, "tempVcMainChannel") as string;
-        const TEMP_CATEGORY = await GetServerConfig(guild.id, "tempvcCategory") as string;
-        const VerifiedRole = await GetServerConfig(guild.id, "verifiedRoleId") as string;
+        const guild = newState.guild;
+        const tempChannelId = await GetServerConfig(guild.id, "tempVcMainChannel");
+        const tempCategoryId = await GetServerConfig(guild.id, "tempvcCategory");
 
-        if (old_state.channel?.parent?.id === TEMP_CATEGORY && old_state.channel.id !== TEMP_CHANNEL) {
-            if (!new_state) return;
+        // temporary voice channels aren't set up in this server
+        if (!tempChannelId || !tempCategoryId) return;
             
-            if (voiceChannel?.members.size === 0){
-                old_state.channel.delete().catch(() => null);
+        // Deletes the temporary channel they left when nobody is in it anymore
+        const oldChannel = oldState.channel;
+        if (
+            oldChannel &&
+            oldChannel.parentId === tempCategoryId &&
+            oldChannel.id !== tempChannelId &&
+            oldChannel.members.size === 0
+        ) {
+            await oldChannel.delete().catch(() => null);
             }
 
-            return;
-        }
+        // Joining the main channel makes a new temporary channel, this also works when they come from another temporary one
+        const member = newState.member;
+        if (newState.channelId !== tempChannelId || !member) return;
 
-        if (new_state.channelId === TEMP_CHANNEL) {
-            new_state.guild.channels.create({
-                name: `${getDisplayName(new_state.guild, new_state.member?.id)}'s VC`,
+        const verifiedRoleId = await GetServerConfig(guild.id, "verifiedRoleId");
+
+        try {
+            const channel = await guild.channels.create({
+                name: `${member.displayName.slice(0, 90)}'s VC`,
                 type: ChannelType.GuildVoice,
-                parent: TEMP_CATEGORY,
+                parent: tempCategoryId,
                 bitrate: 96000,
                 permissionOverwrites: [
                     {
-                        id: new_state.member?.id || "",
-                        allow: ["ViewChannel", "Connect", "Speak", "MoveMembers"],
+                        id: member.id,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.Connect,
+                            PermissionFlagsBits.Speak,
+                            PermissionFlagsBits.MoveMembers,
+                        ],
                     },
                     {
-                        id: new_state.guild.roles.cache.get(VerifiedRole)?.id || new_state.guild.roles.everyone.id,
-                        allow: ["ViewChannel"],
-                    }
+                        id: (verifiedRoleId && guild.roles.cache.get(verifiedRoleId)?.id) || guild.roles.everyone.id,
+                        allow: [PermissionFlagsBits.ViewChannel],
+                    },
                 ],
-            }).then((channel) => {
-                new_state.setChannel(channel);
-                channel?.send({
-                    content: `Welcome to your temporary voice channel, <@${new_state.member?.id}>!\n\nYou can customize your channel settings using the \`/tempvc options\` command.\n\nExample:\nTo invite users to your channel, use the \`/tempvc options <Invite>\` command.\n\nWhitelist is by default disabled.`,
-                }).catch(() => null);
             });
+
+            await newState.setChannel(channel);
+            await channel.send({
+                content:
+                    `Welcome to your temporary voice channel, <@${member.id}>!\n\n` +
+                    `You can customize it with the \`/tempvc\` commands, like \`/tempvc name\`, \`/tempvc limit\` or \`/tempvc visibility\`.\n\n` +
+                    `Example:\nTo invite someone to your channel, use \`/tempvc invite\`.\n\n` +
+                    `Whitelist is by default disabled.`,
+                }).catch(() => null);
+        } catch (error) {
+            console.error("Could not create a temporary voice channel:", error);
         }
 	},
 };
-

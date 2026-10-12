@@ -1,97 +1,35 @@
 import fs from "node:fs";
 import axios from "axios";
 import type { Client } from "discord.js";
-
-interface Schools {
-	schoolUnitCode: number;
-	name: string;
-	id: string;
-	medieGymnasietSchoolUnitCode?: number;
-}
+import { CITIES } from "../../utils/verifyOptions.js";
 
 interface UnitsResponsePartial {
 	valueType: string;
 	value: string;
 }
 
-const SchoolList: Schools[] = [
-	{
-		name: "Borås",
-		id: "1497160597220098148",
-		schoolUnitCode: 86888278,
-	},
-	{
-		name: "Göteborg",
-		id: "1497160590647623690",
-		schoolUnitCode: 53231578,
-		medieGymnasietSchoolUnitCode: 97382366,
-	},
-	{
-		name: "Halmstad",
-		id: "1497142973668917248",
-		schoolUnitCode: 47264019,
-	},
-	{
-		name: "Helsingborg",
-		id: "1497142972477734962",
-		schoolUnitCode: 68240485,
-	},
-	{
-		name: "Jönköping",
-		id: "1497142974889332836",
-		schoolUnitCode: 18594470,
-	},
-	{
-		name: "Kungsbacka",
-		id: "1497142971643072545",
-		schoolUnitCode: 86888278,
-	},
-	{
-		name: "Linköping",
-		id: "1497142969726271538",
-		schoolUnitCode: 86787111,
-	},
-	{
-		name: "Lund",
-		id: "1497149407169089536",
-		schoolUnitCode: 51449748,
-	},
-	{
-		name: "Malmö",
-		id: "1497142975552290888",
-		schoolUnitCode: 97931189,
-	},
-	{
-		name: "Nyköping",
-		id: "1497140788864225360",
-		schoolUnitCode: 44285075,
-	},
-	{
-		name: "Stockholm Norra",
-		id: "1497160592056647750",
-		schoolUnitCode: 18106851,
-	},
-	{
-		name: "Stockholm Södra",
-		id: "1497142976835747840",
-		schoolUnitCode: 46256929,
-	},
-	{
-		name: "Trollhättan",
-		id: "1497160595823263804",
-		schoolUnitCode: 21400668,
-	},
-	{
-		name: "Växjö",
-		id: "1497160595085066340",
-		schoolUnitCode: 17083056,
-	},
-	{
-		name: "Örebro",
-		id: "1497160592866283631",
-		schoolUnitCode: 94207720,
-	},
-];
+type SchoolData = Record<string, { id: string; studentCount: number }>;
+
+// The unit codes from skolverket, the keys are the same as in CITIES (utils/verifyOptions.ts)
+// The name and the role id come from there so a city only has to be changed in one place
+const UNIT_CODES: Record<string, { schoolUnitCode: number; medieGymnasietSchoolUnitCode?: number }> = {
+	bor: { schoolUnitCode: 86888278 },
+	got: { schoolUnitCode: 53231578 },
+	hal: { schoolUnitCode: 47264019 },
+	hel: { schoolUnitCode: 68240485 },
+	jon: { schoolUnitCode: 18594470 },
+	lin: { schoolUnitCode: 86787111 },
+	lun: { schoolUnitCode: 51449748 },
+	mal: { schoolUnitCode: 97931189 },
+	nyk: { schoolUnitCode: 44285075 },
+	sthn: { schoolUnitCode: 18106851 },
+	sths: { schoolUnitCode: 46256929 },
+	tro: { schoolUnitCode: 21400668 },
+	vax: { schoolUnitCode: 17083056 },
+	ore: { schoolUnitCode: 94207720 },
+};
+
+const CACHE_FILE = "./cache/schools.json";
 
 const repeating: Repeating = {
 	data: {
@@ -101,89 +39,73 @@ const repeating: Repeating = {
 		clockTime: "00:00",
 	},
 	async execute(_client: Client) {
-		if (fs.existsSync("./cache/schools.json") && new Date().getHours() !== 0) return;
+		if (fs.existsSync(CACHE_FILE) && new Date().getHours() !== 0) return;
 
-		getAllSchoolData().then((schoolData) => {
+		const schoolData = await getAllSchoolData();
+
 			fs.mkdirSync("./cache", { recursive: true });
-			fs.writeFileSync(
-				"./cache/schools.json",
-				JSON.stringify(schoolData, null, 4)
-			);
-		});
+		fs.writeFileSync(CACHE_FILE, JSON.stringify(schoolData, null, 4));
 	},
 };
 
-async function getAllSchoolData(): Promise<{
-	[key: string]: { id: string; studentCount: number };
-}> {
-	const schoolData: { [key: string]: { id: string; studentCount: number } } =
-		{};
+function loadOldData(): SchoolData {
+	try {
+		return JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8")) as SchoolData;
+	} catch {
+		return {};
+	}
+}
 
-	for (const school of SchoolList) {
-		const studentCount = await getSchoolData(school);
-		schoolData[school.name] = {
-			id: school.id,
-			studentCount,
+async function getAllSchoolData(): Promise<SchoolData> {
+	const oldData = loadOldData();
+	const schoolData: SchoolData = {};
+
+	for (const city of CITIES) {
+		const codes = UNIT_CODES[city.key];
+		if (!codes || !city.roleId) continue;
+
+		const studentCount = await getSchoolData(codes);
+		schoolData[city.label] = {
+			id: city.roleId,
+			// if skolverket didn't answer, the old number is better than a 0 that makes the stats look empty
+			studentCount: studentCount ?? oldData[city.label]?.studentCount ?? 0,
 		};
 	}
-
-	const schoolPromises = SchoolList.map(async (school) => {
-		const studentCount = await getSchoolData(school);
-		schoolData[school.name] = {
-			id: school.id,
-			studentCount,
-		};
-	});
-
-	await Promise.all(schoolPromises);
 
 	return schoolData;
 }
 
-async function getSchoolData(school: Schools): Promise<number> {
-	let studentCount = 0;
+/**
+ * The number of pupils at a school unit
+ * @returns null if skolverket couldn't be reached
+ */
+async function fetchPupils(schoolUnitCode: number): Promise<number | null> {
+	try {
+		const response = await axios.get(
+			`https://api.skolverket.se/planned-educations/v4/school-units/${schoolUnitCode}/statistics/gy`,
+			{ timeout: 15000 },
+		);
 
-	await axios
-		.get(
-			`https://api.skolverket.se/planned-educations/v4/school-units/${school.schoolUnitCode}/statistics/gy`,
-		)
-		.then(
-			(response: {
-				data: { body: { totalNumberOfPupils: UnitsResponsePartial[] } };
-			}) => {
-				const data = response.data.body
-					?.totalNumberOfPupils[0] as UnitsResponsePartial;
-				if (data.valueType !== "EXISTS") return;
+		const data = response.data?.body?.totalNumberOfPupils?.[0] as UnitsResponsePartial | undefined;
+		if (!data) return null;
+		if (data.valueType !== "EXISTS") return 0;
+
 				const numericValue = parseInt(data.value.replace(/\D/g, ""), 10);
-				studentCount = Number.isNaN(numericValue) ? 0 : numericValue;
-			},
-		)
-		.catch((error) => {
-			console.error("Error fetching schooldata:", error);
-		});
-
-	if (school.medieGymnasietSchoolUnitCode) {
-		await axios
-			.get(
-				`https://api.skolverket.se/planned-educations/v4/school-units/${school.medieGymnasietSchoolUnitCode}/statistics/gy`,
-			)
-			.then(
-				(response: {
-					data: { body: { totalNumberOfPupils: UnitsResponsePartial[] } };
-				}) => {
-					const data = response.data.body
-						?.totalNumberOfPupils[0] as UnitsResponsePartial;
-					if (data.valueType !== "EXISTS") return;
-					const value = data.value;
-					const numericValue = parseInt(value.replace(/\D/g, ""), 10);
-					studentCount += Number.isNaN(numericValue) ? 0 : numericValue;
-				},
-			)
-			.catch((error) => {
-				console.error("Error fetching schooldata:", error);
-			});
+		return Number.isNaN(numericValue) ? 0 : numericValue;
+	} catch (error) {
+		console.error(`Error fetching schooldata for ${schoolUnitCode}:`, error);
+		return null;
+	}
 	}
 
-	return studentCount;
+async function getSchoolData(codes: { schoolUnitCode: number; medieGymnasietSchoolUnitCode?: number }): Promise<number | null> {
+	const main = await fetchPupils(codes.schoolUnitCode);
+	const media = codes.medieGymnasietSchoolUnitCode
+		? await fetchPupils(codes.medieGymnasietSchoolUnitCode)
+		: 0;
+
+	if (main === null || media === null) return null;
+	return main + media;
 }
+
 export default repeating;

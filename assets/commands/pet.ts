@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 
 const gifs = [
@@ -19,7 +19,7 @@ const command: Command = {
                 .setRequired(true)
         ),
 
-	async execute(interaction: ChatInputCommandInteraction, _client: Client) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply();
 
         const user = interaction.options.getUser("user", true);

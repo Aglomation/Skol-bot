@@ -1,6 +1,6 @@
 import type {
+	ButtonInteraction,
     ChatInputCommandInteraction,
-    Client,
     SlashCommandSubcommandBuilder,
 } from "discord.js";
 
@@ -11,6 +11,7 @@ import {
     ComponentType,
     MessageFlags,
 } from "discord.js";
+import { GetServerConfig } from "../../../utils/configManager.js";
 import { DeletePersonalData } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -20,8 +21,15 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
+    if (!interaction.guild || !interaction.member) {
+        await interaction.reply({
+            content: "This command can only be used in a server.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId("privacy_deleteme_confirm")
@@ -33,27 +41,28 @@ export default async function command(
             .setStyle(ButtonStyle.Secondary),
     );
     
-    if (!interaction.guild || !interaction.member) {
-        await interaction.reply({
-            content: "This command can only be used in a server.",
-            flags: MessageFlags.Ephemeral,
-        });
-        return;
-    }
-
     await interaction.reply({
         content: "Are you sure you want to delete your data? This action is irreversible and will remove your access to the server.",
         flags: MessageFlags.Ephemeral,
-        components: [row]
+        components: [row],
     });
 
     const message = await interaction.fetchReply();
+
+    let buttonInteraction: ButtonInteraction;
     try {
-        const buttonInteraction = await message.awaitMessageComponent({
+        buttonInteraction = await message.awaitMessageComponent({
             componentType: ComponentType.Button,
             time: 30000,
             filter: (i) => i.user.id === interaction.user.id,
         });
+    } catch {
+        await interaction.editReply({
+            content: "Confirmation timed out.",
+            components: [],
+        });
+        return;
+    }
 
         if (buttonInteraction.customId !== "privacy_deleteme_confirm") {
             await buttonInteraction.update({
@@ -63,38 +72,33 @@ export default async function command(
             return;
         }
         
-
-        await interaction.editReply({
+    // answering the button itself, otherwise discord shows "This interaction failed"
+    await buttonInteraction.update({
             content: "Attempting to delete your data. This may take a moment...",
             components: [],
         });
 
-        
-        const member = interaction.guild?.members.cache.get(interaction.user.id);
-        if (!member) return;
+    try {
+        // the access is removed first, if that fails nothing has been deleted yet
+        const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+        const verifiedRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId");
+        if (member && verifiedRoleId && member.roles.cache.has(verifiedRoleId)) {
+            await member.roles.remove(verifiedRoleId);
+        }
 
         // moderation history is kept as the privacy policy allows, a full delete needs an admin
         const keptHistory = await DeletePersonalData(interaction.user.id, interaction.guild.id);
 
         await interaction.editReply({
-            content: "Deletion request completed. Your data has been deleted and your access to the server will now be revoked." +
+            content: "Deletion request completed. Your data has been deleted and your access to the server has been revoked." +
                 (keptHistory ? "\nYour moderation history is kept as described in the privacy policy, contact an admin if you want it removed." : ""),
             components: [],
         });
-
-        const verifiedRole = interaction.guild?.roles.cache.get(
-            "1498832228145168514",
-        );
-        if (verifiedRole) {
-            await member.roles.remove(verifiedRole);
-        }
-
-        
-    } catch(error) {
+    } catch (error) {
         console.error("Error occurred while handling deletion request:", error);
         await interaction.editReply({
-            content: "Confirmation timed out.",
+            content: "Something went wrong while deleting your data, please try again or contact an admin.",
             components: [],
         });
-    };
-};
+    }
+        }

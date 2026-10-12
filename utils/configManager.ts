@@ -105,10 +105,10 @@ export async function GetFullServerConfig(id: string, force = false): Promise<Se
 }
 
 /**
- * Get one value from a server config
+ * Get one value from a server config, the type follows the key (a channel id is a string, isDevServer a boolean)
  * @param force Skip the cache and get the latest from the database
  */
-export async function GetServerConfig(id: string, key: ServerConfigKey, force = false): Promise<string | number | boolean | null> {
+export async function GetServerConfig<K extends ServerConfigKey>(id: string, key: K, force = false): Promise<ServerConfig[K] | null> {
 	try {
 		const serverConfig = await GetFullServerConfig(id, force);
 		if (!serverConfig) {

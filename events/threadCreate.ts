@@ -1,4 +1,4 @@
-import type { Client, ThreadChannel } from "discord.js";
+import type { ThreadChannel } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder, Events } from "discord.js";
 import button from "../assets/buttons/ping.js";
 import { GetServerConfig } from "../utils/configManager.js";
@@ -6,43 +6,56 @@ import { GetServerConfig } from "../utils/configManager.js";
 export default {
 	name: Events.ThreadCreate,
 	once: false,
-    async execute ( thread: ThreadChannel, newlyCreated: boolean, _client: Client) {
-        if (thread.parentId === (await GetServerConfig(thread.guildId, "supportChannel")) as string) {
-            if (newlyCreated) {
+    async execute(thread: ThreadChannel, newlyCreated: boolean) {
+        if (!newlyCreated) return;
+        if (thread.parentId !== await GetServerConfig(thread.guildId, "supportChannel")) return;
+
                 	const embed = new EmbedBuilder()
                         .setTitle("Welcome to the support thread!")
                         .setDescription(
-                            "A staff member will be with you shortly, in the meantime please describe your issue and be patient!\n\n"+
-                            "If you need immediate assistance, please ping the staff by pressing one of the buttons below.\n\n"+
+                "A staff member will be with you shortly, in the meantime please describe your issue and be patient!\n\n" +
+                "If you need immediate assistance, please ping the staff by pressing one of the buttons below.\n\n" +
                             "Moderators can't help with verification issues, if you need help with that please ping an administrator or preferably the owner."
                         )
                         .setColor(Colors.Blurple);
 
-                    // Role - Moderator
-                    const btn1 = new ButtonBuilder()
-                        .setCustomId(`${button.data.customId}:&${await GetServerConfig(thread.guildId, "modRoleId") as string}`)
+        const row = new ActionRowBuilder<ButtonBuilder>();
+
+        // Role - Moderator (a role that isn't set has no button, it would ping nobody)
+        const modRoleId = await GetServerConfig(thread.guildId, "modRoleId");
+        if (modRoleId) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`${button.data.customId}:&${modRoleId}`)
                         .setLabel("Moderator")
                         .setEmoji("🛡️")
-                        .setStyle(ButtonStyle.Primary);
+                    .setStyle(ButtonStyle.Primary),
+            );
+        }
 
                     // Role - Admin
-                    const btn2 = new ButtonBuilder()
-                        .setCustomId(`${button.data.customId}:&${await GetServerConfig(thread.guildId, "adminRoleId") as string}`)
+        const adminRoleId = await GetServerConfig(thread.guildId, "adminRoleId");
+        if (adminRoleId) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`${button.data.customId}:&${adminRoleId}`)
                         .setLabel("Administrator")
                         .setEmoji("🐦")
-                        .setStyle(ButtonStyle.Secondary);
+                    .setStyle(ButtonStyle.Secondary),
+            );
+        }
 
                     // User - Me 😋
-                    const btn3 = new ButtonBuilder()
+        row.addComponents(
+            new ButtonBuilder()
                         .setCustomId(`${button.data.customId}:${thread.guild.ownerId}`)
                         .setLabel("Owner")
                         .setEmoji("👑")
-                        .setStyle(ButtonStyle.Danger);
+                .setStyle(ButtonStyle.Danger),
+        );
 
-                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(btn1, btn2, btn3);
-
-                    await thread.send({ embeds: [embed], components: [row] });
-            }
-        }
-    }
+        await thread.send({ embeds: [embed], components: [row] }).catch((error) =>
+            console.error("Could not send the support thread message:", error),
+        );
+    },
 };

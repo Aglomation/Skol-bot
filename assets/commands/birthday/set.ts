@@ -1,12 +1,12 @@
 import type {
 	ChatInputCommandInteraction,
-	Client,
 	GuildMember,
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import { UpdateProfile } from "../../../utils/profileManager.js";
-import repeating from "../../repeating/birthday.js";
+import { GetServerConfig } from "../../../utils/configManager.js";
+import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
+import { AnnounceBirthdays } from "../../repeating/birthday.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -22,16 +22,15 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 .setDescriptionLocalizations({
                     "sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
                 })
-                .setRequired(false),
+                .setRequired(true),
         );
 
 export default async function set(
-	interaction: ChatInputCommandInteraction,
-	_client: Client,
+	interaction: ChatInputCommandInteraction
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	const date = interaction.options.getString("date", false);
+	const date = interaction.options.getString("date", true);
 	const user = interaction.user.id;
 
 	const today = new Date();
@@ -39,26 +38,10 @@ export default async function set(
 	const currentDay = today.getDate();
 	const currentYear = today.getFullYear();
 
-	if (!user) {
-		await interaction.editReply({ content: "User not found." });
-		return;
-	}
-
-	if (!date) {
-		await UpdateProfile(user, interaction.guild.id, { birthday: null });
-		await interaction.editReply({
-			content: "Cleared birthday.",
-		});
-		return;
-	}
-
 	const [year, month, day] = date
 		.match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
 		?.slice(1)
 		.map(Number) || [null, null, null];
-	
-
-	
 
 	if (!year || !month || !day) {
 		await interaction.editReply({
@@ -82,9 +65,8 @@ export default async function set(
 	
 	// Check if the user is a teacher, then expand the valid age range
 	// Valid age range is 13-30 for students, teachers can set any age
-	const isTeacher = (interaction.member as GuildMember).roles.cache.has(
-		"1497140069872435217",
-	);
+	const teacherRoleId = await GetServerConfig(interaction.guild.id, "teacherRoleId");
+	const isTeacher = !!teacherRoleId && (interaction.member as GuildMember).roles.cache.has(teacherRoleId);
 	if ((age > 30 || age < 13) && !isTeacher){
 		await interaction.editReply({
 			content: `Invalid year.`,
@@ -92,20 +74,27 @@ export default async function set(
 		return;
 	}
 
-	await UpdateProfile(user, interaction.guild.id, { birthday: Math.floor(timestamp / 1000) });
+	const saved = await UpdateProfile(user, interaction.guild.id, { birthday: Math.floor(timestamp / 1000) });
+	if (saved === PROFILE_FAILED) {
+		await interaction.editReply({ content: "I couldn't save your birthday, try again later." });
+		return;
+	}
 
 	const embed = new EmbedBuilder()
 		.setTitle("Birthday Set!")
 		.setDescription(`Your birthday has been set to <t:${Math.floor(timestamp / 1000)}:D>.\nYou will turn ${age+1} on your next birthday!`)
 		.setThumbnail(interaction.user.displayAvatarURL())
-		.setFooter({ text: `Use /birthday set without a date to clear your birthday.` })
+		.setFooter({ text: `Use /birthday clear to remove your birthday.` })
 		.setColor("Aqua");
 
 	await interaction.editReply({
 		embeds: [embed]
 	});
 
+	// it is their birthday today, so they get their message now and not just at midnight
+	// only theirs, everyone else already got theirs
 	if (month === currentMonth && day === currentDay) {
-		await repeating.execute(_client);
+		const profile = await GetProfile(user, interaction.guild.id);
+		if (profile) await AnnounceBirthdays(interaction.client, interaction.guild, [profile]);
 	}
 }

@@ -1,17 +1,15 @@
 import { existsSync, mkdirSync } from "node:fs";
 import fs from "node:fs/promises"; // Swapped to async fs promises
-import type { ChatInputCommandInteraction, Client } from "discord.js";
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
+import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { GetServerConfig } from "../../utils/configManager.js";
 import { getRoleUserCount } from "../../utils/memberUtils.js";
+import { YEARS } from "../../utils/verifyOptions.js";
 
-const Roles = {
-    åk26: "1497140069843079226",
-    åk25: "1497140069843079225",
-    åk24: "1497140069843079224",
-    åk23: "1497140069843079223",
-    åk22: "1498635283321852006",
-    verified: "1498832228145168514",
-};
+// the year roles from the verify options (26, 25, 24, 23, 22), not the teacher one
+const STUDENT_YEARS = YEARS.filter((year) => year.roleId && /^\d+$/.test(year.key));
+// the ones that still go to the school
+const CURRENT_YEARS = STUDENT_YEARS.filter((year) => !year.alumni);
 
 interface FinalSchoolData {
     name: string;
@@ -33,6 +31,7 @@ const command: Command = {
     data: new SlashCommandBuilder()
         .setName("stats")
         .setDescription("Get the current amount of members per region")
+        .setContexts(InteractionContextType.Guild)
         .addStringOption((option) =>
             option
                 .setName("order")
@@ -47,20 +46,27 @@ const command: Command = {
                     { name: "Åk 23", value: "åk23" },
                     { name : "Åk 22", value: "åk22" },
                 )
-        )
-        .addBooleanOption((option) =>
-            option
-                .setName("unverified")
-                .setDescription("Show unverified members as well")
-                .setRequired(false)
         ),
 
-    async execute(interaction: ChatInputCommandInteraction, _client: Client) {
+    async execute(interaction: ChatInputCommandInteraction) {
         if (!interaction.guild) return;
         
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const order = interaction.options.getString("order", true);
+        const verifiedRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId");
+        if (!verifiedRoleId) {
+            await interaction.editReply("Verified role is not set up in the server configuration.");
+            return;
+        }
+        
+        // which year roles are counted
+        const years = order === "all"
+            ? STUDENT_YEARS
+            : order === "current"
+                ? CURRENT_YEARS
+                : STUDENT_YEARS.filter((year) => `åk${year.key}` === order);
+        // only verified members, unless unverified is on
         const fields: { name: string; value: string; inline?: boolean }[] = [];
         const finalSchoolData: FinalSchoolData[] = [];
 
@@ -79,28 +85,11 @@ const command: Command = {
         let totalStudentsCapacity = 0;
 
         for (const [key, roleData] of Object.entries(schoolData)) {
-            let activeCount = 0;
-            const unverified = interaction.options.getBoolean("unverified", false) || false;
-            const verifiedFilter = unverified ? [] : [Roles.verified];
-
-            if (order === "all") {
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk26]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk25]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk24]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk23]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk22]);
-            } else if (order === "current") {
-                // Current classes that go to lbs :3
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk26]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk25]);
-                activeCount += getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, Roles.åk24]);
-            } else {
-                // order is a specific year (åk26, åk25, etc.)
-                const specificRole = Roles[order as keyof typeof Roles];
-                if (specificRole) {
-                    activeCount = getRoleUserCount(interaction.guild, roleData.id, unverified, [...verifiedFilter, specificRole]);
-                }
-            }
+            // members with the city role and (the verified role and) the year role, added up for every year
+            const activeCount = years.reduce(
+                (total, year) => total + getRoleUserCount(interaction.guild, roleData.id, false, [...verifiedRoleId, year.roleId as string]),
+                0,
+            );
             
             // 3 classes of students divided by 3 is roughly one class
             const studentCount = (order === "all" || order === "current") 

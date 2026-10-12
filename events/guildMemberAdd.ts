@@ -52,7 +52,7 @@ async function sendWelcomeMessage(member: GuildMember, client: Client) {
         .setColor(0x2b2d31)
         .setThumbnail(member.user.displayAvatarURL({ forceStatic: false }))
         .setFooter({
-            text: `${humanMemberCount} Medlemmar ・ ${new Date().toLocaleString("sv-SE")}`,
+            text: `${humanMemberCount} Medlemmar ・ ${new Date().toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" })}`,
         });
 
     await channel.send({

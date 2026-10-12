@@ -1,4 +1,4 @@
-import type { ButtonInteraction, Client, GuildMember } from "discord.js";
+import type { ButtonInteraction, GuildMember } from "discord.js";
 import { MessageFlags } from "discord.js";
 
 import { GetActiveBan } from "../../utils/moderationManager.js";
@@ -9,7 +9,7 @@ const button: Button = {
 	data: {
 		customId: "verify",
 	},
-	async execute(interaction: ButtonInteraction, _client: Client) {
+	async execute(interaction: ButtonInteraction) {
 		if (!interaction.guild) {
 			// this should never happen, but ts was being angry about maybe being null
 			await interaction.reply({

@@ -1,8 +1,12 @@
 import type { Client } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
-import "dotenv/config";
 import { GetMuteExpiry } from "../../utils/moderationManager.js";
 import { GetProfile } from "../../utils/profileManager.js";
+
+const MAX_TIMEOUT_MS = 2419199000; // 28 days - 1s in milliseconds
+
+// discord only allows 28 days at a time, so a longer mute is extended when it has less than this left
+const REFRESH_WHEN_LEFT_MS = 7 * 24 * 60 * 60 * 1000;
 
 const repeating: Repeating = {
 	data: {
@@ -13,56 +17,45 @@ const repeating: Repeating = {
 	},
 
 	async execute(client: Client) {
-		if (!process.env.GUILD_ID) {
-			console.error("GUILD_ID is not set in environment variables.");
-			return;
-		}
 		for (const [guildId, guild] of client.guilds.cache) {
+			if (!guild.members.me?.permissions.has(PermissionFlagsBits.ModerateMembers)) continue;
 
-			if (!guild) {
-				console.error(`Guild with ID ${process.env.GUILD_ID} not found.`);
-				return;
-			}
-			const members = guild.members.cache;
-
-			if (!members || !guild.members.me?.permissions.has(PermissionFlagsBits.ModerateMembers)) continue;
-
-			const timedOutMembers = members.filter((member) =>
+			const timedOutMembers = guild.members.cache.filter((member) =>
 				member.isCommunicationDisabled(),
 			);
 
-			console.log(`Found ${timedOutMembers.size} users currently on timeout.`);
-
-			timedOutMembers.forEach(async (member) => {
+			for (const member of timedOutMembers.values()) {
 				const profile = await GetProfile(member.id, guildId);
 				// when the mute ends (Infinity = never, 0 = unmuted), null means we have no record of a mute
 				const expiry = GetMuteExpiry(profile);
-				if (expiry === null) return;
+				if (expiry === null) continue;
 
-				console.log(
-					`- ${member.user.tag} (Unmuted at: ${member.communicationDisabledUntil})`,
-				);
 				const timeLeft = expiry - Date.now();
-				const MAX_TIMEOUT_MS = 2419199000; // 28 days - 1s in milliseconds
 				if (timeLeft <= 0) {
-					member.timeout(null, "Timeout should already have been cleared by discord?")
-						.catch((err) => console.error(`Failed to remove timeout for ${member.user.tag}:`, err));
-					return;
+					await member.timeout(null, "Timeout should already have been cleared by discord?")
+						.catch((err) => console.error(`Failed to remove timeout for ${member.user.username}:`, err));
+					continue;
 				}
 				
+				// only longer mutes need this, discords own timeout is enough when it lasts as long as the mute
+				const discordEnds = member.communicationDisabledUntilTimestamp ?? 0;
+				if (discordEnds >= expiry) continue;
+				if (discordEnds - Date.now() > REFRESH_WHEN_LEFT_MS) continue;
+
 				// Refreshes the timeout
-				member
+				console.log(`Refreshing the timeout of ${member.user.username} (mute ends: ${Number.isFinite(expiry) ? new Date(expiry).toISOString() : "never"})`);
+				await member
 					.timeout(
 						Math.min(timeLeft, MAX_TIMEOUT_MS),
 						`Refreshing timeout, Expires at: ${Number.isFinite(expiry) ? new Date(expiry).toISOString() : "never"}`,
 					)
 					.catch((err) => {
 						console.error(
-							`Failed to refresh timeout for ${member.user.tag}:`,
+							`Failed to refresh timeout for ${member.user.username}:`,
 							err,
 						);
 					});
-			});
+			}
 		}
 	},
 };

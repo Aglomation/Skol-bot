@@ -1,4 +1,4 @@
-import type { ButtonInteraction, Client } from "discord.js";
+import type { ButtonInteraction } from "discord.js";
 import { generateBirthdayPage } from "../commands/birthday/list.js";
 
 const button: Button = {
@@ -7,7 +7,6 @@ const button: Button = {
 	},
 	async execute(
 		interaction: ButtonInteraction,
-		_client: Client,
 	): Promise<void> {
 		const page = parseInt(interaction.customId.split(":")[1], 10) || 1;
 

@@ -16,22 +16,19 @@ declare global {
 			| { name: string; toJSON: () => RESTPostAPIApplicationCommandsJSONBody };
 		execute: (
 			interaction: ChatInputCommandInteraction,
-			client: Client,
 		) => Promise<void>;
 		autocomplete?: (
 			interaction: AutocompleteInteraction,
-			client: Client,
 		) => Promise<void>;
 	}
 	interface Button {
 		data: { customId: string };
-		execute: (interaction: ButtonInteraction, client: Client) => Promise<void>;
+		execute: (interaction: ButtonInteraction) => Promise<void>;
 	}
 	interface Autocomplete {
 		data: { name: string };
 		execute: (
 			interaction: AutocompleteInteraction,
-			client: Client,
 		) => Promise<void>;
 	}
 	interface Repeating {
@@ -49,7 +46,6 @@ declare global {
 		data: { customId: string };
 		execute: (
 			interaction: StringSelectMenuInteraction,
-			client: Client,
 		) => Promise<void>;
 	}
 	type UserProfile = typeof userProfileTable.$inferSelect;
@@ -63,19 +59,5 @@ declare module "discord.js" {
 		autocompletes: Collection<string, Autocomplete>;
 		buttons: Collection<string, Button>;
 		selectMenus: Collection<string, SelectMenu>;
-		repeating: Collection<
-			string,
-			{
-				repeating: boolean;
-				time: number | null;
-				exactTime: string | null;
-				immediate: boolean;
-				execute: (client: Client) => Promise<void>;
-			}
-		>;
-		banList: Set<string>;
-		saveBanlist: () => void;
-		profilelist: Collection<string, UserProfile>;
-		saveProfilelist: () => void;
 	}
 }

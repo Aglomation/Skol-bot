@@ -11,7 +11,9 @@ import {
 	Routes,
 } from "discord.js";
 import dotenv from "dotenv";
+import { sql } from "drizzle-orm";
 import { db } from "./db/client.js";
+import { serverConfigTable } from "./db/schema.js";
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,26 +49,10 @@ const fileFilter = (file: string) =>
 	file.endsWith(".ts") || file.endsWith(".js");
 
 async function startBot() {
-	// --- Database connection ---
-	await db.query.serverConfigTable
-		.findFirst({
-			where: {
-				id: "1497140069746741338",
-			},
-			with: {
-				members: true,
-			},
-		})
-		.then((data) => {
-			if (!data) {
-				console.error("No server configuration found in the database.");
-				return;
-			}
-			console.log("Server configuration loaded:", data.id);
-			console.log("Members in the db:", data.members.length);
-		});
+	const [servers] = await db.select({ count: sql<number>`count(*)` }).from(serverConfigTable);
+	console.log(`Database connected, ${servers.count} configured server(s).`);
 
-	// --- 1. Load Events ---
+	// Load events
 	const eventsPath = path.join(__dirname, "events");
 	const eventFiles = fs.readdirSync(eventsPath).filter(fileFilter);
 
@@ -74,14 +60,23 @@ async function startBot() {
 		const filePath = path.join(eventsPath, file);
 		const { default: event } = await import(pathToFileURL(filePath).href);
 
+		// an error in a handler is logged here, a rejected promise nobody catches can take the whole bot down
+		const run = async (...args: unknown[]) => {
+			try {
+				await event.execute(...args, client);
+			} catch (error) {
+				console.error(`[Error] Executing event ${event.name}:`, error);
+			}
+		};
+
 		if (event.once) {
-			client.once(event.name, (...args) => event.execute(...args, client));
+			client.once(event.name, run);
 		} else {
-			client.on(event.name, (...args) => event.execute(...args, client));
+			client.on(event.name, run);
 		}
 	}
 
-	// --- 2. Load Commands and Components ---
+	// Load commands, buttons, select menus, and autocompletes
 	const commandsPath = path.join(__dirname, "assets", "commands");
 	const commandEntries = fs.readdirSync(commandsPath);
 	const commandsData: RESTPostAPIApplicationCommandsJSONBody[] = [];
@@ -154,7 +149,7 @@ async function startBot() {
 	}
 
 	// Log in at the very end
-	client.login(process.env.TOKEN);
+	await client.login(process.env.TOKEN);
 }
 
 async function loadRepeatingTasks() {
@@ -166,39 +161,53 @@ async function loadRepeatingTasks() {
 		const { default: repeating } = await import(pathToFileURL(filePath).href);
 		const options = repeating.data;
 
+		// one task failing must not stop the others or take the bot down
+		const run = async () => {
+			try {
+				await repeating.execute(client);
+			} catch (error) {
+				console.error(`[Error] Repeating task ${file}:`, error);
+			}
+		};
+
 		if (options.clockTime) {
 			const [hours, minutes] = options.clockTime.split(":").map(Number);
 
+			// works out the next time again after every run, so it stays on the clock time when the clocks change
 			const scheduleDaily = () => {
 				const now = new Date();
 				const nextRun = new Date();
 				nextRun.setHours(hours, minutes, 0, 0);
 
-				if (nextRun <= now) {
+				// a timer can fire a little early, so anything within a second counts as already passed
+				if (nextRun.getTime() <= now.getTime() + 1000) {
 					nextRun.setDate(nextRun.getDate() + 1);
 				}
 
-				const delay = nextRun.getTime() - now.getTime();
-				setTimeout(() => {
-					repeating.execute(client);
-					setInterval(() => repeating.execute(client), 24 * 60 * 60 * 1000);
-				}, delay);
+				setTimeout(async () => {
+					await run();
+					scheduleDaily();
+				}, nextRun.getTime() - now.getTime());
 			};
 
 			scheduleDaily();
 		}
 		if (options.repeating && options.time) {
-			setInterval(() => repeating.execute(client), options.time);
+			setInterval(run, options.time);
 		}
 		if (options.immediate) {
-			await repeating.execute(client);
+			await run();
 		}
 	}
 }
 
 client.once("clientReady", () => {
-	loadRepeatingTasks();
+	loadRepeatingTasks().catch((error) => console.error("Error starting the repeating tasks:", error));
 });
+
+// logs instead of crashing, the bot should keep running if one thing fails
+client.on("error", (error) => console.error("[Error] Discord client:", error));
+process.on("unhandledRejection", (reason) => console.error("[Error] Unhandled rejection:", reason));
 
 // Execute the function to start the bot
 startBot().catch(console.error);

@@ -1,4 +1,4 @@
-import type { AutocompleteInteraction, Client } from "discord.js";
+import type { AutocompleteInteraction } from "discord.js";
 
 const autocomplete: Autocomplete = {
 	data: {
@@ -6,7 +6,6 @@ const autocomplete: Autocomplete = {
 	},
 	async execute(
 		interaction: AutocompleteInteraction,
-		_client: Client,
 	): Promise<void> {
         await interaction.respond([]);
 	},

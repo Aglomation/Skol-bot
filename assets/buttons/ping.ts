@@ -1,4 +1,4 @@
-import type { ButtonInteraction, Client, TextChannel } from "discord.js";
+import type { ButtonInteraction, Client, ClientUser, TextChannel } from "discord.js";
 import {
 	MessageFlags,
     PermissionFlagsBits,
@@ -8,8 +8,9 @@ const button: Button = {
 	data: {
 		customId: "ping",
 	},
-	async execute(interaction: ButtonInteraction, client: Client) {
+	async execute(interaction: ButtonInteraction) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const client = interaction.client as Client;
 
         const userid = interaction.customId.split(":")[1] || "1";
 
@@ -43,7 +44,7 @@ const button: Button = {
         }
 
         const channel = client.channels.cache.get(interaction.channel?.id as string) as TextChannel;
-        if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
+        if (client?.user || !channel?.permissionsFor(client.user as ClientUser)?.has(PermissionFlagsBits.SendMessages)) return;
 
         await channel.send({ content: `<@${interaction.user.id}> has requested your help <@${userid}>` });
         

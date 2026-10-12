@@ -2,12 +2,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import axios from "axios";
 import * as cheerio from "cheerio";
-import type { ButtonInteraction, Client } from "discord.js";
+import type { ButtonInteraction } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
 import type { PolisenEvent } from "../repeating/polisen.js";
+import { GetEventTime, ParsePolisenTime } from "../repeating/polisen.js";
 
 const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
+
+type PolisenEventType = { lastUpdated: string | null ; mainContent: string; writer: string };
 
 async function loadCache(): Promise<Map<number, PolisenEvent>> {
     try {
@@ -25,6 +28,7 @@ async function loadCache(): Promise<Map<number, PolisenEvent>> {
  */
 async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | null ; mainContent: string; writer: string }> {
     const { data } = await axios.get(`https://polisen.se${url}`, {
+        timeout: 15000,
         headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -103,7 +107,6 @@ const button: Button = {
     },
     async execute(
         interaction: ButtonInteraction,
-        _client: Client,
     ): Promise<void> {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -124,9 +127,18 @@ const button: Button = {
         }
 
 		// webscrape the page for more info
-		const { lastUpdated, mainContent, writer } = await scrapeEventDetails(event.url);
+        let details: PolisenEventType;
+        try {
+            details = await scrapeEventDetails(event.url);
+        } catch (error) {
+            console.error("Could not get the polisen.se page:", error);
+            await interaction.editReply({ content: "Couldn't get the page from polisen.se right now, try again later." });
+            return;
+        }
+        const { lastUpdated, mainContent, writer } = details;
 
-        const time = new Date(`${event.name.match(/(\d{1,2} \w+) \d{2}\.\d{2}/)?.[0].replace(".", ":")} ${new Date().getFullYear()}` || 0);
+        // the time is in the name (with Swedish month names), the datetime of the event is when it was published
+        const time = GetEventTime(event);
 
         const embed = new EmbedBuilder()
             
@@ -137,14 +149,15 @@ const button: Button = {
             .addFields(
                 { name: "Typ", value: event.type, inline: true },
                 { name: "Plats", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
-                { name: "Tid", value: `<t:${Math.floor(time.getTime() / 1000)}:R>`, inline: true },
+                { name: "Tid", value: time ? `<t:${Math.floor(time.getTime() / 1000)}:R>` : "Okänd", inline: true },
                 { name: "Skribent", value: writer || "Okänd", inline: true },
             )
             .setColor(0x005293)
             .setFooter({ 
-                text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Publicerad ${new Date(event.datetime).toLocaleString()}`,
+                text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Publicerad`,
                 iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
-            });
+            })
+            .setTimestamp(ParsePolisenTime(event.datetime));
 
         // Actually send the embed instead of dumping raw text
         await interaction.editReply({

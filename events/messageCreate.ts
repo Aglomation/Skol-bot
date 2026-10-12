@@ -1,19 +1,16 @@
 import type {
     Client,
-    Guild,
     GuildTextBasedChannel,
     Message,
-    Role,
     TextChannel,
 } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
+import { SendLog } from "../utils/logChannel.js";
 import { AddModAction } from "../utils/moderationManager.js";
-import type { PendingRoles } from "../utils/verifyFlow.js";
-import { ApplyVerifyRoles, NotifyNoRoleAnswers, TakePendingRoles } from "../utils/verifyFlow.js";
-import { FindByValue, UpdateProfile } from "../utils/profileManager.js";
+import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
-import { string } from "drizzle-orm/cockroach-core";
+import { CompleteVerification } from "../utils/verifyFlow.js";
 
 const CONFIG = {
     CHANNELS: {
@@ -32,7 +29,7 @@ export default {
     async execute(message: Message, client: Client) {
         if (!message.guild) {
             if (message.author.id !== client.user?.id) {
-                await handleDMLogging(message, client);
+                await handleDMLogging(message);
 				message.react("📩").catch(() => null);
             }
             return; 
@@ -41,7 +38,7 @@ export default {
         // comes from the cache so it doesnt hit the database on every message
         const honeypotChannel = await GetServerConfig(message.guild.id, "honeypotChannel") as string | null;
         if (honeypotChannel && message.channel.id === honeypotChannel) {
-            await handleHoneypot(message, client);
+            await handleHoneypot(message);
             return;
         }
 
@@ -52,20 +49,22 @@ export default {
                 break;
             // This only exists on the official server
             case CONFIG.CHANNELS.VERIFYBACKEND:
-                await handleVerification(message, client);
+                await handleVerification(message);
                 break;
         }
     },
 };
 
-async function handleDMLogging(message: Message, client: Client) {
+async function handleDMLogging(message: Message) {
+    const client = message.client;
+
     // dms only goes to the private log channel
     const serverlog = CONFIG.CHANNELS.PRIVATELOG;
     const logChannel = client.channels.cache.get(serverlog) as TextChannel | undefined;
     if (!logChannel) return;
 
     await logChannel.send(
-        `DM received from ${message.author.tag} (${message.author.id}):\n${message.content}`
+        `DM received from ${message.author.username} (${message.author.id}):\n${message.content}`
     );
 }
 
@@ -75,17 +74,14 @@ async function handleAutoDelete(message: Message) {
     }
 }
 
-async function handleHoneypot(message: Message, client: Client) {
+async function handleHoneypot(message: Message) {
     if (message.member?.permissions.has("Administrator")) return;
 	if (!message.guild) return;
 
+    const client = message.client;
     const compromisedUserId = message.author.id;
     
-    const logChannel = client.channels.cache.get(await GetServerConfig(message.guild.id, "logChannel") as string) as TextChannel | undefined;
-
-    if (logChannel) {
-        await logChannel.send(`Honeypot triggered by <@${compromisedUserId}>! Wiping messages`);
-    }
+    await SendLog(client, message.guild.id, `Honeypot triggered by <@${compromisedUserId}>! Wiping messages`);
 
     // Quarantine and delete
     const muteTime = 3 * 24 * 60 * 60 * 1000;
@@ -108,21 +104,18 @@ async function handleHoneypot(message: Message, client: Client) {
     const results = await purgeChannels(channelsArray, compromisedUserId);
     const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
 
-    if (logChannel) {
-        await logChannel.send(
-            `Honeypot wipe complete. Wiped ${totalDeleted+1} messages from <@${compromisedUserId}>.`
-        );
-    }
+    await SendLog(client, message.guild.id, `Honeypot wipe complete. Wiped ${totalDeleted+1} messages from <@${compromisedUserId}>.`);
 }
 
-async function handleVerification(message: Message, client: Client) {
+async function handleVerification(message: Message) {
     if (message.webhookId !== CONFIG.WEBHOOKS.VERIFYBACKEND) return;
     if (!message.guild) return;
+    const client = message.client;
 
     try {
-        const [email, verify] = message.content.replace(/\s+/g, "").split("$$");
+        const [rawEmail, verify] = message.content.replace(/\s+/g, "").split("$$");
         
-        if (!email || !verify) {
+        if (!rawEmail || !verify) {
             await message.reply("Invalid formatting, didn't include two parts split by $$").catch(() => null);
             return;
         }
@@ -144,6 +137,9 @@ async function handleVerification(message: Message, client: Client) {
             return;
         }
 
+        // lowercase so Name@lbs.se and name@lbs.se count as the same email
+        const email = rawEmail.toLowerCase();
+
         // checks for valid email while allowing subdomains
         const isValidEmail = /@(?:[a-z0-9-]+\.)*(?:lbs\.se|dbgy\.se|learnet\.se)$/i.test(email) && !email.includes("+");
         if (!isValidEmail) {
@@ -151,9 +147,27 @@ async function handleVerification(message: Message, client: Client) {
             return;
         }
 
-        await UpdateProfile(userId, profile.serverId, { email });
-        // the answers from the verify questions are only kept in memory, they are taken out here
-        await assignVerificationRoles(client.guilds.cache.get(profile.serverId), userId, email, TakePendingRoles(profile.serverId, userId));
+        const saved = await UpdateProfile(userId, profile.serverId, { email });
+        if (saved === PROFILE_DUPLICATE) {
+            // the email is unique, so another account already uses it, nobody gets verified on it twice
+            await message.reply(`This email is already linked to another account.\n[${email}]`).catch(() => null);
+            await sendEmailInUseNotice(client, profile.serverId, userId);
+            return;
+        }
+        if (saved !== null) {
+            await message.reply("Could not save the email, check the console.").catch(() => null);
+            return;
+        }
+
+        const guild = client.guilds.cache.get(profile.serverId);
+        const member = await guild?.members.fetch(userId).catch(() => null);
+        if (!member) {
+            await message.reply("The email was saved, but the user isn't in the server so no roles were given.").catch(() => null);
+            return;
+        }
+
+        // the answers from the verify questions are only kept in memory, they are taken out in here
+        await CompleteVerification(member, email);
         await message.delete().catch(() => null);
 
     } catch (error) {
@@ -179,54 +193,28 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
         .setEmoji("🔄")
         .setStyle(ButtonStyle.Link)
         .setURL(`https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=${verifyCode}`);
-    
+
     const member = message.guild?.members.cache.get(userId);
-    if (!member) return;
-
-    await member.send({ 
-        embeds: [embed], 
-        components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)] 
-    }).catch(() => {
-        GetServerConfig(message.guild?.id as string, "verificationChannelId").then(async (channelId) => {
-            const channel = message.guild?.channels.cache.get(channelId as string) as TextChannel | undefined;
-            if (!channel) return;
-            const nonRevealingEmail = email.replace(/^([^@]+)(@.+)$/, (_, l, domain) => 
-                l.split('.').map((p: string) => p[0] + '*'.repeat(Math.max(p.length - 1, 0))).join('.') + domain
-            );
-            await channel.send({
-                content: `<@${userId}> Du har inte kunnat verifiera dig med mailen du skickade in. Mailen var ogiltig.\n\n` +
-                `\`${nonRevealingEmail}\` Slutar inte med @lbs.se, byt konto och försök igen!` +
-                (supportChannel ? `\n\n*Problem? Skapa en ticket i <#${supportChannel}>.*` : ""),
-                embeds: [embed],
-                components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)]
-            }).catch(() => null);
-        });
-
-    });	
-
+    if (member) {
+        await member.send({ 
+            embeds: [embed], 
+            components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)] 
+        }).catch(() => null);
+    }
 }
 
-async function assignVerificationRoles(guild: Guild | undefined, userId: string, email: string, pending: PendingRoles | null) {
-    if (!guild) return;
-    let member = guild.members.cache.get(userId) || null;
+async function sendEmailInUseNotice(client: Client, serverId: string, userId: string) {
+    const guild = client.guilds.cache.get(serverId);
+    const supportChannel = await GetServerConfig(serverId, "supportChannel");
     
-    if (!member) {
-        console.error(`Failed to fetch member for user ID ${userId} from cache, attempting API fetch.`);
-        member = await guild.members.fetch(userId).catch(() => null) || null;
-        return;
+    const embed = new EmbedBuilder()
+        .setTitle("❌ Mailen används redan")
+        .setDescription(
+            `Den LBS-mail du försökte verifiera med är redan kopplad till ett annat Discord-konto.` +
+            (supportChannel ? `\n\n*Är det ditt gamla konto? Skapa en ticket i <#${supportChannel}>.*` : "")
+        )
+        .setColor(0xFF0000);
+
+    const member = await guild?.members.fetch(userId).catch(() => null);
+    await member?.send({ embeds: [embed] }).catch(() => null);
     }
-
-    const verifiedRole = guild.roles.cache.get(await GetServerConfig(guild.id, "verifiedRoleId") as string);
-    if (verifiedRole) await member.roles.add(verifiedRole);
-    if (guild.id === "1497140069746741338") await member.roles.add(guild.roles.cache.get("1497140069805592742") as Role) // Seperator role
-
-    // city, class, year and pronouns from the verify questions, if they are gone the member gets told to pick them again
-    if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
-    else await NotifyNoRoleAnswers(member);
-
-	// Gives the teacher role automatically to teachers
-    if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {
-        const teacherRole = guild.roles.cache.get(await GetServerConfig(guild.id, "teacherRoleId") as string);
-        if (teacherRole) await member.roles.add(teacherRole);
-    }
-}

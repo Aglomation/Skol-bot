@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import type { ModActionType } from "../../../utils/moderationManager.js";
 import { FlattenActions, GetActiveBan, GetActiveMute, GetModProfiles } from "../../../utils/moderationManager.js";
@@ -6,7 +6,7 @@ import { HasPermission, TYPE_INFO } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
-		.setName("stats")
+		.setName("citystats")
 		.setDescription("Numbers about the moderation in this server")
 		.addIntegerOption((option) =>
 			option
@@ -24,7 +24,6 @@ function TopList(counts: Map<string, number>, max = 5): string {
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });

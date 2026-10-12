@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -6,31 +6,24 @@ import {
 	EmbedBuilder,
 	MessageFlags,
 	PermissionFlagsBits,
-	PermissionsBitField,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
-import button from "../../buttons/verify.js";
+import { HasPermission } from "../../../../utils/permissions.js";
+import button from "../../../buttons/verify.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName("verifymessage")
+		.setName("verify")
 		.setDescription("Sends the message with button for verification");
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	client: Client,
 ) {
 	if (!interaction.guild) return;
 
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	// Check if the user has the "Ban Members" permission, which assumes you're a moderator or admin
-	const executor = interaction.member as GuildMember;
-
-	if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers) && await GetServerConfig(interaction.guild.id, "isDevServer") === false) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	// Ban Members assumes you're a moderator or admin
+	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
 	const embed = new EmbedBuilder()
         .setTitle("Verifiera din LBS-mejl 🔒")
@@ -46,8 +39,17 @@ export default async function command(
 
 	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(btn);
 
-	const channel = client.channels.cache.get(interaction.channel?.id as string) as TextChannel;
-	if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
+	const channel = interaction.channel;
+	if (!channel?.isTextBased() || channel.isDMBased()) {
+		await interaction.editReply("This command must be run in a server text channel.");
+		return;
+	}
+
+	const botMember = interaction.guild.members.me;
+	if (!botMember || !channel.permissionsFor(botMember).has(PermissionFlagsBits.SendMessages)) {
+		await interaction.editReply("I don't have permission to send messages in this channel.");
+		return;
+	}
 
 	await channel.send({ embeds: [embed], components: [row] });
 

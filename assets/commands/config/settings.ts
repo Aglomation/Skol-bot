@@ -1,7 +1,6 @@
 import { ChannelType } from "discord.js";
 import type { ServerConfigKey } from "../../../utils/configManager.js";
 
-// isDevServer is left out on purpose, it skips permission checks so it should only be changed in the database
 export type SettingKey = Exclude<ServerConfigKey, "id" | "isDevServer">;
 
 type SettingChannelType =

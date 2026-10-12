@@ -1,21 +1,18 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import {
-    Colors,
-    EmbedBuilder,
     MessageFlags,
     PermissionFlagsBits,
     PermissionsBitField,
 } from "discord.js";
-import { GetServerConfig } from "../../../utils/configManager.js";
+import { GetServerConfig } from "../../../../utils/configManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName('rulesmessage')
+		.setName('rules')
         .setDescription('Posts the server rules embed into the current channel.');
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	client: Client,
 ) {
     if (!interaction.guild) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });

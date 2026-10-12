@@ -1,16 +1,13 @@
-import type { ChatInputCommandInteraction, Client, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
-import {
-	MessageFlags,
-    PermissionsBitField,
-} from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
+import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
-import { UpdateProfile } from "../../../utils/profileManager.js";
-
+import { HasPermission } from "../../../utils/permissions.js";
+import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
 		.setName("clearverify")
-		.setDescription("Removes the email from the selected user")
+        .setDescription("Removes the email and the verify roles from the selected user")
         .addUserOption((option) =>
             option
                 .setName("user")
@@ -20,30 +17,40 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
-	_client: Client,
 ) {
     if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    // Check if the user has the "Ban Members" permission, which assumes you're a moderator or admin
-    const executor = interaction.member as GuildMember;
+    // Ban Members assumes you're a moderator or admin
+    if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
-    if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers) && await GetServerConfig(interaction.guild.id, "isDevServer") === false) {
-        await interaction.editReply("You don't have permission to use this.");
+    const user = interaction.options.getUser("user", true);
+
+    // only touch the profile if there is something to clear, UpdateProfile would make an empty one
+    const profile = await GetProfile(user.id, interaction.guild.id);
+    if (profile?.email) {
+        const saved = await UpdateProfile(user.id, interaction.guild.id, { email: null });
+        if (saved === PROFILE_FAILED) {
+            await interaction.editReply("I couldn't clear the email, check the console.");
+            return;
+        }
+    }
+
+    // removes the verified role, and the teacher role since that came from the email
+    const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+    if (!member) {
+        await interaction.editReply("Email cleared. They aren't in the server, so no roles were removed.");
         return;
     }
     
-    const user = interaction.options.getUser("user", true);
+    const roleIds = [
+        await GetServerConfig(interaction.guild.id, "verifiedRoleId"),
+        await GetServerConfig(interaction.guild.id, "teacherRoleId"),
+    ].filter((id): id is string => !!id && member.roles.cache.has(id));
 
-    await UpdateProfile(user.id, interaction.guild.id, { email: null });
+    if (roleIds.length > 0) await member.roles.remove(roleIds);
     
-    // removes the verify role
-    const member = interaction.guild?.members.cache.get(user.id);
-    if (member) {
-        await member.roles.remove("1498832228145168514");
-    }
-
     await interaction.editReply({
-        content: "Verify role cleared for the user.",
+        content: "Email and verify roles cleared for the user.",
     });
-}
+    }

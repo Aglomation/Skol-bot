@@ -12,7 +12,7 @@ export type NumberedAction = { number: number; action: ModAction };
 export type ServerAction = NumberedAction & { userId: string };
 
 /**
- * Turns a duration from stringToDate into the time it ends
+ * Turns a duration from parseDuration into the time it ends
  * @returns The end time in ms, or null if it never ends (inf)
  */
 export function UntilFromDuration(duration: number): number | null {

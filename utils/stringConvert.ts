@@ -1,9 +1,9 @@
 /**
  * Converts a string like "1d 2h 30m" into milliseconds.
  * @param input The input string to convert
- * @returns Number of milliseconds or null if invalid
+ * @returns Number of milliseconds (Infinity for inf) or null if invalid
  */
-export function stringToDate(input: string): number | null {
+export function parseDuration(input: string): number | null {
 	if (!input || input === "0") return null;
 
 	const cleaned = String(input).replace(/[()\s]/g, "");
@@ -44,40 +44,32 @@ export function stringToDate(input: string): number | null {
 
 	return totalMs ? totalMs : null;
 }
+
+// The old name, it gives a duration and not a date. Kept so older code keeps working
+export const stringToDate = parseDuration;
+
 /**
  * Converts a month number (1-12) to its corresponding month name. Overflow rolls over (13 -> January)
  * @param input The input month number (1-12)
  * @returns The corresponding month name or "Unknown" if invalid
  */
+const MONTHS = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
+
 export function numToMonth(input: number): string {
-	switch (((input - 1) % 12) + 1) {
-		case 1:
-			return "January";
-		case 2:
-			return "February";
-		case 3:
-			return "March";
-		case 4:
-			return "April";
-		case 5:
-			return "May";
-		case 6:
-			return "June";
-		case 7:
-			return "July";
-		case 8:
-			return "August";
-		case 9:
-			return "September";
-		case 10:
-			return "October";
-		case 11:
-			return "November";
-		case 12:
-			return "December";
-		default:
-			return "Unknown";
-	}
+	return MONTHS[(((input - 1) % 12) + 12) % 12] ?? "Unknown";
 }
 
 export function uppercaseFirstLetter(input: string, onlyFirst?: boolean): string {
@@ -88,7 +80,7 @@ export function uppercaseFirstLetter(input: string, onlyFirst?: boolean): string
 	}
 	
 	return cleaned
-		.split(/[\s\s]+/g)
+		.split(/\s+/g)
 		.filter(Boolean)
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join(" ");

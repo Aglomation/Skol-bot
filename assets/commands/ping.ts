@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 
 const command: Command = {
@@ -6,13 +6,13 @@ const command: Command = {
 		.setName("ping")
 		.setDescription("Checks the bot latency"),
 
-	async execute(interaction: ChatInputCommandInteraction, client: Client) {
+	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		const sent = await interaction.fetchReply();
 
 		const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
-		const websocket = client.ws.ping;
+		const websocket = interaction.client.ws.ping;
 
 		await interaction.editReply({
 			content: `Pong!\nRoundtrip: \`${roundtrip}ms\`\nWebSocket: \`${websocket}ms\``,

@@ -1,10 +1,9 @@
-import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
+import type { ChatInputCommandInteraction, EmbedBuilder, GuildMember } from "discord.js";
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
 	ButtonStyle,
 	ComponentType,
-	EmbedBuilder,
 } from "discord.js";
 import type { ModAction, ModActionType, NumberedAction } from "../../../utils/moderationManager.js";
 

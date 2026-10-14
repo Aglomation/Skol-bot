@@ -95,11 +95,6 @@ export default async function command(
 		interaction.options.getString("deletemessages", false) || "",
 	);
 
-	// nobody bans themselves or the bot, and a moderator can't ban someone who ranks as high as them or higher
-	if (targetUser.id === interaction.user.id || targetUser.id === interaction.client.user?.id) {
-		await interaction.editReply("You can't do that to yourself or to me.");
-		return;
-	}
 	const denied = targetMember ? CheckHierarchy(executor, targetMember) : null;
 	if (denied) {
 		await interaction.editReply(denied);

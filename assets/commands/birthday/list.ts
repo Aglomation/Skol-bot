@@ -11,7 +11,7 @@ import { getDisplayName } from "../../../utils/memberUtils.js";
 import { numToMonth } from "../../../utils/stringConvert.js";
 
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -67,7 +67,7 @@ export const generateBirthdayPage = async (
 		(currentPage - 1) * PAGE_SIZE,
 		currentPage * PAGE_SIZE,
 	);
-	const today = TodayInSweden(new Date("2025-08-29 05:20"));
+	const today = TodayInSweden();
 	const currentMonth = today.month;
 	const currentDay = today.day;
 	const currentYear = today.year;

@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { FlattenActions, GetActiveBan, GetModProfiles } from "../../../utils/moderationManager.js";
-import { FormatAction, HasPermission, MakePages, SendPages } from "./shared.js";
+import { FormatAction, HasModPermission, MakePages, SendPages } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -19,7 +19,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasPermission(interaction, PermissionFlagsBits.MuteMembers))) return;
+	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const onlyActive = interaction.options.getBoolean("active") ?? false;
 

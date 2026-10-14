@@ -5,6 +5,9 @@ import { serverConfigTable } from "../db/schema.js";
 export type ServerConfig = typeof serverConfigTable.$inferSelect;
 export type ServerConfigKey = keyof ServerConfig;
 
+// What the commands are allowed to change, isDevServer and the id are only changed in the database by hand
+export type ServerSettings = Partial<Omit<ServerConfig, "id" | "isDevServer">>;
+
 // Cache so we dont hit the database on every message/voice update
 // Everything that changes the config goes through here so the cache updates itself
 // The time is only a backup for when someone edits the database directly
@@ -15,7 +18,11 @@ type CacheEntry = { config: ServerConfig | null; expires: number };
 const cache = new Map<string, CacheEntry>();
 const pending = new Map<string, Promise<ServerConfig | null>>();
 
+// servers that were reported as having no config, so it's in the console once and not on every message
+const reportedMissing = new Set<string>();
+
 function SaveToCache(id: string, config: ServerConfig | null): void {
+	if (config) reportedMissing.delete(id);
 	cache.set(id, {
 		config,
 		expires: Date.now() + (config ? CACHE_TIME : MISSING_CACHE_TIME),
@@ -38,20 +45,26 @@ export function ClearServerConfigCache(id?: string): void {
 
 /**
  * Update a server config, if not exist make one
+ * The id and isDevServer are never changed here, whatever is passed in
  */
 export async function UpdateServerConfig(
 	id: string,
-	newData: Partial<ServerConfig>,
+	newData: ServerSettings,
 ): Promise<void> {
+	const { id: _id, isDevServer: _isDevServer, ...data } = newData as Partial<ServerConfig>;
+
+	// an update with nothing in it makes the query fail
+	if (Object.keys(data).length === 0) return;
+
 	try {
 		const [row] = await db.insert(serverConfigTable)
 			.values({
 				id,
-				...newData
+				...data
 			})
 			.onConflictDoUpdate({
 				target: [serverConfigTable.id],
-				set: newData
+				set: data
 			})
 			.returning();
 
@@ -112,7 +125,10 @@ export async function GetServerConfig<K extends ServerConfigKey>(id: string, key
 	try {
 		const serverConfig = await GetFullServerConfig(id, force);
 		if (!serverConfig) {
-			console.error(`Server config not found for ID: ${id}`);
+			if (!reportedMissing.has(id)) {
+				reportedMissing.add(id);
+				console.error(`Server config not found for ID: ${id}`);
+			}
 			return null;
 		}
 		return serverConfig[key] ?? null;

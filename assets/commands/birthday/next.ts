@@ -12,7 +12,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			"sv-SE": "Visar nästa födelsedag",
 		});
 
-export default async function next(
+export default async function command(
 	interaction: ChatInputCommandInteraction,
 ) {
 	if (!interaction.guild) return;
@@ -34,6 +34,9 @@ export default async function next(
 	const { group, month, day, timestamp } = nextBirthdays;
 	const shared = group.length > 1;
 
+	// the names come from the cache
+	await interaction.guild.members.fetch({ user: group.map((entry) => entry.user.discordId) }).catch(() => null);
+
 	const displayNames = group
 		.map((entry) => getDisplayName(interaction.guild, entry.user.discordId))
 		.filter((name): name is string => Boolean(name));
@@ -48,7 +51,7 @@ export default async function next(
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` })
 		.setDescription(
-			`The next birthday${shared ? "s" : ""} is ${shared ? `shared by: \n**${displayNames.join(", ")}**\n` : `**${displayNames[0] ?? "Someone"}**`} and will be on <t:${timestamp}:D> <t:${timestamp}:R>`,
+			`The next birthday${shared ? "s" : ""} is ${shared ? `shared by: \n**${displayNames.join(", ")}**\n` : `**${displayNames[0] ?? "Someone"}**`} and will be <t:${timestamp}:R>`,
 		);
 
 	await interaction.editReply({

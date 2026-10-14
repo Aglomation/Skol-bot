@@ -2,7 +2,7 @@ import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetActiveMute, VoidModAction } from "../../../utils/moderationManager.js";
 import { GetProfile } from "../../../utils/profileManager.js";
-import { HasPermission, TYPE_INFO } from "./shared.js";
+import { HasModPermission, TYPE_INFO } from "./shared.js";
 import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -23,6 +23,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			option
 				.setName("reason")
 				.setDescription("Why it's being voided")
+				.setMaxLength(400)
 				.setRequired(true),
 		);
 
@@ -33,7 +34,7 @@ export default async function command(
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 	// voiding someone elses case needs more than just being able to mute
-	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
+	if (!(await HasModPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const caseNumber = interaction.options.getInteger("case", true);
@@ -65,7 +66,8 @@ export default async function command(
 	if (wasActiveMute) {
 		const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 		const removed = await member?.timeout(null, `Mute voided by ${interaction.user.tag}`).then(() => true).catch(() => false);
-		extra = removed ? "\nTheir timeout was removed too." : "\nI couldn't remove their timeout, use /unmute if they are still muted.";
+		if (!member) extra = "\nThey are not in the server, so there is no timeout to remove.";
+		else extra = removed ? "\nTheir timeout was removed too." : "\nI couldn't remove their timeout, use /unmute if they are still muted.";
 	}
 
 	await interaction.editReply(`Voided case #${caseNumber} (${TYPE_INFO[entry.type].label}) for **${user.tag}**.${extra}`);

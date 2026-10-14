@@ -5,36 +5,78 @@ export type BirthdayDate = { day: number; month: number; year: number };
 export type SortedBirthday = { user: UserProfile; birthday: BirthdayDate | null };
 
 /**
+ * Today in Sweden, it is the same date whatever timezone the server is in
+ */
+export function TodayInSweden(now = new Date()): BirthdayDate {
+	const parts = new Intl.DateTimeFormat("en-CA", {
+		timeZone: "Europe/Stockholm",
+		year: "numeric",
+		month: "numeric",
+		day: "numeric",
+	}).formatToParts(now);
+	const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+
+	return { year: get("year"), month: get("month"), day: get("day") };
+}
+
+export function IsLeapYear(year: number): boolean {
+	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * A saved birthday as text, like 17 May 1990
+ * Birthdays are saved as midnight UTC, discords <t:> times would show the day before for people west of that
+ * @param timestamp Seconds
+ */
+export function FormatBirthday(timestamp: number): string {
+	return new Date(timestamp * 1000).toLocaleDateString("en-GB", {
+		timeZone: "UTC",
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+}
+
+/**
  * Everyone in the server with a birthday, sorted by month and day (the year doesnt matter for the order)
  * @returns null if nobody has set one
  */
 export const sortedList = async (guild: Guild): Promise<SortedBirthday[] | null> => {
-	const users = await FindAllNonNullKeys("birthday", guild.id);
+    const users = await FindAllNonNullKeys("birthday", guild.id);
 
-	if (users.length === 0) return null;
+    if (users.length === 0) return null;
 
-	return users
-		.map((user): SortedBirthday => {
-			const birthday = user.birthday as UserProfile["birthday"] | null;
-			if (!birthday) return { user, birthday: null };
+    return users
+        .map((user): SortedBirthday => {
+            const birthday = user.birthday as UserProfile["birthday"] | null;
+            if (birthday == null) return { user, birthday: null };
 
-			const birthdayDate = new Date(birthday * 1000);
-			return {
-				user,
-				birthday: {
-					day: birthdayDate.getDate(),
-					month: birthdayDate.getMonth() + 1,
-					year: birthdayDate.getFullYear(),
-				},
-			};
-		})
-		.sort((a, b) => {
-			if (!a.birthday || !b.birthday) return 0;
-			if (a.birthday.month !== b.birthday.month) {
-				return a.birthday.month - b.birthday.month;
-			}
-			return a.birthday.day - b.birthday.day;
-		});
+            // Parse the timestamp into parts using Sweden's timezone
+            const parts = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Europe/Stockholm",
+                year: "numeric",
+                month: "numeric",
+                day: "numeric",
+            }).formatToParts(new Date(birthday * 1000));
+
+            const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+
+            return {
+                user,
+                birthday: {
+                    year: get("year"),
+                    month: get("month"),
+                    day: get("day"),
+                },
+            };
+        })
+        .sort((a, b) => {
+            if (!a.birthday || !b.birthday) return 0;
+            if (a.birthday.month !== b.birthday.month) {
+                return a.birthday.month - b.birthday.month;
+            }
+            return a.birthday.day - b.birthday.day;
+        });
 };
 
 export type NextBirthdays = {
@@ -49,9 +91,9 @@ export type NextBirthdays = {
  * If none are left this year it is the first one next year
  * @param list The list from sortedList
  */
-export function GetNextBirthdays(list: SortedBirthday[], today = new Date()): NextBirthdays | null {
-	const currentMonth = today.getMonth() + 1;
-	const currentDay = today.getDate();
+export function GetNextBirthdays(list: SortedBirthday[], today: BirthdayDate = TodayInSweden()): NextBirthdays | null {
+	const currentMonth = today.month;
+	const currentDay = today.day;
 
 	const upcoming = list.find(({ birthday }) =>
 		!!birthday &&
@@ -63,9 +105,10 @@ export function GetNextBirthdays(list: SortedBirthday[], today = new Date()): Ne
 	const { month, day } = next.birthday;
 	const group = list.filter(({ birthday }) => birthday?.month === month && birthday.day === day);
 
-	const hasPassed = month < currentMonth || (month === currentMonth && day < currentDay);
-	const year = hasPassed ? today.getFullYear() + 1 : today.getFullYear();
-	const timestamp = Math.floor(new Date(year, month - 1, day).getTime() / 1000);
+	// today counts as passed, if the only birthday is today the next one is next year
+	const hasPassed = month < currentMonth || (month === currentMonth && day <= currentDay);
+	const year = hasPassed ? today.year + 1 : today.year;
+	const timestamp = Math.floor(Date.UTC(year, month - 1, day) / 1000);
 
 	return { group, month, day, timestamp };
 }

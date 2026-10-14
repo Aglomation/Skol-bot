@@ -1,5 +1,6 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, User } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
+import { FormatBirthday } from "../../../utils/birthdayUtils.js";
 import { getDisplayName } from "../../../utils/memberUtils.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 
@@ -19,7 +20,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 		);
 
 
-export default async function get(
+export default async function command(
 	interaction: ChatInputCommandInteraction,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -31,7 +32,8 @@ export default async function get(
 
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
 
-	if (!birthday)
+	// 0 is a real date (1970-01-01)
+	if (birthday == null)
 		return await interaction.editReply({
 			content: "That user hasn't set their birthday yet.",
 		});
@@ -41,7 +43,7 @@ export default async function get(
 
 	const embed = new EmbedBuilder()
 		.setTitle(`${name}'s Birthday`)
-		.setDescription(`${name}'s birthday is set to <t:${birthday}:D>`)
+		.setDescription(`${name}'s birthday is set to ${FormatBirthday(birthday)}`)
 		.setThumbnail(user.displayAvatarURL())
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` });

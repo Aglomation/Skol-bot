@@ -4,9 +4,11 @@ import type {
 	ChatInputCommandInteraction,
 	Client,
 	Collection,
+	RESTPostAPIApplicationCommandsJSONBody,
 	SlashCommandBuilder,
+	StringSelectMenuInteraction,
 } from "discord.js";
-import type { userProfileTable } from "../db/schema.js";
+import type { userProfileTable } from "./db/schema.js";
 
 // 1. Define the structures for your commands and components
 declare global {

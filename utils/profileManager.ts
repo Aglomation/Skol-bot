@@ -1,6 +1,5 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../db/client.js";
-import type { ModAction } from "../db/schema.js";
 import { userProfileTable } from "../db/schema.js";
 
 export type UserProfile = typeof userProfileTable.$inferSelect;
@@ -37,7 +36,7 @@ export async function UpdateProfile(
             // Postgres error code 23505 means "unique_violation"
             if (pgError.code === '23505' || pgError.message.includes("unique constraint")) {
                 console.warn("Unique constraint violation in UpdateProfile.");
-                return 1;
+                return PROFILE_DUPLICATE;
             }
         }
 
@@ -48,34 +47,29 @@ export async function UpdateProfile(
 }
 
 /**
+ * Get a single profile, throws if the database fails
+ * Use this when a database that is down must not look the same as a user without a profile (like the ban list)
+ * @returns The user's profile object, or null if they don't have one
+ */
+export async function GetProfileStrict(userId: string, serverId: string): Promise<UserProfile | null> {
+	const result = await db
+		.select()
+		.from(userProfileTable)
+		.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)))
+		.limit(1);
+	return result.length > 0 ? result[0] : null;
+}
+
+/**
  * Get a single profile
  * @param userId The ID of the user whose profile to retrieve
- * @returns The user's profile object, or null if not found
+ * @returns The user's profile object, or null if not found (also when the database fails, it is in the console)
  */
 export async function GetProfile(userId: string, serverId: string): Promise<UserProfile | null> {
 	try {
-		const result = await db
-			.select()
-			.from(userProfileTable)
-			.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)))
-			.limit(1);
-		return result.length > 0 ? result[0] : null;
+		return await GetProfileStrict(userId, serverId);
 	} catch (error) {
 		console.error("Error getting profile:", error);
-		return null;
-	}
-}
-
-export async function getValueByKey(userId: string, serverId: string, key: UserProfileKey): Promise<string | number | boolean | ModAction[] | null> {
-	try {
-		const profile = await GetProfile(userId, serverId);
-		if (!profile) {
-			console.error(`Profile not found for user ID: ${userId}`);
-			return null;
-		}
-		return profile[key] ?? null;
-	} catch (error) {
-		console.error("Error getting value by key:", error);
 		return null;
 	}
 }

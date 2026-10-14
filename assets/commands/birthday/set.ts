@@ -4,6 +4,7 @@ import type {
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
+import { FormatBirthday, TodayInSweden } from "../../../utils/birthdayUtils.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
 import { AnnounceBirthdays } from "../../repeating/birthday.js";
@@ -25,7 +26,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 .setRequired(true),
         );
 
-export default async function set(
+export default async function command(
 	interaction: ChatInputCommandInteraction
 ) {
 	if (!interaction.guild) return;
@@ -33,10 +34,10 @@ export default async function set(
 	const date = interaction.options.getString("date", true);
 	const user = interaction.user.id;
 
-	const today = new Date();
-	const currentMonth = today.getMonth() + 1;
-	const currentDay = today.getDate();
-	const currentYear = today.getFullYear();
+	const today = TodayInSweden();
+	const currentMonth = today.month;
+	const currentDay = today.day;
+	const currentYear = today.year;
 
 	const [year, month, day] = date
 		.match(/^(\d{4})-?(\d{2})-?(\d{2})$/)
@@ -51,8 +52,17 @@ export default async function set(
 	}
 
 
+	// no years in the future, and Date.UTC treats the years 0-99 as 1900-1999
+	if (year < 1900 || year > currentYear) {
+		await interaction.editReply({
+			content: "Invalid year.",
+		});
+		return;
+	}
+
 	// Date goes to the next month if the day is invalid for the month, check if the month rolled over.
-	if (new Date(year, month - 1, day).getMonth() !== month - 1) {
+	// it is saved as midnight UTC, so the day is the same whatever timezone the server or the person is in
+	if (new Date(Date.UTC(year, month - 1, day)).getUTCMonth() !== month - 1) {
 		await interaction.editReply({
 			content: "Invalid date. Please check the day and month combination.",
 		});
@@ -61,7 +71,7 @@ export default async function set(
 
 	// 2026 - 2008 - (has had birthday this year? 0 : 1) = 18 or 17
 	const age = currentYear - year - ((currentMonth < month || (currentMonth === month && currentDay < day)) ? 1 : 0);
-	const timestamp = new Date(year, month - 1, day).getTime();
+	const timestamp = Date.UTC(year, month - 1, day);
 	
 	// Check if the user is a teacher, then expand the valid age range
 	// Valid age range is 13-30 for students, teachers can set any age
@@ -82,7 +92,7 @@ export default async function set(
 
 	const embed = new EmbedBuilder()
 		.setTitle("Birthday Set!")
-		.setDescription(`Your birthday has been set to <t:${Math.floor(timestamp / 1000)}:D>.\nYou will turn ${age+1} on your next birthday!`)
+		.setDescription(`Your birthday has been set to ${FormatBirthday(Math.floor(timestamp / 1000))}.\nYou will turn ${age+1} on your next birthday!`)
 		.setThumbnail(interaction.user.displayAvatarURL())
 		.setFooter({ text: `Use /birthday clear to remove your birthday.` })
 		.setColor("Aqua");

@@ -1,6 +1,7 @@
-import type { VoiceState } from "discord.js";
+import type { VoiceChannel, VoiceState } from "discord.js";
 import { ChannelType, Events, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
+import { CanCreateTempChannel, ForgetTempChannel, IsTempChannel, SetTempOwner } from "../utils/tempVoice.js";
 
 export default {
 	name: Events.VoiceStateUpdate,
@@ -17,24 +18,28 @@ export default {
         if (!tempChannelId || !tempCategoryId) return;
             
         // Deletes the temporary channel they left when nobody is in it anymore
+        // channels that an admin put in the category by hand are not temporary, those stay
         const oldChannel = oldState.channel;
-        if (
-            oldChannel &&
-            oldChannel.parentId === tempCategoryId &&
-            oldChannel.id !== tempChannelId &&
-            oldChannel.members.size === 0
-        ) {
+        if (oldChannel && IsTempChannel(oldChannel, tempChannelId, tempCategoryId) && oldChannel.members.size === 0) {
+            ForgetTempChannel(oldChannel.id);
             await oldChannel.delete().catch(() => null);
-            }
+        }
 
         // Joining the main channel makes a new temporary channel, this also works when they come from another temporary one
         const member = newState.member;
         if (newState.channelId !== tempChannelId || !member) return;
 
+        // joining and leaving over and over would make a pile of channels
+        if (!CanCreateTempChannel(member.id)) {
+            await newState.disconnect("Too many temporary channels at once").catch(() => null);
+            return;
+        }
+
         const verifiedRoleId = await GetServerConfig(guild.id, "verifiedRoleId");
 
+        let channel: VoiceChannel | null = null;
         try {
-            const channel = await guild.channels.create({
+            channel = await guild.channels.create({
                 name: `${member.displayName.slice(0, 90)}'s VC`,
                 type: ChannelType.GuildVoice,
                 parent: tempCategoryId,
@@ -55,6 +60,7 @@ export default {
                     },
                 ],
             });
+            SetTempOwner(channel.id, member.id);
 
             await newState.setChannel(channel);
             await channel.send({
@@ -66,6 +72,12 @@ export default {
                 }).catch(() => null);
         } catch (error) {
             console.error("Could not create a temporary voice channel:", error);
+
+            // nobody ever got in (they left before the move), so nothing would delete it later
+            if (channel) {
+                ForgetTempChannel(channel.id);
+                await channel.delete().catch(() => null);
+            }
         }
 	},
 };

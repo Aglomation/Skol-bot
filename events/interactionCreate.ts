@@ -1,6 +1,9 @@
 import type { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Client, Interaction, StringSelectMenuInteraction } from "discord.js";
 import { Events, MessageFlags } from "discord.js";
 
+// buttons a command waits for itself with a collector, they have no handler here and that is fine
+const COLLECTOR_BUTTONS = ["privacy_deleteme_", "modprev", "modnext"];
+
 export default {
 	name: Events.InteractionCreate,
 	once: false,
@@ -75,6 +78,8 @@ async function handleButton(interaction: ButtonInteraction, client: Client) {
 	const customId = interaction.customId.includes(":")
 		? interaction.customId.split(":")[0]
 		: interaction.customId;
+
+	if (COLLECTOR_BUTTONS.some((prefix) => customId.startsWith(prefix))) return;
 
 	const buttonCommand = client.buttons.get(customId);
 

@@ -5,7 +5,8 @@ import type {
 } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
-import { SendLog } from "../utils/logChannel.js";
+import { IsSchoolEmail } from "../utils/emails.js";
+import { SendLog, SendToChannel } from "../utils/logChannel.js";
 import { AddModAction } from "../utils/moderationManager.js";
 import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../utils/profileManager.js";
 import { purgeChannels } from "../utils/purgeMessages.js";
@@ -27,9 +28,8 @@ export default {
     once: false,
     async execute(message: Message, client: Client) {
         if (!message.guild) {
-            if (message.author.id !== client.user?.id) {
+            if (message.author.id !== client.user?.id && !message.author.bot) {
                 await handleDMLogging(message);
-				message.react("📩").catch(() => null);
             }
             return; 
         }
@@ -55,12 +55,16 @@ export default {
 };
 
 async function handleDMLogging(message: Message) {
-    const client = message.client;
+    // dms only goes to the private log channel, by its id (SendLog wants a server)
+    const attachments = message.attachments.size > 0 ? `\n(${message.attachments.size} attachment(s)` : "";
+    const logged = await SendToChannel(
+        message.client,
+        CONFIG.CHANNELS.PRIVATELOG,
+        `DM received from ${message.author.username} (${message.author.id}):\n${message.content}${attachments}`,
+    );
 
-    // dms only goes to the private log channel
-    const serverlog = CONFIG.CHANNELS.PRIVATELOG;
-
-    await SendLog(client, serverlog, `DM received from ${message.author.username} (${message.author.id}):\n${message.content}`);
+    // the reaction shows that the staff will see it, so it only goes on when they will
+    if (logged) await message.react("📩").catch(() => null);
 }
 
 async function handleAutoDelete(message: Message) {
@@ -70,17 +74,19 @@ async function handleAutoDelete(message: Message) {
 }
 
 async function handleHoneypot(message: Message) {
-    if (message.member?.permissions.has("Administrator")) return;
-	if (!message.guild) return;
+    if (!message.guild) return;
+    if (message.author.bot || message.webhookId) return;
+
+    const member = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
+    if (member?.permissions.has("Administrator")) return;
 
     const client = message.client;
     const compromisedUserId = message.author.id;
-    
     await SendLog(client, message.guild.id, `Honeypot triggered by <@${compromisedUserId}>! Wiping messages`);
 
     // Quarantine and delete
     const muteTime = 3 * 24 * 60 * 60 * 1000;
-    const timedOut = await message.member?.timeout(muteTime).catch(() => null);
+    const timedOut = await member?.timeout(muteTime, "Honeypot triggered").catch(() => null);
 
     // save it in the moderation history, the bot is the one that did it
     if (timedOut) {
@@ -90,6 +96,8 @@ async function handleHoneypot(message: Message) {
             reason: "Honeypot triggered",
             until: Date.now() + muteTime,
         });
+    } else {
+        await SendLog(client, message.guild.id, `I couldn't time out <@${compromisedUserId}>, their messages are still wiped.`);
     }
     await message.delete().catch(() => null);
 
@@ -136,8 +144,7 @@ async function handleVerification(message: Message) {
         const email = rawEmail.toLowerCase();
 
         // checks for valid email while allowing subdomains
-        const isValidEmail = /@(?:[a-z0-9-]+\.)*(?:lbs\.se|dbgy\.se|learnet\.se)$/i.test(email) && !email.includes("+");
-        if (!isValidEmail) {
+        if (!IsSchoolEmail(email)) {
             await sendInvalidEmailNotice(message, profile.discordId, email, verify);
             return;
         }
@@ -162,7 +169,12 @@ async function handleVerification(message: Message) {
         }
 
         // the answers from the verify questions are only kept in memory, they are taken out in here
-        await CompleteVerification(member, email);
+        const completed = await CompleteVerification(member, email);
+        if (!completed) {
+            // the message stays so the moderators see it
+            await message.reply("The email was saved, but I couldn't give the roles (check that my role is above them). The user can press the verify button again to get them.").catch(() => null);
+            return;
+        }
         await message.delete().catch(() => null);
 
     } catch (error) {

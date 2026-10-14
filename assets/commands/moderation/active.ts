@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetActiveBan, GetActiveMute, GetModProfiles } from "../../../utils/moderationManager.js";
-import { HasPermission, MakePages, SendPages, Time } from "./shared.js";
+import { HasModPermission, MakePages, SendPages, Time } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -13,7 +13,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasPermission(interaction, PermissionFlagsBits.MuteMembers))) return;
+	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const profiles = await GetModProfiles(interaction.guild.id, ["mute", "softban"]);
 

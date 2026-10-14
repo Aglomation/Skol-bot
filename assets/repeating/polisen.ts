@@ -9,7 +9,13 @@ const CACHE_DIR = "./cache";
 const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
 const API_URL = "https://polisen.se/api/events";
 const BASE_URL = "https://polisen.se";
-const USER_AGENT = "LBS Discord bot (Vera Heltborg; vera.heltborg@proton.me)";
+
+// Who polisen.se can contact if the bot causes trouble, it comes from POLISEN_CONTACT in the .env
+// It is read when it's used, the .env is only loaded after the imports
+const GetUserAgent = (): string => {
+    const contact = process.env.POLISEN_CONTACT;
+    return contact ? `LBS Discord bot (${contact})` : "LBS Discord bot";
+};
 
 export interface PolisenEvent {
 	id: number; // 645957
@@ -70,9 +76,21 @@ const hideTypes: Array<string> = [
     "personskada",
     "explosion",
     "kroppskada",
-    "sexualbrott"
+    "sexualbrott",
+    "sedlighetsbrott",
+    "olaga hot",
+    "människorov",
+    "dråp",
+    "våld"
 ];
 const HIDE_TYPES_REGEX = new RegExp(`\\b(${hideTypes.join("|")})\\b`, "i");
+
+/**
+ * The url of an event is a path on polisen.se, it is put after the host so it can't be anything else (like "@other.site")
+ */
+export function IsEventPath(url: unknown): url is string {
+    return typeof url === "string" && /^\/[^\s\\]*$/.test(url) && !url.startsWith("//");
+}
 
 let isProcessing = false;
 
@@ -92,7 +110,10 @@ async function loadCache(): Promise<PolisenEvent[]> {
  * Saves the Array values back to the cache file.
  */
 async function saveCache(data: PolisenEvent[]): Promise<void> {
-    await fs.writeFile(CACHE_FILE, JSON.stringify(data, null, 0));
+    // written to another file first and then renamed, so the button never reads a half written cache
+    const tempFile = `${CACHE_FILE}.tmp`;
+    await fs.writeFile(tempFile, JSON.stringify(data, null, 0));
+    await fs.rename(tempFile, CACHE_FILE);
 }
 
 function createEventMessage(item: PolisenEvent, isUpdate: boolean): { embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] } {
@@ -101,7 +122,6 @@ function createEventMessage(item: PolisenEvent, isUpdate: boolean): { embeds: Em
 
     const embed = new EmbedBuilder()
         .setTitle(item.name)
-        .setURL(`${BASE_URL}${item.url}`)
         .setColor(isUpdate ? Colors.DarkAqua : Colors.Aqua)
         .setAuthor({
             name: "Polisen.se",
@@ -110,6 +130,8 @@ function createEventMessage(item: PolisenEvent, isUpdate: boolean): { embeds: Em
         })
         .setFooter({ text: "Publicerad" })
         .setTimestamp(ParsePolisenTime(item.datetime));
+
+    if (IsEventPath(item.url)) embed.setURL(`${BASE_URL}${item.url}`);
 
     if (isUpdate) {
         embed.setDescription(`**Uppdaterad!**\n${description}`);
@@ -145,7 +167,7 @@ const repeating: Repeating = {
         isProcessing = true;
         try {
             const apiDataRaw: PolisenEvent[] = await axios.get(API_URL, {
-                headers: { "User-Agent": USER_AGENT },
+                headers: { "User-Agent": GetUserAgent() },
             }).then(res => res.data).catch((err) => {
                 console.error("Error fetching polisen data:", err.message);
                 return null;
@@ -197,28 +219,39 @@ const repeating: Repeating = {
                 updatedEventsToSend.length = 0;
             }
 
-            if (!isCacheEmpty) {
-                // Sent in reverse to retain chronologic sequence
-                for (const item of newEventsToSend.reverse()) {
-                    console.log(`New item found: ${item.id} - ${item.summary}`);
-                    await sendMessagesToServers(client, createEventMessage(item, false));
-                }
-
-                for (const item of updatedEventsToSend.reverse()) {
-                    console.log(`Item updated (bumped to top): ${item.id}`);
-                    await sendMessagesToServers(client, createEventMessage(item, true));
-                }
-            }
-
+            // Saved before sending, if something goes wrong halfway the events count as seen
+            // The other way around the same events would be posted again every minute
             const historicalEvents = cachedEvents.filter(e => !seenApiIds.has(e.id));
             const allEvents = [...uniqueApiData, ...historicalEvents].slice(0, MAX_CACHED_EVENTS);
             
             await saveCache(allEvents);
+
+            if (!isCacheEmpty) {
+                // Sent in reverse to retain chronologic sequence
+                for (const item of newEventsToSend.reverse()) {
+                    console.log(`New item found: ${item.id} - ${item.summary}`);
+                    await sendEvent(client, item, false);
+                }
+
+                for (const item of updatedEventsToSend.reverse()) {
+                    console.log(`Item updated (bumped to top): ${item.id}`);
+                    await sendEvent(client, item, true);
+                }
+            }
         } finally {
             isProcessing = false;
         }
     },
 };
+// one broken event must not stop the others from being posted
+async function sendEvent(client: Client, item: PolisenEvent, isUpdate: boolean) {
+    try {
+        await sendMessagesToServers(client, createEventMessage(item, isUpdate));
+    } catch (error) {
+        console.error(`Could not post event ${item.id}:`, error);
+    }
+}
+
 async function sendMessagesToServers(client: Client, message: { embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] }) {
     const servers = await FindAllNonNullKeysConfig("policeChannel");
 

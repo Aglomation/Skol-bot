@@ -1,7 +1,10 @@
+// anything longer than this is a typo, and numbers this big stop being exact
+const MAX_DURATION_MS = 100 * 365 * 24 * 60 * 60 * 1000;
+
 /**
  * Converts a string like "1d 2h 30m" into milliseconds.
  * @param input The input string to convert
- * @returns Number of milliseconds (Infinity for inf) or null if invalid
+ * @returns Number of milliseconds (Infinity for inf) or null if invalid or longer than 100 years
  */
 export function parseDuration(input: string): number | null {
 	if (!input || input === "0") return null;
@@ -41,6 +44,8 @@ export function parseDuration(input: string): number | null {
 		match = re.exec(cleaned);
 		
 	}
+
+	if (totalMs > MAX_DURATION_MS) return null;
 
 	return totalMs ? totalMs : null;
 }

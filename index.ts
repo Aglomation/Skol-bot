@@ -161,11 +161,18 @@ async function loadRepeatingTasks() {
 		const options = repeating.data;
 
 		// one task failing must not stop the others or take the bot down
+		// a run that takes longer than the time between runs must not be started a second time on top of itself
+		let running = false;
 		const run = async () => {
+			if (running) return;
+			running = true;
+
 			try {
 				await repeating.execute(client);
 			} catch (error) {
 				console.error(`[Error] Repeating task ${file}:`, error);
+			} finally {
+				running = false;
 			}
 		};
 
@@ -194,8 +201,9 @@ async function loadRepeatingTasks() {
 		if (options.repeating && options.time) {
 			setInterval(run, options.time);
 		}
+		// not awaited, a slow first run (like the school data) would hold up loading the other tasks
 		if (options.immediate) {
-			await run();
+			void run();
 		}
 	}
 }

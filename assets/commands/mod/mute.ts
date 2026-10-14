@@ -9,7 +9,8 @@ import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { AddModAction, TimeoutLength, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { CheckHierarchy } from "../../../utils/permissions.js";
 import { purgeChannels } from "../../../utils/purgeMessages.js";
 import { parseDuration } from "../../../utils/stringConvert.js";
 import { SendLog } from "../../../utils/logChannel.js";
@@ -25,6 +26,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			option
 				.setName("reason")
 				.setDescription("Reason for the mute")
+				.setMaxLength(400)
 				.setRequired(true),
 		)
 		.addStringOption((option) =>
@@ -75,7 +77,8 @@ export default async function command(
 	// Ensure interaction.member is treated as a GuildMember to access permissions
 	const executor = interaction.member as GuildMember;
 
-	if (!executor.permissions.has(PermissionFlagsBits.MuteMembers)) {
+	// a timeout is the moderate members permission, mute members is the voice mute
+	if (!executor.permissions.has(PermissionFlagsBits.ModerateMembers)) {
 		await interaction.editReply("You don't have permission to use this.");
 		return;
 	}
@@ -93,6 +96,12 @@ export default async function command(
 		return;
 	}
 
+	const denied = CheckHierarchy(executor, member);
+	if (denied) {
+		await interaction.editReply(denied);
+		return;
+	}
+
 	if (!date) {
 		await interaction.editReply("Invalid duration format. Make sure to follow the format!\nExample: `1h` for 1 hour, `30m` for 30 minutes, `inf` for indefinite.");
 		return;
@@ -100,10 +109,7 @@ export default async function command(
 
 	try {
 		// If the duration is longer than 28 days it needs to be refreshed later.
-		await member.timeout(
-			Math.min(date, 28 * 24 * 60 * 60 * 1000 - 1000),
-			reason,
-		);
+		await member.timeout(TimeoutLength(UntilFromDuration(date)), reason);
 
 		const expiresAt = Number.isFinite(date)
 			? Math.floor((Date.now() + date) / 1000)
@@ -130,7 +136,10 @@ export default async function command(
 			...(dmSent ? {} : { dm: false }),
 		});
 
-		await interaction.editReply(`**${user.tag}** has been muted. (case #${caseNumber ?? "?"})`);
+		await interaction.editReply(
+			`**${user.tag}** has been muted. (case #${caseNumber ?? "?"})` +
+				(caseNumber === null ? "\nI couldn't save the mute in the database, so it won't be refreshed or put back if they leave and join again." : ""),
+		);
 
 		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 

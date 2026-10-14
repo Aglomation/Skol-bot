@@ -16,7 +16,7 @@ const command: Command = {
 		.setName("moderation")
 		.setDescription("Look at and manage the moderation history")
 		.setContexts(InteractionContextType.Guild)
-		.setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
 		.addSubcommand(historyBuilder)
 		.addSubcommand(recentBuilder)

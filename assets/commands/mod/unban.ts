@@ -23,7 +23,8 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 		.addStringOption((option) =>
 			option
 				.setName("reason")
-				.setDescription("Reason for the ban")
+				.setDescription("Reason for the unban")
+				.setMaxLength(400)
 				.setRequired(true),
 		)
 
@@ -47,13 +48,6 @@ export default async function command(
 	const user = interaction.options.getUser("user", true);
 	const reason = interaction.options.getString("reason", true);
 	const profile = await GetProfile(user.id, interaction.guild.id);
-
-	if (interaction.guildId !== "1497140069746741338") {
-		await interaction.editReply(
-			"This command is restricted for this server.",
-		);
-		return;
-	}
 
 	if (!GetActiveBan(profile)) {
 		await interaction.editReply("That user is not on the ban list.");
@@ -79,9 +73,14 @@ export default async function command(
 		...(dmSent ? {} : { dm: false }),
 	});
 
+	if (caseNumber === null) {
+		await interaction.editReply("I couldn't save the unban in the database, so they are still on the ban list. They may have gotten the dm, try again.");
+		return;
+	}
+
 	await interaction.editReply(
-		`**${user.tag}** has been removed from the ban list. (case #${caseNumber ?? "?"})`,
+		`**${user.tag}** has been removed from the ban list. (case #${caseNumber})`,
 	);
 
-	await SendLog(interaction.client, interaction.guild.id, `<@${user.id}> has been unbanned by <@${interaction.user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
+	await SendLog(interaction.client, interaction.guild.id, `<@${user.id}> has been unbanned by <@${interaction.user.id}> for the reason: ${reason} (case #${caseNumber})`);
 };

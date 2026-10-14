@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx index.ts",
-		"build": "tsc",
+		"build": "node -e \"require('node:fs').rmSync('builds', { recursive: true, force: true })\" && tsc",
 		"start": "node builds/index.js",
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"lint:unsafe": "bunx --bun @biomejs/biome lint --write --unsafe",

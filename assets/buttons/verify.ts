@@ -2,7 +2,7 @@ import type { ButtonInteraction, GuildMember } from "discord.js";
 import { MessageFlags } from "discord.js";
 
 import { GetActiveBan } from "../../utils/moderationManager.js";
-import { GetProfile } from "../../utils/profileManager.js";
+import { GetProfileStrict } from "../../utils/profileManager.js";
 import { BuildStep } from "../../utils/verifyFlow.js";
 
 const button: Button = {
@@ -21,11 +21,22 @@ const button: Button = {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		// In case the autoban failed, check an extra time
-		const profile = await GetProfile(interaction.user.id, interaction.guild.id) as UserProfile;
+		// if the database doesn't answer nobody gets through, they can try again
+		let profile: UserProfile | null;
+		try {
+			profile = await GetProfileStrict(interaction.user.id, interaction.guild.id);
+		} catch (error) {
+			console.error("Could not check the ban list in the verify button:", error);
+			await interaction.editReply("Något gick fel, försök igen om en stund.");
+			return;
+		}
 
 		if (GetActiveBan(profile)) {
 			const member = interaction.member as GuildMember;
-			if (!member) return;
+			if (!member) {
+				await interaction.editReply("Något gick fel, försök igen om en stund.");
+				return;
+			}
 
 			await member.kick();
 			return;

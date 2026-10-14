@@ -1,5 +1,6 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import { GetTempOwner } from "../../../utils/tempVoice.js";
 import { GetTempChannel, WithChannelOption } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -29,6 +30,11 @@ export default async function command(
 
 	if (!member || user.bot || user.id === interaction.user.id) {
 		await interaction.editReply({ content: "Invalid user. Please provide a valid user." });
+		return;
+	}
+	// an operator could otherwise take the channel from the person who made it
+	if (user.id === GetTempOwner(channel.id)) {
+		await interaction.editReply({ content: "You cannot change the operator status of the owner of the channel." });
 		return;
 	}
 	if (member.permissions.has(PermissionFlagsBits.MoveMembers)) {

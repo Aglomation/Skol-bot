@@ -59,6 +59,11 @@ const command: Command = {
             await interaction.editReply("Verified role is not set up in the server configuration.");
             return;
         }
+
+        // the counts come from the cache, so everyone has to be in it
+        if (interaction.guild.members.cache.size < interaction.guild.memberCount) {
+            await interaction.guild.members.fetch().catch((error) => console.error("Could not fetch the members for /stats:", error));
+        }
         
         // which year roles are counted
         const years = order === "all"
@@ -87,7 +92,7 @@ const command: Command = {
         for (const [key, roleData] of Object.entries(schoolData)) {
             // members with the city role and (the verified role and) the year role, added up for every year
             const activeCount = years.reduce(
-                (total, year) => total + getRoleUserCount(interaction.guild, roleData.id, false, [...verifiedRoleId, year.roleId as string]),
+                (total, year) => total + getRoleUserCount(interaction.guild, roleData.id, false, [verifiedRoleId, year.roleId as string]),
                 0,
             );
             

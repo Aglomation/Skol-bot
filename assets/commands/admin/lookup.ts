@@ -50,7 +50,9 @@ export default async function command(
 		"lookup",
 		true,
 	) as UserProfileKey;
-	const value = interaction.options.getString("string", true);
+	// emails and codes are saved in lowercase
+	const typed = interaction.options.getString("string", true).trim();
+	const value = lookup === "email" || lookup === "verifycode" ? typed.toLowerCase() : typed;
 
 	// only profiles of this server
 	const result = await FindByValue(lookup, value, interaction.guild.id);
@@ -71,7 +73,8 @@ export default async function command(
 				?.user.displayAvatarURL() ?? null,
 		)
 		.setAuthor({
-			name: `Lookup for key:"${lookup}" with value:"${value}"`,
+			// an author name can only be 256 characters, the value can be way longer
+			name: `Lookup for key:"${lookup}" with value:"${value}"`.slice(0, 250),
 			iconURL: interaction.user.displayAvatarURL(),
 		})
 		.setColor("DarkNavy");

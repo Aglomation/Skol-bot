@@ -10,6 +10,7 @@ import {
 	PermissionsBitField,
 } from "discord.js";
 import { AddModAction, GetActiveBan, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { CheckHierarchy } from "../../../utils/permissions.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 import { purgeChannels } from "../../../utils/purgeMessages.js";
 import { parseDuration } from "../../../utils/stringConvert.js";
@@ -30,6 +31,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			option
 				.setName("reason")
 				.setDescription("Reason for the ban")
+				.setMaxLength(400)
 				.setRequired(true),
 		)
 		.addStringOption((option) =>
@@ -93,6 +95,17 @@ export default async function command(
 		interaction.options.getString("deletemessages", false) || "",
 	);
 
+	// nobody bans themselves or the bot, and a moderator can't ban someone who ranks as high as them or higher
+	if (targetUser.id === interaction.user.id || targetUser.id === interaction.client.user?.id) {
+		await interaction.editReply("You can't do that to yourself or to me.");
+		return;
+	}
+	const denied = targetMember ? CheckHierarchy(executor, targetMember) : null;
+	if (denied) {
+		await interaction.editReply(denied);
+		return;
+	}
+
 	const profile = await GetProfile(targetUser.id, interaction.guild.id);
 
 	if (!date) {
@@ -129,11 +142,25 @@ export default async function command(
 			until: UntilFromDuration(date),
 			...(editDmSent ? {} : { dm: false }),
 		});
+		if (editNumber === null) {
+			await interaction.editReply("I couldn't save the change in the database, so the ban is the same as before. They may have gotten the dm, try again.");
+			return;
+		}
+
+		// someone with an active ban shouldn't be in the server, it happens if they joined while the bot or the database was down
+		let stillInServer = "";
+		if (targetMember) {
+			stillInServer = await targetMember
+				.kick(reason)
+				.then(() => "\nThey were still in the server, so I kicked them.")
+				.catch(() => "\nThey are still in the server and I couldn't kick them, do it by hand.");
+		}
+
 		await interaction.editReply(
-			`User is already on the ban list. Edited their ban instead. (case #${editNumber ?? "?"})`,
+			`User is already on the ban list. Edited their ban instead. (case #${editNumber})${stillInServer}`,
 		);
 
-		SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber ?? "?"})`);
+		SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber})`);
 		return;
 	}
 
@@ -179,15 +206,29 @@ export default async function command(
 			...(dmSent ? {} : { dm: false }),
 		});
 
+		// without a saved case the ban doesn't exist, they would be able to join again
+		if (caseNumber === null) {
+			await interaction.editReply("I couldn't save the ban in the database, so I didn't kick them. They may have gotten the ban dm, try again.");
+			return;
+		}
+
 		// Kicks instead of banning to avoid IP-ban
-		if (targetMember) await targetMember.kick(reason);
+		// the ban is saved, so if the kick fails they are kicked when they join the next time
+		let kickFailed = false;
+		if (targetMember) {
+			await targetMember.kick(reason).catch((err) => {
+				console.error(`Could not kick ${targetUser.tag} after saving the ban:`, err);
+				kickFailed = true;
+			});
+		}
 
 		await interaction.editReply(
-			`**${targetUser.tag}** has been banned. (case #${caseNumber ?? "?"})` +
-				(targetMember ? "" : "\nThey are not in the server, they will be kicked if they join."),
+			`**${targetUser.tag}** has been banned. (case #${caseNumber})` +
+				(targetMember ? "" : "\nThey are not in the server, they will be kicked if they join.") +
+				(kickFailed ? "\nThe ban is saved but I couldn't kick them, do it by hand." : ""),
 		);
 
-		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has banned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`);
+		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has banned <@${targetUser.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber})`);
 
 		// Purge messages if option is set
 		if (channelsToPurge.length > 0 && deleteMessagesDuration) {

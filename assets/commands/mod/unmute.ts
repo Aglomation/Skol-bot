@@ -2,13 +2,14 @@ import type {
 	ChatInputCommandInteraction,
 	GuildMember,
 	SlashCommandSubcommandBuilder,
-	TextChannel,
 } from "discord.js";
 import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction } from "../../../utils/moderationManager.js";
+import { AddModAction, GetActiveMute } from "../../../utils/moderationManager.js";
+import { CheckHierarchy } from "../../../utils/permissions.js";
+import { GetProfile } from "../../../utils/profileManager.js";
 import { SendLog } from "../../../utils/logChannel.js";
 
 
@@ -23,6 +24,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			option
 				.setName("reason")
 				.setDescription("Reason for the unmute")
+				.setMaxLength(400)
 				.setRequired(true),
 		)
 		.addBooleanOption((option) =>
@@ -49,7 +51,8 @@ export default async function command(
 	// Ensure interaction.member is treated as a GuildMember to access permissions
 	const executor = interaction.member as GuildMember;
 
-	if (!executor.permissions.has(PermissionFlagsBits.MuteMembers)) {
+	// a timeout is the moderate members permission, mute members is the voice mute
+	if (!executor.permissions.has(PermissionFlagsBits.ModerateMembers)) {
 		await interaction.editReply("You don't have permission to use this.");
 		return;
 	}
@@ -58,13 +61,21 @@ export default async function command(
 	const member = interaction.options.getMember("user") as GuildMember | null;
 	const reason = interaction.options.getString("reason", true);
 
-	if (!member) {
-		await interaction.editReply("User is not in this server.");
+	// someone that left can still have a mute going, it is put back when they join, so this is how it is cleared
+	const profile = await GetProfile(user.id, interaction.guild.id);
+	if (!member && !GetActiveMute(profile)) {
+		await interaction.editReply("User is not in this server and has no active mute.");
+		return;
+	}
+
+	const denied = member ? CheckHierarchy(executor, member) : null;
+	if (denied) {
+		await interaction.editReply(denied);
 		return;
 	}
 
 	try {
-		await member.timeout(
+		await member?.timeout(
 			null,
 			`Unmuted by ${interaction.user.tag} for the reason: ${reason}`,
 		);
@@ -88,7 +99,11 @@ export default async function command(
 			...(dmSent ? {} : { dm: false }),
 		});
 
-		await interaction.editReply(`**${user.tag}** has been unmuted. (case #${caseNumber ?? "?"})`);
+		await interaction.editReply(
+			`**${user.tag}** has been unmuted. (case #${caseNumber ?? "?"})` +
+				(caseNumber === null ? "\nI couldn't save the unmute in the database, so the history still says they are muted." : "") +
+				(member ? "" : "\nThey are not in the server, so they won't be muted when they join."),
+		);
 
 		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has unmuted <@${user.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 

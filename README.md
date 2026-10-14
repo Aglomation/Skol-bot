@@ -14,7 +14,7 @@ This discord bot was made to handle our School discord server. It has features s
 ### Setup - You will need a database to store information for the bot to work properly. 
 1. Clone the repository
 2. Install dependencies with `npm install`
-3. Create a `.env` file in the root directory and add your bot token, an example is provided in `.env.example`
+3. Create a `.env` file in the root directory and add your bot token, an example is provided in `.example.env`
    A large part of the bot uses a database to store information, so you will need a PostgreSQL server and its connection string in `DATABASE_URL`.
 4. Push the schema with `bunx drizzle-kit push` (or `migrate` if you keep migrations)
 5. Build the bot with `npm run build`

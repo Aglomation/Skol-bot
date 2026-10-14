@@ -9,7 +9,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	WithChannelOption(
 		subcommand
 			.setName("type")
-			.setDescription("Mark your temporary voice channel as normal, spoiler or NSFW")
+			.setDescription("Mark your temporary voice channel as normal or spoiler")
 			.addStringOption((option) =>
 				option
 					.setName("type")
@@ -18,7 +18,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 					.addChoices(
 						{ name: "Normal", value: "normal" },
 						{ name: "Spoiler", value: "spoiler" },
-						{ name: "NSFW", value: "nsfw" },
 					),
 			),
 	);
@@ -41,11 +40,8 @@ export default async function command(
 			case "spoiler":
 				await channel.edit({ nsfw: false, flags: SPOILER_FLAG });
 				break;
-			case "nsfw":
-				await channel.edit({ nsfw: true, flags: 0 });
-				break;
 			default:
-				await interaction.editReply({ content: "Invalid type. Please choose from Normal, NSFW, or Spoiler." });
+				await interaction.editReply({ content: "Invalid type. Please choose from Normal or Spoiler." });
 				return;
 		}
 

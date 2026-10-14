@@ -2,7 +2,7 @@ import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import type { ModActionType } from "../../../utils/moderationManager.js";
 import { FlattenActions, GetActiveBan, GetActiveMute, GetModProfiles } from "../../../utils/moderationManager.js";
-import { HasPermission, TYPE_INFO } from "./shared.js";
+import { HasModPermission, TYPE_INFO } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -27,7 +27,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasPermission(interaction, PermissionFlagsBits.MuteMembers))) return;
+	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const days = interaction.options.getInteger("days") ?? 30;
 	const since = Date.now() - days * 24 * 60 * 60 * 1000;

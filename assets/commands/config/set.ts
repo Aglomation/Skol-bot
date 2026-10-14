@@ -1,6 +1,5 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
-import type { ServerConfig } from "../../../utils/configManager.js";
 import { GetFullServerConfig, UpdateServerConfig } from "../../../utils/configManager.js";
 import type { SettingKey } from "./settings.js";
 import { Mention, SETTINGS, TEXT_CHANNELS } from "./settings.js";
@@ -55,7 +54,7 @@ export default async function command(
 		return;
 	}
 
-	await UpdateServerConfig(interaction.guild.id, changes as Partial<ServerConfig>);
+	await UpdateServerConfig(interaction.guild.id, changes);
 
 	// get it again from the database so we only say saved if it actually saved
 	const saved = await GetFullServerConfig(interaction.guild.id, true);

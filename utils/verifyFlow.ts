@@ -7,6 +7,7 @@ import {
 	StringSelectMenuBuilder,
 } from "discord.js";
 import { GetServerConfig } from "./configManager.js";
+import { IsTeacherEmail } from "./emails.js";
 import { GetProfile, PROFILE_DUPLICATE, UpdateProfile } from "./profileManager.js";
 import type { VerifyOption } from "./verifyOptions.js";
 import { CITIES, CLASSES, PRONOUNS, ROLE_GROUPS, YEARS } from "./verifyOptions.js";
@@ -59,6 +60,18 @@ export async function NotifyNoRoleAnswers(member: GuildMember): Promise<void> {
 		.send(
 			`## Välj dina roller\n` +
 			`Du är verifierad! Boten sparar inte dina val av stad, klass, år och pronomen (av integritetsskäl), de försvann när botten startades om, vänligen gör en support ticket :D\n`
+		)
+		.catch(() => null);
+}
+
+/**
+ * For when they got verified but some of their roles couldn't be given (the bots role is probably too low)
+ */
+async function NotifyRolesFailed(member: GuildMember): Promise<void> {
+	await member
+		.send(
+			`## Välj dina roller\n` +
+			`Du är verifierad! Jag kunde tyvärr inte ge dig alla roller från dina val, använd \`/roles all\` för att välja dem igen eller gör en support ticket :D\n`
 		)
 		.catch(() => null);
 }
@@ -252,27 +265,50 @@ export async function SetPronouns(
 }
 
 /**
- * Gives a member everything they get for verifying: the verified role, the roles from the verify questions and the teacher role for teachers
- * Used when the form comes in (messageCreate) and by /admin manualverify
+ * Gives the teacher role if the email is one of a teacher
  */
-export async function CompleteVerification(member: GuildMember, email: string): Promise<void> {
+async function GiveTeacherRole(member: GuildMember, email: string): Promise<void> {
+	if (!IsTeacherEmail(email)) return;
+
+	const teacherRoleId = await GetServerConfig(member.guild.id, "teacherRoleId");
+	const teacherRole = teacherRoleId ? member.guild.roles.cache.get(teacherRoleId) : undefined;
+	if (teacherRole) await member.roles.add(teacherRole);
+}
+
+/**
+ * Gives a member everything they get for verifying: the verified role, the roles from the verify questions and the teacher role for teachers
+ * Used when the form comes in (messageCreate) and by /admin verify manual
+ * @returns false if the verified or teacher role couldn't be given (the bots role is probably too low)
+ */
+export async function CompleteVerification(member: GuildMember, email: string): Promise<boolean> {
 	const guild = member.guild;
 
-	const verifiedRoleId = await GetServerConfig(guild.id, "verifiedRoleId");
-	const verifiedRole = verifiedRoleId ? guild.roles.cache.get(verifiedRoleId) : undefined;
-	if (verifiedRole) await member.roles.add(verifiedRole);
+	try {
+		const verifiedRoleId = await GetServerConfig(guild.id, "verifiedRoleId");
+		const verifiedRole = verifiedRoleId ? guild.roles.cache.get(verifiedRoleId) : undefined;
+		if (verifiedRole) await member.roles.add(verifiedRole);
+	} catch (error) {
+		console.error("Could not give the verified role:", error);
+		return false;
+	}
 
 	// city, class, year and pronouns from the verify questions, if they are gone the member gets told to pick them again
 	const pending = TakePendingRoles(guild.id, member.id);
-	if (pending) await ApplyVerifyRoles(member, pending.roleIds, pending.asked);
-	else await NotifyNoRoleAnswers(member);
+	if (pending) {
+		if (!(await ApplyVerifyRoles(member, pending.roleIds, pending.asked))) await NotifyRolesFailed(member);
+	} else {
+		await NotifyNoRoleAnswers(member);
+	}
 
 	// Gives the teacher role automatically to teachers
-	if (email.endsWith("@ga.lbs.se") || email.endsWith("@lbs.se")) {
-		const teacherRoleId = await GetServerConfig(guild.id, "teacherRoleId");
-		const teacherRole = teacherRoleId ? guild.roles.cache.get(teacherRoleId) : undefined;
-		if (teacherRole) await member.roles.add(teacherRole);
+	try {
+		await GiveTeacherRole(member, email);
+	} catch (error) {
+		console.error("Could not give the teacher role:", error);
+		return false;
 	}
+
+	return true;
 }
 
 /**
@@ -301,10 +337,14 @@ export async function FinishVerify(
 		const verifiedRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId");
 		const verifiedRole = verifiedRoleId ? interaction.guild.roles.cache.get(verifiedRoleId) : undefined;
 		if (verifiedRole) await member.roles.add(verifiedRole);
-		await ApplyVerifyRoles(member, roleIds, asked);
+		const rolesGiven = await ApplyVerifyRoles(member, roleIds, asked);
+
+		// a teacher that left and came back gets the teacher role again, same as when they first verified
+		await GiveTeacherRole(member, profile.email);
 
 		await interaction.update({
-			content: `You have been verified successfully!\nLinked to: ${profile.email}`,
+			content: `You have been verified successfully!\nLinked to: ${profile.email}` +
+				(rolesGiven ? "" : "\nI couldn't give you all of your roles, use `/roles all` to pick them again or make a support ticket."),
 			embeds: [],
 			components: [],
 		});

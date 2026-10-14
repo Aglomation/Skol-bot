@@ -1,6 +1,6 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import type { ServerConfig } from "../../../utils/configManager.js";
+import type { ServerSettings } from "../../../utils/configManager.js";
 import { GetFullServerConfig, UpdateServerConfig } from "../../../utils/configManager.js";
 import { SETTINGS } from "./settings.js";
 
@@ -41,7 +41,7 @@ export default async function command(
 		return;
 	}
 
-	await UpdateServerConfig(interaction.guild.id, { [setting.key]: null } as Partial<ServerConfig>);
+	await UpdateServerConfig(interaction.guild.id, { [setting.key]: null } as ServerSettings);
 
 	const saved = await GetFullServerConfig(interaction.guild.id, true);
 	if (saved?.[setting.key]) {

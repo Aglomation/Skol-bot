@@ -14,7 +14,7 @@ const command: Command = {
 		.setName("mod")
 		.setDescription("moderation commands")
 		.setContexts(InteractionContextType.Guild)
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
         .addSubcommand(banBuilder)
         .addSubcommand(muteBuilder)

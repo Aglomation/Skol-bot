@@ -9,6 +9,7 @@ import {
 	PermissionsBitField,
 } from "discord.js";
 import { AddModAction } from "../../../utils/moderationManager.js";
+import { CheckHierarchy } from "../../../utils/permissions.js";
 import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -25,6 +26,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			option
 				.setName("reason")
 				.setDescription("Reason for the warning")
+				.setMaxLength(400)
 				.setRequired(true),
 		)
 		.addBooleanOption((option) =>
@@ -38,8 +40,9 @@ export default async function command(
 	interaction: ChatInputCommandInteraction
 ) {
 	if (!interaction.guild) {
-		await interaction.editReply({
+		await interaction.reply({
 			content: "This command can only be used in a server.",
+			flags: MessageFlags.Ephemeral,
 		});
 		return;
 	}
@@ -52,13 +55,21 @@ export default async function command(
 	// Ensure interaction.member is treated as a GuildMember to access permissions
 	const executor = interaction.member as GuildMember;
 
-	if (!executor.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
+	// a timeout is the moderate members permission, mute members is the voice mute
+	if (!executor.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
 		await interaction.editReply("You don't have permission to use this.");
 		return;
 	}
 
 	const targetUser = interaction.options.getUser("user", true);
+	const targetMember = interaction.options.getMember("user") as GuildMember | null;
 	const reason = interaction.options.getString("reason", true);
+
+	const denied = targetMember ? CheckHierarchy(executor, targetMember) : null;
+	if (denied) {
+		await interaction.editReply(denied);
+		return;
+	}
 
 	try {
 		let dmSent = true;
@@ -83,7 +94,10 @@ export default async function command(
 			...(dmSent ? {} : { dm: false }),
 		});
 
-		await interaction.editReply(`**${targetUser.tag}** has been warned. (case #${caseNumber ?? "?"})`);
+		await interaction.editReply(
+			`**${targetUser.tag}** has been warned. (case #${caseNumber ?? "?"})` +
+				(caseNumber === null ? "\nI couldn't save the warning in the database, so it is not in their history." : ""),
+		);
 		
 		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has warned <@${targetUser.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 	} catch (err) {

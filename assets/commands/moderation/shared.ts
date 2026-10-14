@@ -25,7 +25,7 @@ export const TYPE_CHOICES = (Object.keys(TYPE_INFO) as ModActionType[]).map((typ
 /**
  * Checks if the mod is allowed to use the command, replies if they arent
  */
-export async function HasPermission(
+export async function HasModPermission(
 	interaction: ChatInputCommandInteraction,
 	permission: bigint,
 ): Promise<boolean> {

@@ -5,6 +5,13 @@ import { LegacyToActions } from "../utils/moderationManager.js";
 
 const PROFILE_FILE = "./storage/profiles.json";
 
+// the profiles belong to a server now: npx tsx scripts/dbMigrate.ts <serverId>
+const SERVER_ID = process.argv[2];
+if (!SERVER_ID) {
+	console.error("Usage: npx tsx scripts/dbMigrate.ts <serverId>");
+	process.exit(1);
+}
+
 export type ProfileList = Record<string, UserProfile>;
 
 const stats = {
@@ -27,7 +34,7 @@ fs.readFile(PROFILE_FILE, "utf-8", (err, data) => {
 		stats.goal = Object.entries(profiles).length;
 		for (const [userId, profile] of Object.entries(profiles)) {
 			try {
-				const newData: UserProfile = {
+				const newData = {
 					verifycode: profile.verifycode ?? null,
 					email: profile.email ?? null,
 					// the old timeout/banned/banreason/banduration turns into moderation entries
@@ -39,7 +46,8 @@ fs.readFile(PROFILE_FILE, "utf-8", (err, data) => {
 
 				db.insert(userProfileTable)
 					.values({
-						id: userId,
+						discordId: userId,
+						serverId: SERVER_ID,
 						...newData,
 					})
 					.then(() => {

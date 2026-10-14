@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { AddModAction } from "../../../utils/moderationManager.js";
-import { HasPermission } from "./shared.js";
+import { HasModPermission } from "./shared.js";
 import { SendLog } from "../../../utils/logChannel.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -24,7 +24,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasPermission(interaction, PermissionFlagsBits.MuteMembers))) return;
+	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const note = interaction.options.getString("note", true);

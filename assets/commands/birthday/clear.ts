@@ -10,7 +10,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			"sv-SE": "Tar bort din födelsedag",
 		});
 
-export default async function clear(
+export default async function command(
 	interaction: ChatInputCommandInteraction,
 ) {
 	if (!interaction.guild) return;

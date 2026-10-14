@@ -20,3 +20,21 @@ export async function HasPermission(
 	await interaction.editReply("You don't have permission to use this.");
 	return false;
 }
+
+/**
+ * Checks if a moderator is allowed to act on a member, nobody can touch someone with the same or a higher top role
+ * The server owner can act on anyone, except themselves
+ * @returns Why it isn't allowed, null if it is
+ */
+export function CheckHierarchy(executor: GuildMember, target: GuildMember): string | null {
+	if (target.id === executor.id) return "You can't do that to yourself.";
+	if (target.id === target.client.user?.id) return "I won't do that to myself.";
+	if (target.id === target.guild.ownerId) return "You can't do that to the server owner.";
+	if (executor.id === executor.guild.ownerId) return null;
+
+	if (executor.roles.highest.comparePositionTo(target.roles.highest) <= 0) {
+		return "Their highest role is the same as or higher than yours.";
+	}
+
+	return null;
+}

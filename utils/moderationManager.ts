@@ -19,6 +19,18 @@ export function UntilFromDuration(duration: number): number | null {
 	return Number.isFinite(duration) ? Date.now() + duration : null;
 }
 
+// discord only allows a timeout of 28 days at a time, a longer mute is refreshed before it runs out
+export const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000 - 1000;
+
+/**
+ * How long the discord timeout of a mute has to be, from now
+ * @param until When the mute ends, null = never
+ */
+export function TimeoutLength(until: number | null | undefined): number {
+	if (until == null) return MAX_TIMEOUT_MS;
+	return Math.max(1000, Math.min(until - Date.now(), MAX_TIMEOUT_MS));
+}
+
 /**
  * Adds an action to a users moderation list, makes the profile if it doesnt exist
  * Done in one query so two mods at the same time cant overwrite each other
@@ -163,17 +175,6 @@ export function GetActiveMute(profile: HasModeration): NumberedAction | null {
 export function GetActiveBan(profile: HasModeration): NumberedAction | null {
 	const state = LastState(profile, "softban");
 	return IsActive(state, "softban") ? state : null;
-}
-
-/**
- * When the last mute ends, used to refresh long mutes
- * @returns Infinity if it never ends, 0 if they got unmuted, null if they have no mute record
- */
-export function GetMuteExpiry(profile: HasModeration): number | null {
-	const state = LastState(profile, "mute");
-	if (!state) return null;
-	if (state.action.type === "unmute") return 0;
-	return state.action.until ?? Infinity;
 }
 
 /**

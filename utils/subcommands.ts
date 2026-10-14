@@ -40,7 +40,7 @@ export async function RunSubcommand(
 			return;
 		}
 
-		await handler(interaction, interaction.client);
+		await handler(interaction);
 	} catch (err) {
 		console.error(`[Error] Running subcommand ${name}:`, err);
 		await Reply(interaction, `Error running subcommand: ${name}`);

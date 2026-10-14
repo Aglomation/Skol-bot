@@ -1,5 +1,7 @@
 import type { Client, Guild, TextChannel } from "discord.js";
 import { EmbedBuilder, PermissionFlagsBits } from "discord.js";
+import type { BirthdayDate } from "../../utils/birthdayUtils.js";
+import { IsLeapYear, TodayInSweden } from "../../utils/birthdayUtils.js";
 import { FindAllNonNullKeysConfig, GetServerConfig } from "../../utils/configManager.js";
 import { getDisplayName } from "../../utils/memberUtils.js";
 import { FindAllNonNullKeys } from "../../utils/profileManager.js";
@@ -13,27 +15,25 @@ const formatBirthdayLine = (
     const name = getDisplayName(guild, member.discordId);
     const mention = `(<@${member.discordId}>)`; 
 
+    // birthdays are saved as midnight UTC
     const birthdayDate = new Date((member.birthday as number) * 1000);
-    const age = currentYear - birthdayDate.getFullYear();
+    const age = currentYear - birthdayDate.getUTCFullYear();
 	return `${name} ${mention} - ${age} Years old`;
 };
 
-const isBirthdayToday = (birthday: Date | null, date: Date): boolean => {
+const isBirthdayToday = (birthday: Date | null, date: BirthdayDate): boolean => {
     if (!birthday) return false;
 
-    const currentMonth = date.getMonth() + 1;
-    const currentDay = date.getDate();
+    const birthdayMonth = birthday.getUTCMonth() + 1;
+    const birthdayDay = birthday.getUTCDate();
     
     // Standard birthday
-    if (birthday.getMonth() + 1 === currentMonth && birthday.getDate() === currentDay) {
+    if (birthdayMonth === date.month && birthdayDay === date.day) {
         return true;
     }
 
-    // Leap year stuff
-    const yesterday = new Date(date);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (birthday.getMonth() + 1 === 2 && birthday.getDate() === 29 && currentMonth === 3 && currentDay === 1 && yesterday.getDate() !== 29) {
+    // Leap year stuff, the 29th of February is celebrated on the 1st of March in the years without one
+    if (birthdayMonth === 2 && birthdayDay === 29 && date.month === 3 && date.day === 1 && !IsLeapYear(date.year)) {
         return true;
     }
 
@@ -48,8 +48,8 @@ const announced = new Set<string>();
  * Anyone who already got one today is skipped
  */
 export async function AnnounceBirthdays(client: Client, guild: Guild, members: UserProfile[]): Promise<void> {
-    const today = new Date();
-    const day = `${today.getMonth()}-${today.getDate()}`;
+    const today = TodayInSweden();
+    const day = `${today.month}-${today.day}`;
 
     // forget the ones from earlier days
     for (const key of announced) {
@@ -64,13 +64,13 @@ export async function AnnounceBirthdays(client: Client, guild: Guild, members: U
     if (todaysBirthdays.length === 0) return;
 
     todaysBirthdays.sort((a, b) => {
-        const yearA = new Date((a.birthday as number) * 1000)?.getFullYear() || 0;
-        const yearB = new Date((b.birthday as number) * 1000)?.getFullYear() || 0;
+        const yearA = new Date((a.birthday as number) * 1000)?.getUTCFullYear() || 0;
+        const yearB = new Date((b.birthday as number) * 1000)?.getUTCFullYear() || 0;
         return yearB - yearA; 
     });
 
     const descriptionLines = todaysBirthdays.map(member => 
-        formatBirthdayLine(guild, member, today.getFullYear())
+        formatBirthdayLine(guild, member, today.year)
     );
 
     const embed = new EmbedBuilder()
@@ -97,28 +97,31 @@ const repeating: Repeating = {
 		clockTime: "00:00",
 	},
 	async execute(client: Client) {
-		const today = new Date();
+		const today = TodayInSweden();
         const servers = await FindAllNonNullKeysConfig("birthdayChannel");
 
         for (const server of servers){
             const guild = client.guilds.cache.get(server.id);
             if (!guild) continue;
 
-            const birthdayMembers = await FindAllNonNullKeys("birthday", server.id);
-            
-            const todaysBirthdays = birthdayMembers.filter((member) => {
-                const name = getDisplayName(guild, member.discordId);
-                if (!name) return false;
-                
-                const birthday = member.birthday as UserProfile["birthday"] | null;
-                const birthdayDate = birthday ? new Date(birthday * 1000) : null;
+            // one server failing must not stop the others from getting their messages
+            try {
+                const birthdayMembers = await FindAllNonNullKeys("birthday", server.id);
 
-                if (!birthdayDate) return false;
+                const todaysBirthdays: UserProfile[] = [];
+                for (const member of birthdayMembers) {
+                    const birthday = member.birthday as UserProfile["birthday"] | null;
+                    if (birthday == null || !isBirthdayToday(new Date(birthday * 1000), today)) continue;
 
-                return isBirthdayToday(birthdayDate, today);
-            });
+                    // the member isn't always in the cache, and the name is taken from it
+                    const inServer = await guild.members.fetch(member.discordId).catch(() => null);
+                    if (inServer) todaysBirthdays.push(member);
+                }
 
-            await AnnounceBirthdays(client, guild, todaysBirthdays);
+                await AnnounceBirthdays(client, guild, todaysBirthdays);
+            } catch (error) {
+                console.error(`Could not announce the birthdays in ${guild.id}:`, error);
+            }
         }
 	},
 };

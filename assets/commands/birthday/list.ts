@@ -6,10 +6,12 @@ import {
 	EmbedBuilder,
 	MessageFlags,
 } from "discord.js";
-import { GetNextBirthdays, sortedList } from "../../../utils/birthdayUtils.js";
+import { GetNextBirthdays, sortedList, TodayInSweden } from "../../../utils/birthdayUtils.js";
 import { getDisplayName } from "../../../utils/memberUtils.js";
 import { numToMonth } from "../../../utils/stringConvert.js";
 
+
+const PAGE_SIZE = 10;
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -41,6 +43,11 @@ const getSuffix = (day: number) => {
 	}
 };
 
+const compareDates = (m1: number, d1: number, m2: number, d2: number) => {
+    if (m1 !== m2) return m1 - m2;
+    return d1 - d2;
+};
+
 export const generateBirthdayPage = async (
 	page: number,
 	guild: Guild | null,
@@ -52,62 +59,72 @@ export const generateBirthdayPage = async (
 	const formattedList = await sortedList(guild);
 	if (!formattedList || formattedList.length === 0) return null;
 
-	const pageSize = 30;
-	const maxPage = Math.ceil(formattedList.length / pageSize) || 1;
+	const maxPage = Math.ceil(formattedList.length / PAGE_SIZE) || 1;
 
 	const currentPage = Math.max(1, Math.min(page, maxPage));
 
 	const pageItems = formattedList.slice(
-		(currentPage - 1) * pageSize,
-		currentPage * pageSize,
+		(currentPage - 1) * PAGE_SIZE,
+		currentPage * PAGE_SIZE,
 	);
-
-	const today = new Date();
-	const currentMonth = today.getMonth() + 1;
-	const currentDay = today.getDate();
-	const currentYear = today.getFullYear();
+	const today = TodayInSweden(new Date("2025-08-29 05:20"));
+	const currentMonth = today.month;
+	const currentDay = today.day;
+	const currentYear = today.year;
 
 	const next = GetNextBirthdays(formattedList, today);
 
 	const descLines: string[] = [];
-	let hasInsertedYearSeparator = false;
-	for (let i = 0; i < pageItems.length; i++) {
+    let hasInsertedToday = false;
+    let lastMonth: number | null = null;
+
+    for (let i = 0; i < pageItems.length; i++) {
         const currentItem = pageItems[i];
         if (!currentItem.birthday) continue;
 
         const { user, birthday } = currentItem;
+        const prevItem = i > 0 ? pageItems[i - 1] : null;
+
+        if (!hasInsertedToday && prevItem && prevItem.birthday) {
+            const isTodayBetween = 
+                compareDates(prevItem.birthday.month, prevItem.birthday.day, currentMonth, currentDay) <= 0 &&
+                compareDates(currentMonth, currentDay, birthday.month, birthday.day) < 0;
+
+            if (isTodayBetween && prevItem.birthday.month === currentMonth) {
+                descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
+                hasInsertedToday = true;
+            }
+        }
+
+        if (lastMonth !== birthday.month) {
+            if (!hasInsertedToday && currentMonth === birthday.month && compareDates(currentMonth, currentDay, birthday.month, birthday.day) < 0) {
+                descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
+                descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
+                hasInsertedToday = true;
+                lastMonth = birthday.month;
+            } else {
+                descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
+                lastMonth = birthday.month;
+            }
+        }
+
+        const isToday = birthday.month === currentMonth && birthday.day === currentDay;
+        if (isToday && !hasInsertedToday) {
+            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
+            hasInsertedToday = true;
+        }
 
         const age = calculateAge(birthday, currentMonth, currentDay, currentYear);
         const name = getDisplayName(guild, user.discordId);
-		if (!name) continue;
-		
-        const prevItem = pageItems[i - 1];
-
-        const isFirstOfMonth = !prevItem || prevItem.birthday?.month !== birthday.month;
-        
-        const isNextUp =
-			!!next &&
-			next.month === birthday.month &&
-			next.day === birthday.day;
-
-        if (isFirstOfMonth) {
-            descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
-        }
-
-		const isToday = birthday.month === currentMonth && birthday.day === currentDay;
         const daySuffix = getSuffix(birthday.day);
-
-		if ((isToday || isNextUp) && !hasInsertedYearSeparator) {
-            descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
-            hasInsertedYearSeparator = true;
-        }
 
         if (isToday) {
             descLines.push(`▫️ **${birthday.day}${daySuffix}** - **${name}** (Turns ${age} today! 🎂)\n`);
         } else {
-            descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name} \`${age}\`\n`);
+            const isNextUp = !!next && next.month === birthday.month && next.day === birthday.day;
+            descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name} \`${age}\`${isNextUp ? " - Next Up!" : ""}\n`);
         }
-	}
+    }
 
 	let nextBirthdayValue = "No upcoming birthdays";
 	if (next) {
@@ -125,9 +142,9 @@ export const generateBirthdayPage = async (
 		.setAuthor({ name: guild?.name || "", iconURL: guild?.iconURL?.() || undefined })
 		.setColor("Aqua")
 		.setFooter({
-			text: `Total (${formattedList.length}) ・ ${pageSize} per page [Showing: ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, formattedList.length)}] ・ Use /birthday set to set your birthday!`,
+			text: `Total (${formattedList.length}) ・ ${PAGE_SIZE} per page [Showing: ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, formattedList.length)}] ・ Use /birthday set to set your birthday!`,
 		})
-		.setDescription(descLines.join(""))
+		.setDescription(descLines.join("").trim())
 		.setFields([
 			{
 				name: next ? `Next Upcoming Birthday (<t:${next.timestamp}:R>)` : "Next Upcoming Birthday",
@@ -172,19 +189,43 @@ export const generateBirthdayPage = async (
 	};
 };
 
-export default async function list(
-	interaction: ChatInputCommandInteraction,
-	page = 1,
+export default async function command(
+interaction: ChatInputCommandInteraction,
 ) {
-	await interaction.deferReply({ flags: MessageFlags.Ephemeral});
-	const pageData = await generateBirthdayPage(page, interaction.guild);
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	if (!pageData) {
-		// Handle empty list gracefully
-		return interaction.editReply({
-			content: "No birthdays have been set yet!",
-		});
-	}
+    if (!interaction.guild) {
+        return interaction.editReply({ content: "This command can only be used in a server." });
+    }
 
-	await interaction.editReply(pageData);
+    const formattedList = await sortedList(interaction.guild);
+    if (!formattedList || formattedList.length === 0) {
+        return interaction.editReply({ content: "No birthdays have been set yet!" });
+    }
+
+    const today = TodayInSweden();
+    const next = GetNextBirthdays(formattedList, today);
+
+    let targetPageIndex = 0;
+
+    if (next) {
+        // Find the index of the next upcoming birthday in the sorted list
+        const index = formattedList.findIndex(
+            (item) => item.birthday?.month === next.month && item.birthday?.day === next.day
+        );
+        if (index !== -1) {
+            targetPageIndex = Math.floor(index / PAGE_SIZE);
+        }
+    }
+
+    const targetPage = targetPageIndex + 1; // Pages are 1-indexed
+    const pageData = await generateBirthdayPage(targetPage, interaction.guild);
+
+    if (!pageData) {
+        return interaction.editReply({
+            content: "No birthdays have been set yet!",
+        });
+    }
+
+    await interaction.editReply(pageData);
 }

@@ -3,7 +3,7 @@ import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import type { ModActionType, NumberedAction } from "../../../utils/moderationManager.js";
 import { GetActiveBan, GetActiveMute } from "../../../utils/moderationManager.js";
 import { GetProfile } from "../../../utils/profileManager.js";
-import { CountByType, FormatAction, HasPermission, MakePages, SendPages, Time, TYPE_CHOICES, TYPE_INFO } from "./shared.js";
+import { CountByType, FormatAction, HasModPermission, MakePages, SendPages, Time, TYPE_CHOICES, TYPE_INFO } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -31,7 +31,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasPermission(interaction, PermissionFlagsBits.MuteMembers))) return;
+	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const type = interaction.options.getString("type") as ModActionType | null;

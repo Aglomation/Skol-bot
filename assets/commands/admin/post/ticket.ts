@@ -8,7 +8,7 @@ import { HasPermission } from "../../../../utils/permissions.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
 		.setName('ticket')
-        .setDescription('Posts the server rules embed into the current channel.');
+        .setDescription('Posts the channels and tickets embed into the current channel.');
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,

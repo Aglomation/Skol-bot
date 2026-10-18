@@ -13,9 +13,7 @@ import {
 import dotenv from "dotenv";
 import { sql } from "drizzle-orm";
 import { db } from "./db/client.js";
-import * as schema from "./db/schema.js";
 import { serverConfigTable } from "./db/schema.js";
-import { NotifyOwnerAboutSchema, SyncSchema } from "./utils/schemaSync.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,9 +48,6 @@ const fileFilter = (file: string) =>
 	file.endsWith(".ts") || file.endsWith(".js");
 
 async function startBot() {
-	// adds new tables and columns by itself (see utils/schemaSync.ts), before anything reads from them
-	await SyncSchema(db, schema);
-
 	const [servers] = await db.select({ count: sql<number>`count(*)` }).from(serverConfigTable);
 	console.log(`Database connected, ${servers.count} configured server(s).`);
 
@@ -207,8 +202,6 @@ async function loadRepeatingTasks() {
 
 client.once("clientReady", () => {
 	loadRepeatingTasks().catch((error) => console.error("Error starting the repeating tasks:", error));
-	// the owner can't see the console of the server, so what happened with the database goes in a DM
-	NotifyOwnerAboutSchema(client).catch((error) => console.error("Could not tell the owner about the database:", error));
 });
 
 // logs instead of crashing, the bot should keep running if one thing fails

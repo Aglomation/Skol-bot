@@ -81,13 +81,9 @@ export default async function command(
     try {
         // the access is removed first, if that fails nothing has been deleted yet
         const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
-        // the teacher role came from the email.
-        const roleIds = [
-            await GetServerConfig(interaction.guild.id, "verifiedRoleId"),
-            await GetServerConfig(interaction.guild.id, "teacherRoleId"),
-        ].filter((id): id is string => !!id && !!member?.roles.cache.has(id));
-        if (member && roleIds.length > 0) {
-            await member.roles.remove(roleIds);
+        const verifiedRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId");
+        if (member && verifiedRoleId && member.roles.cache.has(verifiedRoleId)) {
+            await member.roles.remove(verifiedRoleId);
         }
 
         // moderation history is kept as the privacy policy allows, a full delete needs an admin

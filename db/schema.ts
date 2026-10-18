@@ -30,7 +30,6 @@ export const serverConfigTable = pgTable("server_config", {
 	birthdayChannel: varchar("birthday_channel", { length: 255 }),
 	welcomeChannel: varchar("welcome_channel", { length: 255 }),
 	supportChannel: varchar("support_channel", { length: 255 }),
-	ticketCategory: varchar("ticket_category", { length: 255 }),
 	modRoleId: varchar("mod_role_id", { length: 255 }),
 	adminRoleId: varchar("admin_role_id", { length: 255 }),
 });

@@ -20,7 +20,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 		);
 
 
-export default async function get(
+export default async function command(
 	interaction: ChatInputCommandInteraction,
 ) {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });

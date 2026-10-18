@@ -26,7 +26,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 .setRequired(true),
         );
 
-export default async function set(
+export default async function command(
 	interaction: ChatInputCommandInteraction
 ) {
 	if (!interaction.guild) return;

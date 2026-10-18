@@ -104,7 +104,8 @@ export async function GetFullServerConfig(id: string, force = false): Promise<Se
 				return config;
 			} catch (error) {
 				console.error("Error getting server config:", error);
-				return force ? null : (cached?.config ?? null);
+				// old config is better than no config
+				return cached?.config ?? null;
 			} finally {
 				pending.delete(id);
 			}

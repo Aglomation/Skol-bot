@@ -1,8 +1,6 @@
 import type { GuildTextBasedChannel } from "discord.js";
 import { SnowflakeUtil } from "discord.js";
 
-const MAX_PAGES = 50;
-
 /**
  *
  * @param channel
@@ -24,11 +22,9 @@ export async function purgeMessages(
 			fetchedMessages.first(),
 		);
 
-		let pages = 0;
 		while (
 			fetchedMessages.size > 0 &&
-			oldestFetchedMessage?.createdTimestamp >= cutoffTimestamp &&
-			pages++ < MAX_PAGES
+			oldestFetchedMessage?.createdTimestamp >= cutoffTimestamp
 		) {
 			const olderMessages = await channel.messages.fetch({
 				limit: 100,

@@ -49,7 +49,7 @@ export default async function command(
 		await channel.permissionOverwrites.edit(user.id, {
 			Connect: true,
 			Speak: true,
-			MoveMembers: isOperator ? null : true,
+			MoveMembers: !isOperator,
 		});
 
 		await interaction.editReply({

@@ -43,11 +43,8 @@ const repeating: Repeating = {
 
 		const schoolData = await getAllSchoolData();
 
-		fs.mkdirSync("./cache", { recursive: true });
-
-		// written to another file first and then renamed, so /stats never reads half of it
-		fs.writeFileSync(`${CACHE_FILE}.tmp`, JSON.stringify(schoolData, null, 4));
-		fs.renameSync(`${CACHE_FILE}.tmp`, CACHE_FILE);
+			fs.mkdirSync("./cache", { recursive: true });
+		fs.writeFileSync(CACHE_FILE, JSON.stringify(schoolData, null, 4));
 	},
 };
 

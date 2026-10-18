@@ -10,14 +10,14 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			"sv-SE": "Tar bort din födelsedag",
 		});
 
-export default async function clear(
+export default async function command(
 	interaction: ChatInputCommandInteraction,
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 	const profile = await GetProfile(interaction.user.id, interaction.guild.id);
-	if (profile?.birthday == null) {
+	if (!profile?.birthday) {
 		await interaction.editReply({ content: "You don't have a birthday set." });
 		return;
 	}

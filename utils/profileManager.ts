@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { userProfileTable } from "../db/schema.js";
 
@@ -158,20 +158,16 @@ export async function FindAllNonNullKeys(
  * @returns true if the moderation history was kept
  */
 export async function DeletePersonalData(userId: string, serverId: string): Promise<boolean> {
-	const isTheirs = and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId));
+		const profile = await GetProfile(userId, serverId);
+		if (profile && profile.moderation.length > 0) {
+			await db.update(userProfileTable)
+				.set({ email: null, verifycode: null, birthday: null })
+				.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)));
+			return true;
+	}
 
-	// one query that only deletes a profile with an empty history, so a case that is added at the same moment can't be deleted with it
-	const deleted = await db.delete(userProfileTable)
-		.where(and(isTheirs, sql`jsonb_array_length(${userProfileTable.moderation}) = 0`))
-		.returning({ id: userProfileTable.id });
-	if (deleted.length > 0) return false;
-
-	// there is a history (or no profile at all), the row stays and only the personal data goes
-	const kept = await db.update(userProfileTable)
-		.set({ email: null, verifycode: null, birthday: null })
-		.where(isTheirs)
-		.returning({ id: userProfileTable.id });
-	return kept.length > 0;
+	await DeleteProfile(userId, serverId);
+	return false;
 }
 
 /**

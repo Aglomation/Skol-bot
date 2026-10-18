@@ -41,6 +41,7 @@ export default async function command(
             "**- Födelsedatum (frivilligt):** Sparas med år baserat på ditt **samtycke**. **Observera:** alla på servern kan se ditt födelsedatum och din ålder via `/birthday`, och boten gratulerar dig offentligt, med ålder, i födelsedagskanalen.\n" +
             "**- Modereringshistorik:** Varningar, anteckningar, avstängningar och bannlysningar med orsak, tid och ansvarig moderator (**Berättigat intresse**, Art. 6.1 f GDPR). Loggas även i en intern moderatorkanal.\n" +
             "**- Direktmeddelanden till boten:** Vidarebefordras med innehåll och ditt ID till en privat moderatorkanal (**Berättigat intresse**: support och missbruk).\n" +
+            "**- Tickets:** Meddelandena i en ticket sparas som en textfil i den privata moderatorkanalen när ticketen stängs (**Berättigat intresse**: support).\n" +
             "Boten sparar annars inte dina meddelanden. Dina val i verifieringen (stad, klass, år, pronomen) blir roller som alla ser och hålls bara i botens minne, högst en vecka, medan du verifierar dig.\n\n" +
             "## Lagring & Personuppgiftsbiträden\n" +
             "Uppgifterna lagras i vår självhostade PostgreSQL-databas, ingen tredjepart har tillgång till den. Meddelanden och roller lagras av Discord ([integritetspolicy](https://discord.com/privacy)). Vi använder även [Google Formulär](https://policies.google.com/privacy) för e-postverifieringen. Vi säljer **aldrig** dina uppgifter eller delar dem med obehöriga tredje parter.\n\n" +
@@ -58,7 +59,7 @@ export default async function command(
             "*Du har rätt att lämna in ett klagomål gällande vår personuppgiftshantering till Integritetsskyddsmyndigheten (IMY).*",
         color: 0xEED202,
         footer: {
-            text: "Senast uppdaterad: 2026-10-12",
+            text: "Senast uppdaterad: 2026-10-16",
         },
     };
 
@@ -74,6 +75,7 @@ export default async function command(
             "**- Birthday (voluntary):** Stored with the year, based on your **Consent**. **Note:** everyone on the server can see your birth date and age through `/birthday`, and the bot congratulates you publicly, with your age, in the birthday channel.\n" +
             "**- Moderation History:** Warnings, notes, mutes and bans with the reason, time and responsible moderator (**Legitimate Interests**, Art. 6(1)(f)). Also logged in an internal moderator channel.\n" +
             "**- Direct messages to the bot:** Forwarded with their content and your ID to a private moderator channel (**Legitimate Interests**: support and abuse).\n" +
+            "**- Tickets:** The messages in a ticket are saved as a text file in the private moderator channel when the ticket is closed (**Legitimate Interests**: support).\n" +
             "Otherwise the bot does not store your messages. Your choices during verification (city, class, year, pronouns) become roles everyone can see and are only kept in the bot's memory, for up to a week, while you verify.\n\n" +
             "## Storage & Third-Party Processors\n" +
             "The data is stored in our own self-hosted PostgreSQL database, no third party has access to it. Messages and roles are stored by Discord ([privacy policy](https://discord.com/privacy)). We also use [Google Forms](https://policies.google.com/privacy) for the email verification. We **never** sell your data or share it with unauthorized third parties.\n\n" +
@@ -91,7 +93,7 @@ export default async function command(
             "*You have the right to lodge a complaint with the Swedish Authority for Privacy Protection (IMY).*",
         color: 0xEED202,
         footer: {
-            text: "Last updated: 2026-10-12",
+            text: "Last updated: 2026-10-16",
         },
     };
 

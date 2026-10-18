@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import type { AttachmentBuilder, Client } from "discord.js";
 import { GetServerConfig } from "./configManager.js";
 
 // discord doesn't take messages over 2000 characters
@@ -9,14 +9,14 @@ const MAX_LENGTH = 2000;
  * A message that is too long is cut, it would not be sent at all otherwise
  * @returns true if it was sent
  */
-export async function SendToChannel(client: Client, channelId: string, content: string): Promise<boolean> {
+export async function SendToChannel(client: Client, channelId: string, content: string, files: AttachmentBuilder[] = []): Promise<boolean> {
 	const channel = client.channels.cache.get(channelId);
 	if (!channel?.isTextBased() || !("send" in channel)) return false;
 
 	const text = content.length > MAX_LENGTH ? `${content.slice(0, MAX_LENGTH - 1)}…` : content;
 
 	try {
-		await channel.send({ content: text, allowedMentions: { parse: [] } });
+		await channel.send({ content: text, files, allowedMentions: { parse: [] } });
 		return true;
 	} catch (error) {
 		console.error("Could not send to the channel:", error);

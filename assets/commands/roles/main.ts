@@ -5,6 +5,7 @@ import { RunSubcommand } from "../../../utils/subcommands.js";
 
 import { builder as allBuilder } from "./all.js";
 import { builder as pronounsBuilder } from "./pronouns.js";
+import { builder as colorBuilder } from "./color.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -13,7 +14,8 @@ const command: Command = {
 		.setContexts(InteractionContextType.Guild)
 
 		.addSubcommand(allBuilder)
-		.addSubcommand(pronounsBuilder),
+		.addSubcommand(pronounsBuilder)
+		.addSubcommand(colorBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await RunSubcommand(import.meta.url, interaction);

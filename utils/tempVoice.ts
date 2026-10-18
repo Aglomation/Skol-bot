@@ -16,7 +16,6 @@ export function GetTempOwner(channelId: string): string | null {
 
 export function ForgetTempChannel(channelId: string): void {
 	owners.delete(channelId);
-	renames.delete(channelId);
 }
 
 /**
@@ -53,27 +52,6 @@ export function CanCreateTempChannel(userId: string): boolean {
 	if (now - (lastCreated.get(userId) ?? 0) < CREATE_COOLDOWN_MS) return false;
 	lastCreated.set(userId, now);
 	return true;
-}
-
-// Discord allows 2 renames per 10 minutes for a channel, a third one just waits in the queue for minutes
-const RENAME_LIMIT = 2;
-const RENAME_WINDOW_MS = 10 * 60 * 1000;
-const renames = new Map<string, number[]>();
-
-/**
- * @returns How many milliseconds until the channel can be renamed again, 0 if it can be renamed now
- */
-export function RenameWait(channelId: string): number {
-	const now = Date.now();
-	const recent = (renames.get(channelId) ?? []).filter((time) => now - time < RENAME_WINDOW_MS);
-	renames.set(channelId, recent);
-
-	if (recent.length < RENAME_LIMIT) return 0;
-	return recent[0] + RENAME_WINDOW_MS - now;
-}
-
-export function NoteRename(channelId: string): void {
-	renames.set(channelId, [...(renames.get(channelId) ?? []), Date.now()]);
 }
 
 /**

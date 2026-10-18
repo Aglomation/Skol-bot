@@ -1,5 +1,5 @@
 import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
-import { GetServerConfig } from "./configManager.js";
+import { GetFullServerConfig } from "./configManager.js";
 
 /**
  * Checks if the member is allowed to use a command, replies if they arent
@@ -15,7 +15,7 @@ export async function HasPermission(
 
 	const executor = interaction.member as GuildMember;
 	if (executor.permissions.has(permission)) return true;
-	if (await GetServerConfig(interaction.guild.id, "isDevServer") === true) return true;
+	if ((await GetFullServerConfig(interaction.guild.id, true))?.isDevServer === true) return true;
 
 	await interaction.editReply("You don't have permission to use this.");
 	return false;

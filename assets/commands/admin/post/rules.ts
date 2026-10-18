@@ -21,7 +21,7 @@ export default async function command(
 	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
     const rulesEmbed = new EmbedBuilder()
-        .setAuthor({ name: 'Rules & Guidelines', iconURL: interaction.guild?.iconURL() || '' })
+        .setAuthor({ name: 'Rules & Guidelines', iconURL: interaction.guild?.iconURL() ?? undefined })
         .setDescription(
             `**By being a member of this server, you agree to follow these rules.**\n` +
             `We apply common sense; if you are intentionally being disruptive, "it wasn't explicitly in the rules" will not be an excuse.\n\n` +

@@ -28,7 +28,16 @@ export default async function command(
         return;
     }
 
-    const json = JSON.stringify(profile, null, 2);
+    // staff notes are not shown to the user.
+    const data = {
+        ...profile,
+        moderation: profile.moderation.map((action) =>
+            action.type === "note"
+                ? { type: action.type, at: action.at, reason: "<hidden>", by: "<hidden>" }
+                : action,
+        ),
+    };
+    const json = JSON.stringify(data, null, 2);
 
     // discord only allows 2000 characters in a message, the moderation history can be longer than that
     if (json.length > 1800) {

@@ -12,7 +12,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 			"sv-SE": "Visar nästa födelsedag",
 		});
 
-export default async function command(
+export default async function next(
 	interaction: ChatInputCommandInteraction,
 ) {
 	if (!interaction.guild) return;

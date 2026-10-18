@@ -3,7 +3,7 @@ import type {
     GuildTextBasedChannel,
     Message,
 } from "discord.js";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
 import { IsSchoolEmail } from "../utils/emails.js";
 import { SendLog, SendToChannel } from "../utils/logChannel.js";
@@ -61,6 +61,7 @@ async function handleDMLogging(message: Message) {
         message.client,
         CONFIG.CHANNELS.PRIVATELOG,
         `DM received from ${message.author.username} (${message.author.id}):\n${message.content}${attachments}`,
+        message.attachments.map((a) => new AttachmentBuilder(a.url, { name: a.name ?? "attachment" })),
     );
 
     // the reaction shows that the staff will see it, so it only goes on when they will

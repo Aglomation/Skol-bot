@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import type { db } from "../db/client.js";
 import { GetOwnerIds } from "./botOwner.js";
 
-// ngl i vibe coded all of this
+// What drizzle-kit push says it wants to do
 type PushPlan = {
 	hasDataLoss: boolean;
 	warnings: string[];
@@ -63,6 +63,38 @@ async function LoadPushSchema(): Promise<PushSchema | null> {
 	return null;
 }
 
+const asText = (value: unknown): string => (typeof value === "string" ? value : JSON.stringify(value));
+
+// A short description of what drizzle-kit gave back, so it can be understood from the message when the format is a new one
+function DescribeShape(value: unknown): string {
+	if (!value || typeof value !== "object") return typeof value;
+	return Object.entries(value)
+		.map(([key, entry]) => {
+			if (Array.isArray(entry)) return `${key}: array(${entry.length}${entry.length > 0 ? `, first is ${typeof entry[0]}` : ""})`;
+			return `${key}: ${typeof entry}`;
+		})
+		.join(", ");
+}
+
+// The answer of pushSchema has changed names between versions of drizzle-kit, the known ones are read here
+function ReadPlan(raw: unknown): PushPlan | null {
+	if (!raw || typeof raw !== "object") return null;
+	const plan = raw as Record<string, unknown>;
+
+	const found = [plan.statementsToExecute, plan.sqlStatements, plan.statements].find(Array.isArray) as unknown[] | undefined;
+	if (!found || !found.every((statement) => typeof statement === "string")) return null;
+
+	const warnings = [plan.warnings, plan.hints].find(Array.isArray) as unknown[] | undefined;
+	const losses = Array.isArray(plan.losses) ? plan.losses : [];
+
+	return {
+		// a comment line (like a statement breakpoint) is not something to run
+		statementsToExecute: (found as string[]).filter((statement) => statement.replace(/^\s*--.*$/gm, "").trim() !== ""),
+		warnings: [...(warnings ?? []), ...losses].map(asText),
+		hasDataLoss: plan.hasDataLoss === true || losses.length > 0,
+	};
+}
+
 /**
  * Compares the database with db/schema.ts like `drizzle-kit push` does, without changing anything
  * @param push Only for tests, otherwise drizzle-kit is loaded
@@ -81,9 +113,13 @@ export async function CheckSchema(
 			};
 		}
 
-		const plan = await pushSchema(schema, database);
-		if (!Array.isArray(plan?.statementsToExecute)) {
-			return { state: "unavailable", reason: "drizzle-kit gave an answer this version of the bot doesn't understand." };
+		const answer: unknown = await pushSchema(schema, database);
+		const plan = ReadPlan(answer);
+		if (!plan) {
+			return {
+				state: "unavailable",
+				reason: `drizzle-kit gave an answer this version of the bot doesn't understand. It contained: ${DescribeShape(answer)}`,
+			};
 		}
 
 		const statements = plan.statementsToExecute;
@@ -93,7 +129,7 @@ export async function CheckSchema(
 		return {
 			state: "pending",
 			statements,
-			warnings: plan.warnings ?? [],
+			warnings: plan.warnings,
 			risky,
 			safeToApply: !plan.hasDataLoss && risky.length === 0,
 		};

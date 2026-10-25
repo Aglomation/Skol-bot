@@ -5,7 +5,7 @@ import { GetTicketForMember } from "../../../utils/tickets.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
 		.setName("add")
-		.setDescription("Add someone to this ticket.")
+		.setDescription("Add someone to this ticket")
 		.addUserOption((option) => option.setName("user").setDescription("The person to add").setRequired(true));
 
 export default async function command(interaction: ChatInputCommandInteraction) {

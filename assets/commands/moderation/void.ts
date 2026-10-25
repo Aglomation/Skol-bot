@@ -1,9 +1,10 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { GetActiveMute, VoidModAction } from "../../../utils/moderationManager.js";
-import { GetProfile } from "../../../utils/profileManager.js";
-import { HasModPermission, TYPE_INFO } from "./shared.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { GetActiveMute, VoidModAction } from "../../../utils/moderationManager.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { GetProfile } from "../../../utils/profileManager.js";
+import { TYPE_INFO } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -34,7 +35,7 @@ export default async function command(
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 	// voiding someone elses case needs more than just being able to mute
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.BanMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const caseNumber = interaction.options.getInteger("case", true);

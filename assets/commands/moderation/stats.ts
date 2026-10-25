@@ -2,11 +2,12 @@ import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import type { ModActionType } from "../../../utils/moderationManager.js";
 import { FlattenActions, GetActiveBan, GetActiveMute, GetModProfiles } from "../../../utils/moderationManager.js";
-import { HasModPermission, TYPE_INFO } from "./shared.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { TYPE_INFO } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
-		.setName("citystats")
+		.setName("stats")
 		.setDescription("Numbers about the moderation in this server")
 		.addIntegerOption((option) =>
 			option
@@ -27,7 +28,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const days = interaction.options.getInteger("days") ?? 30;
 	const since = Date.now() - days * 24 * 60 * 60 * 1000;
@@ -75,7 +76,7 @@ export default async function command(
 		.setTitle(`Moderation stats (last ${days} days)`)
 		.addFields(
 			{ name: "Actions", value: counts },
-			{ name: "Active right now", value: `🔇 ${activeMutes} muted\n🔨 ${activeBans} softbanned`, inline: true },
+			{ name: "Active right now", value: `🔇 ${activeMutes} muted\n🔨 ${activeBans} banned`, inline: true },
 			{ name: "Users with history", value: `${profiles.length}`, inline: true },
 			{ name: "Most active moderators", value: TopList(moderators) },
 			{ name: "Most actioned users", value: TopList(users) },

@@ -1,8 +1,8 @@
-import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { AddModAction } from "../../../utils/moderationManager.js";
-import { HasModPermission } from "./shared.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { AddModAction } from "../../../utils/moderationManager.js";
+import { HasPermission } from "../../../utils/permissions.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -24,7 +24,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const note = interaction.options.getString("note", true);

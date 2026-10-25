@@ -9,11 +9,11 @@ import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction, TimeoutLength, UntilFromDuration } from "../../../utils/moderationManager.js";
-import { CheckHierarchy } from "../../../utils/permissions.js";
-import { purgeChannels } from "../../../utils/purgeMessages.js";
-import { parseDuration } from "../../../utils/stringConvert.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { AddModAction, TimeoutLength, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
+import { PurgeChannels } from "../../../utils/purgeMessages.js";
+import { ParseDuration } from "../../../utils/stringConvert.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -78,16 +78,13 @@ export default async function command(
 	const executor = interaction.member as GuildMember;
 
 	// a timeout is the moderate members permission, mute members is the voice mute
-	if (!executor.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const member = interaction.options.getMember("user") as GuildMember | null;
 	const reason = interaction.options.getString("reason", true);
-	const date = parseDuration(interaction.options.getString("duration") || "");
-	const deleteMessagesDuration = parseDuration(
+	const date = ParseDuration(interaction.options.getString("duration") || "");
+	const deleteMessagesDuration = ParseDuration(
 		interaction.options.getString("deletemessages", false) || "",
 	);
 
@@ -151,7 +148,7 @@ export default async function command(
 			);
 			const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
 
-			const results = await purgeChannels(
+			const results = await PurgeChannels(
 				channelsArray,
 				user.id,
 				deleteMessagesDuration,

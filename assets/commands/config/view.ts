@@ -1,6 +1,7 @@
-import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetFullServerConfig } from "../../../utils/configManager.js";
+import { HasPermission } from "../../../utils/permissions.js";
 import { Mention, SETTINGS } from "./settings.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -14,11 +15,7 @@ export default async function command(
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	const executor = interaction.member as GuildMember;
-	if (!executor.permissions.has(PermissionFlagsBits.Administrator)) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	if (!(await HasPermission(interaction, PermissionFlagsBits.Administrator))) return;
 
 	const config = await GetFullServerConfig(interaction.guild.id);
 

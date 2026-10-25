@@ -6,9 +6,9 @@ import {
 	EmbedBuilder,
 	MessageFlags,
 } from "discord.js";
-import { GetNextBirthdays, sortedList, TodayInSweden } from "../../../utils/birthdayUtils.js";
-import { getDisplayName } from "../../../utils/memberUtils.js";
-import { numToMonth } from "../../../utils/stringConvert.js";
+import { GetNextBirthdays, GetSortedBirthdays, HasBirthYear, TodayInSweden } from "../../../utils/birthdayUtils.js";
+import { GetDisplayName } from "../../../utils/memberUtils.js";
+import { NumToMonth } from "../../../utils/stringConvert.js";
 
 
 const PAGE_SIZE = 25;
@@ -48,7 +48,7 @@ const compareDates = (m1: number, d1: number, m2: number, d2: number) => {
     return d1 - d2;
 };
 
-export const generateBirthdayPage = async (
+export const GenerateBirthdayPage = async (
 	page: number,
 	guild: Guild | null,
 ): Promise<{
@@ -56,7 +56,7 @@ export const generateBirthdayPage = async (
 	components: ActionRowBuilder<ButtonBuilder>[];
 } | null> => {
 	if (!guild) return null;
-	const formattedList = await sortedList(guild);
+	const formattedList = await GetSortedBirthdays(guild);
 	if (!formattedList || formattedList.length === 0) return null;
 
 	const maxPage = Math.ceil(formattedList.length / PAGE_SIZE) || 1;
@@ -98,12 +98,12 @@ export const generateBirthdayPage = async (
 
         if (lastMonth !== birthday.month) {
             if (!hasInsertedToday && currentMonth === birthday.month && compareDates(currentMonth, currentDay, birthday.month, birthday.day) < 0) {
-                descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
+				descLines.push(`### __**${NumToMonth(birthday.month)}**__\n`);
                 descLines.push(`-# ▫️ ${currentDay}${getSuffix(currentDay)} Today's date \n`);
                 hasInsertedToday = true;
                 lastMonth = birthday.month;
             } else {
-                descLines.push(`### __**${numToMonth(birthday.month)}**__\n`);
+				descLines.push(`### __**${NumToMonth(birthday.month)}**__\n`);
                 lastMonth = birthday.month;
             }
         }
@@ -114,22 +114,23 @@ export const generateBirthdayPage = async (
             hasInsertedToday = true;
         }
 
+		const hasYear = HasBirthYear(birthday);
         const age = calculateAge(birthday, currentMonth, currentDay, currentYear);
-        const name = getDisplayName(guild, user.discordId);
+		const name = GetDisplayName(guild, user.discordId);
         const daySuffix = getSuffix(birthday.day);
 
         if (isToday) {
-            descLines.push(`▫️ **${birthday.day}${daySuffix}** - **${name}** (Turns ${age} today! 🎂)\n`);
+			descLines.push(`▫️ **${birthday.day}${daySuffix}** - **${name}** ${hasYear ? `(Turns ${age} today! 🎂)` : "🎂"}\n`);
         } else {
             const isNextUp = !!next && next.month === birthday.month && next.day === birthday.day;
-            descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name} \`${age}\`${isNextUp ? " - Next Up!" : ""}\n`);
+			descLines.push(`▫️ **${birthday.day}${daySuffix}** - ${name}${hasYear ? ` \`${age}\`` : ""}${isNextUp ? " - Next Up!" : ""}\n`);
         }
     }
 
 	let nextBirthdayValue = "No upcoming birthdays";
 	if (next) {
 		const displayNames = next.group
-			.map((entry) => getDisplayName(guild, entry.user.discordId))
+			.map((entry) => GetDisplayName(guild, entry.user.discordId))
 			.filter((name): name is string => Boolean(name));
 
 		nextBirthdayValue = displayNames.map(name => `• ${name}`).join(`\n`);
@@ -198,7 +199,7 @@ interaction: ChatInputCommandInteraction,
         return interaction.editReply({ content: "This command can only be used in a server." });
     }
 
-    const formattedList = await sortedList(interaction.guild);
+	const formattedList = await GetSortedBirthdays(interaction.guild);
     if (!formattedList || formattedList.length === 0) {
         return interaction.editReply({ content: "No birthdays have been set yet!" });
     }
@@ -219,7 +220,7 @@ interaction: ChatInputCommandInteraction,
     }
 
     const targetPage = targetPageIndex + 1; // Pages are 1-indexed
-    const pageData = await generateBirthdayPage(targetPage, interaction.guild);
+	const pageData = await GenerateBirthdayPage(targetPage, interaction.guild);
 
     if (!pageData) {
         return interaction.editReply({

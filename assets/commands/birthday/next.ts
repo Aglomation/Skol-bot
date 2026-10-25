@@ -1,8 +1,8 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder } from "discord.js";
-import { GetNextBirthdays, sortedList } from "../../../utils/birthdayUtils.js";
-import { getDisplayName } from "../../../utils/memberUtils.js";
-import { numToMonth } from "../../../utils/stringConvert.js";
+import { GetNextBirthdays, GetSortedBirthdays } from "../../../utils/birthdayUtils.js";
+import { GetDisplayName } from "../../../utils/memberUtils.js";
+import { NumToMonth } from "../../../utils/stringConvert.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -17,7 +17,7 @@ export default async function next(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({});
-	const formattedList = await sortedList(interaction.guild);
+	const formattedList = await GetSortedBirthdays(interaction.guild);
 
 	if (!formattedList || formattedList.length === 0) {
 		await interaction.editReply({ content: "No birthdays have been set yet!" });
@@ -38,15 +38,16 @@ export default async function next(
 	await interaction.guild.members.fetch({ user: group.map((entry) => entry.user.discordId) }).catch(() => null);
 
 	const displayNames = group
-		.map((entry) => getDisplayName(interaction.guild, entry.user.discordId))
+		.map((entry) => GetDisplayName(interaction.guild, entry.user.discordId))
 		.filter((name): name is string => Boolean(name));
 
+	const firstMemberId = group[0]?.user.discordId;
 	const embed = new EmbedBuilder()
-		.setTitle(`Next Birthday${shared ? "s" : ""}: ${numToMonth(month)} ${day}`)
+		.setTitle(`Next Birthday${shared ? "s" : ""}: ${NumToMonth(month)} ${day}`)
 		.setThumbnail(
-			interaction.guild.members.cache
-				.get(group[0].user.discordId)
-				?.displayAvatarURL() || null,
+			firstMemberId
+				? interaction.guild.members.cache.get(firstMemberId)?.displayAvatarURL() || null
+				: null,
 		)
 		.setColor("Aqua")
 		.setFooter({ text: `Use /birthday set to set your birthday!` })

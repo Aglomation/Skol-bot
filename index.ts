@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 import { sql } from "drizzle-orm";
 import { db } from "./db/client.js";
 import { serverConfigTable } from "./db/schema.js";
+import { RecordTaskRun, RegisterTask } from "./utils/taskStatus.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -159,13 +160,17 @@ async function loadRepeatingTasks() {
 		const filePath = path.join(repeatingPath, file);
 		const { default: repeating } = await import(pathToFileURL(filePath).href);
 		const options = repeating.data;
+		const name = file.replace(/\.(ts|js)$/, "");
+		RegisterTask(name);
 
 		// one task failing must not stop the others or take the bot down
 		const run = async () => {
 			try {
 				await repeating.execute(client);
+				RecordTaskRun(name);
 			} catch (error) {
 				console.error(`[Error] Repeating task ${file}:`, error);
+				RecordTaskRun(name, error);
 			}
 		};
 

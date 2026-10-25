@@ -5,7 +5,7 @@ import { GetTicketForMember, GetTicketOwner } from "../../../utils/tickets.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
 		.setName("remove")
-		.setDescription("Remove someone you added to this ticket.")
+		.setDescription("Remove someone you added to this ticket")
 		.addUserOption((option) => option.setName("user").setDescription("The person to remove").setRequired(true));
 
 export default async function command(interaction: ChatInputCommandInteraction) {
@@ -23,7 +23,7 @@ export default async function command(interaction: ChatInputCommandInteraction) 
 		await interaction.editReply("You can't remove the owner of the ticket or me.");
 		return;
 	}
-	
+
 	const overwrite = ticket.permissionOverwrites.cache.get(user.id);
 	if (!overwrite) {
 		await interaction.editReply("They were not added to this ticket.");

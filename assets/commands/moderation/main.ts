@@ -8,7 +8,7 @@ import { builder as bansBuilder } from "./bans.js";
 import { builder as historyBuilder } from "./history.js";
 import { builder as noteBuilder } from "./note.js";
 import { builder as recentBuilder } from "./recent.js";
-import { builder as statsBuilder } from "./citystats.js";
+import { builder as statsBuilder } from "./stats.js";
 import { builder as voidBuilder } from "./void.js";
 
 const command: Command = {

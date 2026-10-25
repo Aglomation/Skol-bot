@@ -15,7 +15,7 @@ import { TICKET_BUTTON_ID } from "../../../../utils/tickets.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
 		.setName('ticket')
-        .setDescription('Posts the ticket button into the current channel.');
+        .setDescription("Posts the ticket button into the current channel");
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
@@ -52,8 +52,7 @@ export default async function command(
             "**Use a ticket for:**\n" +
             "- Questions for the staff\n" +
             "- Problems with verification\n" +
-            "- Reporting something\n\n" +
-            "You can have 2 tickets open at the same time, please don't open one for no reason.",
+            "- Reporting something",
         )
         .setFooter({ text: "When a ticket is closed a copy of the messages is saved for the staff, read more with /privacy policy" });
 

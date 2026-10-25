@@ -38,3 +38,8 @@ export function CheckHierarchy(executor: GuildMember, target: GuildMember): stri
 
 	return null;
 }
+
+export async function IsVerified(member: GuildMember): Promise<boolean> {
+	const config = await GetFullServerConfig(member.guild.id);
+	return !!config?.verifiedRoleId && member.roles.cache.has(config.verifiedRoleId);
+}

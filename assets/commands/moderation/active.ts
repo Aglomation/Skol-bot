@@ -1,19 +1,20 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { GetActiveBan, GetActiveMute, GetModProfiles } from "../../../utils/moderationManager.js";
-import { HasModPermission, MakePages, SendPages, Time } from "./shared.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { MakePages, SendPages, Time } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
 		.setName("active")
-		.setDescription("See who is muted or softbanned right now");
+		.setDescription("See who is muted or banned right now");
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const profiles = await GetModProfiles(interaction.guild.id, ["mute", "softban"]);
 
@@ -39,7 +40,7 @@ export default async function command(
 	}
 
 	if (lines.length === 0) {
-		await interaction.editReply("Nobody is muted or softbanned right now.");
+		await interaction.editReply("Nobody is muted or banned right now.");
 		return;
 	}
 
@@ -49,7 +50,7 @@ export default async function command(
 
 	await SendPages(interaction, pages, (text, page, total) =>
 		new EmbedBuilder()
-			.setTitle("Active mutes and softbans")
+			.setTitle("Active mutes and bans")
 			.setDescription(text)
 			.setColor(0xE67E22)
 			.setFooter({ text: `Page ${page + 1}/${total} • ${lines.length} active • based on the bot's history, not discord` }),

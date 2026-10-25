@@ -11,9 +11,9 @@ export default {
 	once: false,
 	async execute(member: GuildMember, client: Client) {
 		const profile = await loadProfile(member, client);
-        
+
         // Check if the user is banned
-        const isBanned = await handleSoftBanCheck(member, profile);
+        const isBanned = await handleBanCheck(member, profile);
         if (isBanned) return;
 
         // A timeout is gone when they leave, so a mute that is still going is put back
@@ -40,19 +40,19 @@ async function loadProfile(member: GuildMember, client: Client): Promise<UserPro
     return null;
 }
 
-async function handleSoftBanCheck(member: GuildMember, profile: UserProfile | null): Promise<boolean> {
+async function handleBanCheck(member: GuildMember, profile: UserProfile | null): Promise<boolean> {
     // If there's no active ban (or profile), the user isn't banned
     if (!GetActiveBan(profile)) return false;
 
     try {
-        await member.kick("User is softbanned");
+        await member.kick("User is banned");
         console.log(`Kicked ${member.user.tag} (ban list active)`);
         await SendLog(member.client, member.guild.id, `<@${member.id}> is on the ban list and was kicked.`);
     } catch (err) {
         console.log(`Failed to kick ${member.user.tag}:`, err);
         await SendLog(member.client, member.guild.id, `<@${member.id}> is on the ban list but I couldn't kick them, please do it by hand.`);
     }
-    
+
     return true; // User is banned
 }
 
@@ -72,7 +72,7 @@ async function handleMuteCheck(member: GuildMember, profile: UserProfile | null)
 async function sendWelcomeMessage(member: GuildMember, client: Client) {
     const channel = client.channels.cache
         .get(await GetServerConfig(member.guild.id, "welcomeChannel") as string) as TextChannel | null;
-        
+
     if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
 
     // Filter out bots

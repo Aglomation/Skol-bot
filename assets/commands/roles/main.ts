@@ -4,8 +4,8 @@ import { InteractionContextType, SlashCommandBuilder } from "discord.js";
 import { RunSubcommand } from "../../../utils/subcommands.js";
 
 import { builder as allBuilder } from "./all.js";
-import { builder as pronounsBuilder } from "./pronouns.js";
 import { builder as colorBuilder } from "./color.js";
+import { builder as pronounsBuilder } from "./pronouns.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()

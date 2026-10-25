@@ -25,7 +25,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         .addBooleanOption((option) =>
             option
                 .setName("force")
-                .setDescription("Force verification, clears email from existing user if it's already in use elsewhere.")
+                .setDescription("Force verification, clears email from existing user if it's already in use elsewhere")
                 .setRequired(false),
         );
 
@@ -37,7 +37,7 @@ export default async function command(
 
     // Ban Members assumes you're a moderator or admin
     if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
-    
+
     const user = interaction.options.getUser("user", true);
     // lowercase, emails are compared as typed so Name@lbs.se would be a different one from name@lbs.se
     const email = interaction.options.getString("email", true).trim().toLowerCase();
@@ -56,7 +56,7 @@ export default async function command(
         await interaction.editReply("That is a teacher email, only an admin can verify someone with it.");
         return;
     }
-    
+
     // the email can belong to someone else (this is also how it is found again if it is already theirs)
     // it is unique over all servers, so this finds it in other servers too
     const existingProfile = await FindByValue("email", email);

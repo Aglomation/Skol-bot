@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import {
     Colors,
     EmbedBuilder,
@@ -10,7 +10,7 @@ import { HasPermission } from "../../../../utils/permissions.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
 		.setName('rules')
-        .setDescription('Posts the server rules embed into the current channel.');
+        .setDescription("Posts the server rules embed into the current channel");
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
@@ -96,14 +96,14 @@ export default async function command(
                 'If you see someone breaking the rules, please open a #🚩・report!\n' +
                 'These rules were last updated on 8/7/2026.' 
         });
-        
+
 
     const channel = interaction.channel;
     if (!channel?.isTextBased() || channel.isDMBased()) {
         await interaction.editReply("This command must be run in a server text channel.");
         return;
     }
-    
+
     const botMember = interaction.guild.members.me;
     if (!botMember || !channel.permissionsFor(botMember).has(PermissionFlagsBits.SendMessages)) {
         await interaction.editReply("I don't have permission to send messages in this channel.");

@@ -1,22 +1,20 @@
 import type {
 	ChatInputCommandInteraction,
-	GuildMember,
 	SlashCommandSubcommandBuilder,
-	TextChannel,
 } from "discord.js";
 import {
 	MessageFlags,
-	PermissionsBitField,
+	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction, GetActiveBan } from "../../../utils/moderationManager.js";
-import { GetProfile } from "../../../utils/profileManager.js";
 import { SendLog } from "../../../utils/logChannel.js";
-
+import { AddModAction, GetActiveBan, SERVER_INVITE } from "../../../utils/moderationManager.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { GetProfile } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
 		.setName("unban")
-		.setDescription("Removes a user from the softban list")
+		.setDescription("Removes a user from the ban list")
 		.addUserOption((option) =>
 			option.setName("user").setDescription("User to unban").setRequired(true),
 		)
@@ -39,11 +37,7 @@ export default async function command(
 		return;
 	}
 
-	const executor = interaction.member as GuildMember;
-	if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const reason = interaction.options.getString("reason", true);
@@ -59,7 +53,7 @@ export default async function command(
 		.send(
 			`## Your ban from ${interaction.guild?.name} has been lifted\n` +
 				`**Reason:** ${reason}\n\n` +
-				`You can join the server again: https://discord.gg/dUYHv8Dv94`,
+				`You can join the server again: ${SERVER_INVITE}`,
 		)
 		.catch(() => {
 			dmSent = false;

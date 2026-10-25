@@ -1,4 +1,4 @@
-import type { Client, GuildBasedChannel, VoiceChannel } from "discord.js";
+import type { Client, GuildBasedChannel, GuildMember, VoiceChannel } from "discord.js";
 import { ChannelType, OverwriteType, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "./configManager.js";
 
@@ -31,6 +31,33 @@ export function IsTempChannel(channel: GuildBasedChannel, mainChannelId: string,
 			(overwrite) => overwrite.type === OverwriteType.Member && overwrite.allow.has(PermissionFlagsBits.MoveMembers),
 		)
 	);
+}
+
+/**
+ * When the owner leaves a channel that still has people in it, the next person gets it, an operator first
+ * Their rights are taken from the one who left, and the name changes if it was the default one
+ * @returns the new owner, or null if the leaver wasn't the owner or nobody is left
+ */
+export async function HandOverTempChannel(channel: VoiceChannel, leaver: GuildMember): Promise<GuildMember | null> {
+	if (GetTempOwner(channel.id) !== leaver.id) return null;
+
+	const people = channel.members.filter((member) => !member.user.bot && member.id !== leaver.id);
+	const isOperator = (member: GuildMember) => channel.permissionOverwrites.cache.get(member.id)?.allow.has(PermissionFlagsBits.MoveMembers);
+	const next = people.find(isOperator) ?? people.first();
+	if (!next) return null;
+
+	try {
+		await channel.permissionOverwrites.edit(next.id, { ViewChannel: true, Connect: true, Speak: true, MoveMembers: true });
+		await channel.permissionOverwrites.edit(leaver.id, { MoveMembers: null });
+		SetTempOwner(channel.id, next.id);
+
+		if (channel.name === `${leaver.displayName.slice(0, 90)}'s VC`) await channel.setName(`${next.displayName.slice(0, 90)}'s VC`);
+		await channel.send({ content: `<@${next.id}> is now the owner of this channel.`, allowedMentions: { users: [next.id] } }).catch(() => null);
+		return next;
+	} catch (error) {
+		console.error("Could not hand over a temporary channel:", error);
+		return null;
+	}
 }
 
 // Joining the main channel over and over would make a pile of channels

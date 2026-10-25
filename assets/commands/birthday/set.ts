@@ -4,7 +4,7 @@ import type {
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import { FormatBirthday, TodayInSweden } from "../../../utils/birthdayUtils.js";
+import { FormatBirthday, HIDDEN_YEAR, TodayInSweden } from "../../../utils/birthdayUtils.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
 import { AnnounceBirthdays } from "../../repeating/birthday.js";
@@ -24,6 +24,14 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                     "sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
                 })
                 .setRequired(true),
+		)
+		.addBooleanOption((option) =>
+			option
+				.setName("hide_year")
+				.setDescription("Don't save or show your birth year and age")
+				.setDescriptionLocalizations({
+					"sv-SE": "Spara och visa inte ditt födelseår och din ålder",
+				}),
         );
 
 export default async function set(
@@ -32,6 +40,7 @@ export default async function set(
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 	const date = interaction.options.getString("date", true);
+	const hideYear = interaction.options.getBoolean("hide_year") ?? false;
 	const user = interaction.user.id;
 
 	const today = TodayInSweden();
@@ -71,8 +80,8 @@ export default async function set(
 
 	// 2026 - 2008 - (has had birthday this year? 0 : 1) = 18 or 17
 	const age = currentYear - year - ((currentMonth < month || (currentMonth === month && currentDay < day)) ? 1 : 0);
-	const timestamp = Date.UTC(year, month - 1, day);
-	
+	const timestamp = Date.UTC(hideYear ? HIDDEN_YEAR : year, month - 1, day);
+
 	// Check if the user is a teacher, then expand the valid age range
 	// Valid age range is 13-30 for students, teachers can set any age
 	const teacherRoleId = await GetServerConfig(interaction.guild.id, "teacherRoleId");
@@ -92,7 +101,11 @@ export default async function set(
 
 	const embed = new EmbedBuilder()
 		.setTitle("Birthday Set!")
-		.setDescription(`Your birthday has been set to ${FormatBirthday(Math.floor(timestamp / 1000))}.\nYou will turn ${age+1} on your next birthday!`)
+		.setDescription(
+			hideYear
+				? `Your birthday has been set to ${FormatBirthday(Math.floor(timestamp / 1000))}.\nYour birth year is not saved or shown.`
+				: `Your birthday has been set to ${FormatBirthday(Math.floor(timestamp / 1000))}.\nYou will turn ${age + 1} on your next birthday!`,
+		)
 		.setThumbnail(interaction.user.displayAvatarURL())
 		.setFooter({ text: `Use /birthday clear to remove your birthday.` })
 		.setColor("Aqua");

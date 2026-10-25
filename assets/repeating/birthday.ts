@@ -1,9 +1,8 @@
 import type { Client, Guild, TextChannel } from "discord.js";
 import { EmbedBuilder, PermissionFlagsBits } from "discord.js";
-import type { BirthdayDate } from "../../utils/birthdayUtils.js";
-import { IsLeapYear, TodayInSweden } from "../../utils/birthdayUtils.js";
+import { HIDDEN_YEAR, IsBirthdayOn, TodayInSweden } from "../../utils/birthdayUtils.js";
 import { FindAllNonNullKeysConfig, GetServerConfig } from "../../utils/configManager.js";
-import { getDisplayName } from "../../utils/memberUtils.js";
+import { GetDisplayName } from "../../utils/memberUtils.js";
 import { FindAllNonNullKeys } from "../../utils/profileManager.js";
 
 
@@ -12,32 +11,14 @@ const formatBirthdayLine = (
     member: UserProfile, 
     currentYear: number
 ): string => {
-    const name = getDisplayName(guild, member.discordId);
+    const name = GetDisplayName(guild, member.discordId);
     const mention = `(<@${member.discordId}>)`; 
 
     // birthdays are saved as midnight UTC
     const birthdayDate = new Date((member.birthday as number) * 1000);
-    const age = currentYear - birthdayDate.getUTCFullYear();
-	return `${name} ${mention} - ${age} Years old`;
-};
+    if (birthdayDate.getUTCFullYear() === HIDDEN_YEAR) return `${name} ${mention}`;
 
-const isBirthdayToday = (birthday: Date | null, date: BirthdayDate): boolean => {
-    if (!birthday) return false;
-
-    const birthdayMonth = birthday.getUTCMonth() + 1;
-    const birthdayDay = birthday.getUTCDate();
-    
-    // Standard birthday
-    if (birthdayMonth === date.month && birthdayDay === date.day) {
-        return true;
-    }
-
-    // Leap year stuff, the 29th of February is celebrated on the 1st of March in the years without one
-    if (birthdayMonth === 2 && birthdayDay === 29 && date.month === 3 && date.day === 1 && !IsLeapYear(date.year)) {
-        return true;
-    }
-
-    return false;
+    return `${name} ${mention} - ${currentYear - birthdayDate.getUTCFullYear()} Years old`;
 };
 
 // "server:user:month-day" of everyone that already got their message today, so setting a birthday on the day itself can't post it twice
@@ -111,7 +92,10 @@ const repeating: Repeating = {
                 const todaysBirthdays: UserProfile[] = [];
                 for (const member of birthdayMembers) {
                     const birthday = member.birthday as UserProfile["birthday"] | null;
-                    if (birthday == null || !isBirthdayToday(new Date(birthday * 1000), today)) continue;
+                    if (birthday == null) continue;
+
+                    const date = new Date(birthday * 1000);
+                    if (!IsBirthdayOn({ month: date.getUTCMonth() + 1, day: date.getUTCDate() }, today)) continue;
 
                     // the member isn't always in the cache, and the name is taken from it
                     const inServer = await guild.members.fetch(member.discordId).catch(() => null);

@@ -6,7 +6,7 @@ const MAX_DURATION_MS = 100 * 365 * 24 * 60 * 60 * 1000;
  * @param input The input string to convert
  * @returns Number of milliseconds (Infinity for inf) or null if invalid or longer than 100 years
  */
-export function parseDuration(input: string): number | null {
+export function ParseDuration(input: string): number | null {
 	if (!input || input === "0") return null;
 
 	const cleaned = String(input).replace(/[()\s]/g, "");
@@ -50,14 +50,6 @@ export function parseDuration(input: string): number | null {
 	return totalMs ? totalMs : null;
 }
 
-// The old name, it gives a duration and not a date. Kept so older code keeps working
-export const stringToDate = parseDuration;
-
-/**
- * Converts a month number (1-12) to its corresponding month name. Overflow rolls over (13 -> January)
- * @param input The input month number (1-12)
- * @returns The corresponding month name or "Unknown" if invalid
- */
 const MONTHS = [
 	"January",
 	"February",
@@ -73,20 +65,11 @@ const MONTHS = [
 	"December",
 ];
 
-export function numToMonth(input: number): string {
+/**
+ * Converts a month number (1-12) to its corresponding month name. Overflow rolls over (13 -> January)
+ * @param input The input month number (1-12)
+ * @returns The corresponding month name or "Unknown" if invalid
+ */
+export function NumToMonth(input: number): string {
 	return MONTHS[(((input - 1) % 12) + 12) % 12] ?? "Unknown";
-}
-
-export function uppercaseFirstLetter(input: string, onlyFirst?: boolean): string {
-	if (!input) return input;
-	const cleaned = input.trim().replace(/[_]/g, " ");
-	if (onlyFirst) {
-		return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-	}
-	
-	return cleaned
-		.split(/\s+/g)
-		.filter(Boolean)
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-		.join(" ");
 }

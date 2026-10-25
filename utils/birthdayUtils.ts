@@ -28,20 +28,33 @@ export function IsLeapYear(year: number): boolean {
  * Birthdays are saved as midnight UTC, discords <t:> times would show the day before for people west of that
  * @param timestamp Seconds
  */
+// a birthday saved without a year gets this year instead, it is a leap year so the 29th of February still works
+export const HIDDEN_YEAR = 1604;
+
+export const HasBirthYear = (birthday: { year: number }) => birthday.year !== HIDDEN_YEAR;
+
 export function FormatBirthday(timestamp: number): string {
-	return new Date(timestamp * 1000).toLocaleDateString("en-GB", {
+	const date = new Date(timestamp * 1000);
+
+	return date.toLocaleDateString("en-GB", {
 		timeZone: "UTC",
 		day: "numeric",
 		month: "long",
-		year: "numeric",
+		year: date.getUTCFullYear() === HIDDEN_YEAR ? undefined : "numeric",
 	});
+}
+
+export function IsBirthdayOn(birthday: { month: number; day: number }, today: BirthdayDate): boolean {
+	if (birthday.month === today.month && birthday.day === today.day) return true;
+
+	return birthday.month === 2 && birthday.day === 29 && today.month === 3 && today.day === 1 && !IsLeapYear(today.year);
 }
 
 /**
  * Everyone in the server with a birthday, sorted by month and day (the year doesnt matter for the order)
  * @returns null if nobody has set one
  */
-export const sortedList = async (guild: Guild): Promise<SortedBirthday[] | null> => {
+export const GetSortedBirthdays = async (guild: Guild): Promise<SortedBirthday[] | null> => {
     const users = await FindAllNonNullKeys("birthday", guild.id);
 
     if (users.length === 0) return null;
@@ -89,7 +102,7 @@ export type NextBirthdays = {
 /**
  * Finds the next birthday after today, and everyone who shares that day
  * If none are left this year it is the first one next year
- * @param list The list from sortedList
+ * @param list The list from GetSortedBirthdays
  */
 export function GetNextBirthdays(list: SortedBirthday[], today: BirthdayDate = TodayInSweden()): NextBirthdays | null {
 	const currentMonth = today.month;

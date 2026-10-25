@@ -9,50 +9,19 @@ const MAX_PAGES = 50;
  * @param targetUserId
  * @returns
  */
-export async function purgeMessages(
+export async function PurgeMessages(
 	channel: GuildTextBasedChannel,
 	targetUserId: string,
 	deleteOlderThanMs = 60 * 60 * 1000, // Default to 1 hour
 ): Promise<number> {
 	try {
 		const cutoffTimestamp = Date.now() - deleteOlderThanMs;
-		let fetchedMessages = await channel.messages.fetch({ limit: 100 });
-		if (fetchedMessages.size === 0) return 0;
-		let oldestFetchedMessage = fetchedMessages.reduce(
-			(oldest, message) =>
-				message.createdTimestamp < oldest.createdTimestamp ? message : oldest,
-			fetchedMessages.first(),
-		);
 
-		let pages = 0;
-		while (
-			fetchedMessages.size > 0 &&
-			oldestFetchedMessage?.createdTimestamp >= cutoffTimestamp &&
-			pages++ < MAX_PAGES
-		) {
-			const olderMessages = await channel.messages.fetch({
-				limit: 100,
-				before: oldestFetchedMessage.id,
-			});
-
-			if (olderMessages.size === 0) {
-				break;
-			}
-
-			fetchedMessages = fetchedMessages.concat(olderMessages);
-			oldestFetchedMessage = olderMessages.reduce(
-				(oldest, message) =>
-					message.createdTimestamp < oldest.createdTimestamp ? message : oldest,
-				olderMessages.first(),
-			);
-		}
-
-		// Filter for the users messages from the past hour
-		const messagesToDelete = fetchedMessages.filter(
-			(msg) =>
-				msg.author.id === targetUserId &&
-				msg.createdTimestamp >= cutoffTimestamp,
-		);
+		let messagesToDelete = channel.messages.cache.filter(
+            (msg) =>
+                msg.author.id === targetUserId &&
+                msg.createdTimestamp >= cutoffTimestamp
+        );
 
 		// Delete messages if found
 		// bulkDelete takes 100 messages at most, sending more fails and deletes nothing
@@ -68,7 +37,7 @@ export async function purgeMessages(
 	}
 }
 
-export async function purgeChannels(
+export async function PurgeChannels(
 	channels: GuildTextBasedChannel[],
 	targetUserId: string,
 	deleteOlderThanMs = 60 * 60 * 1000, // Default to 1 hour
@@ -86,7 +55,7 @@ export async function purgeChannels(
 			}
 		}
 
-		return await purgeMessages(textChannel, targetUserId, deleteOlderThanMs);
+		return await PurgeMessages(textChannel, targetUserId, deleteOlderThanMs);
 	});
 
 	// deletes in parrallel

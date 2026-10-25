@@ -12,12 +12,12 @@ import {
 	PermissionFlagsBits,
 } from "discord.js";
 import { GetServerConfig } from "./configManager.js";
+import { ExplainError } from "./errorText.js";
 import { SendLog, SendToChannel } from "./logChannel.js";
 
 
 export const TICKET_BUTTON_ID = "ticket";
 
-const MAX_OPEN_TICKETS = 2;
 const MAX_CHANNELS_IN_CATEGORY = 50;
 
 const MAX_TRANSCRIPT_PAGES = 10;
@@ -50,6 +50,45 @@ export function IsTicketChannel(channel: GuildBasedChannel, categoryId: string):
 	return channel.type === ChannelType.GuildText && channel.parentId === categoryId && GetTicketOwner(channel) !== null;
 }
 
+const CLAIM_TOPIC = /\s*\| claimed:(\d{15,25})/;
+
+/**
+ * The staff member who took the ticket, it is kept in the topic after the owner
+ */
+export function GetTicketClaimer(channel: TextChannel): string | null {
+	return channel.topic?.match(CLAIM_TOPIC)?.[1] ?? null;
+}
+
+export async function SetTicketClaimer(channel: TextChannel, userId: string | null): Promise<void> {
+	const base = (channel.topic ?? "").replace(CLAIM_TOPIC, "").trimEnd();
+	await channel.setTopic(userId ? `${base} | claimed:${userId}` : base);
+}
+
+const CLOSED_TOPIC = / \| closed$/;
+
+export const IsTicketClosed = (channel: TextChannel) => CLOSED_TOPIC.test(channel.topic ?? "");
+
+export function BuildClosedRows(): ActionRowBuilder<ButtonBuilder>[] {
+	return [
+		new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:delete`).setLabel("Delete ticket").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
+		),
+	];
+}
+
+export function BuildTicketRows(claimed: boolean): ActionRowBuilder<ButtonBuilder>[] {
+	return [
+		new ActionRowBuilder<ButtonBuilder>().addComponents(
+			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:close`).setLabel("Close ticket").setEmoji("🔒").setStyle(ButtonStyle.Danger),
+			new ButtonBuilder()
+				.setCustomId(`${TICKET_BUTTON_ID}:claim`)
+				.setLabel(claimed ? "Unclaim" : "Claim")
+				.setEmoji("✋")
+				.setStyle(ButtonStyle.Secondary),
+		),
+	];
+}
+
 /**
  * Staff are the admins and the people with the mod or admin role of the server
  */
@@ -67,10 +106,11 @@ export async function IsStaff(member: GuildMember): Promise<boolean> {
  * @param staffOnly Only the staff can do it, the owner of the ticket can't
  * @returns The ticket, or why it isn't allowed
  */
-export async function GetTicketForMember(guild: Guild, channelId: string, member: GuildMember, staffOnly = false): Promise<TextChannel | string> {
+export async function GetTicketForMember(guild: Guild, channelId: string, member: GuildMember, staffOnly = false, allowClosed = false): Promise<TextChannel | string> {
 	const categoryId = await GetServerConfig(guild.id, "ticketCategory");
 	const channel = guild.channels.cache.get(channelId);
 	if (!categoryId || !channel || !IsTicketChannel(channel, categoryId)) return "This isn't a ticket.";
+	if (IsTicketClosed(channel) && !allowClosed) return "This ticket is closed.";
 
 	const isOwner = GetTicketOwner(channel) === member.id;
 	if ((staffOnly || !isOwner) && !(await IsStaff(member))) {
@@ -80,21 +120,8 @@ export async function GetTicketForMember(guild: Guild, channelId: string, member
 	return channel;
 }
 
-/**
- * The tickets someone has open
- */
-function FindTickets(guild: Guild, categoryId: string, userId: string): TextChannel[] {
-	const tickets: TextChannel[] = [];
-
-	for (const channel of guild.channels.cache.values()) {
-		if (IsTicketChannel(channel, categoryId) && GetTicketOwner(channel) === userId) tickets.push(channel);
-	}
-
-	return tickets;
-}
-
 // a name for the channel, only letters, numbers and - are left
-function Slug(name: string): string {
+export function Slug(name: string): string {
 	return name
 		.toLowerCase()
 		.normalize("NFKD")
@@ -136,12 +163,6 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 	const user = interaction.user;
 
 	try {
-		const open = FindTickets(guild, category.id, user.id);
-		if (open.length >= MAX_OPEN_TICKETS) {
-			await interaction.editReply(`You already have ${open.length} open tickets: ${open.map((ticket) => `<#${ticket.id}>`).join(", ")}`);
-			return;
-		}
-
 		if (guild.channels.cache.filter((channel) => channel.parentId === category.id).size >= MAX_CHANNELS_IN_CATEGORY) {
 			await interaction.editReply("There are too many tickets open right now, please contact an admin.");
 			return;
@@ -191,15 +212,7 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 			.send({
 				content: `<@${user.id}>${pingRoleId ? ` <@&${pingRoleId}>` : ""}`,
 				embeds: [embed],
-				components: [
-					new ActionRowBuilder<ButtonBuilder>().addComponents(
-						new ButtonBuilder()
-							.setCustomId(`${TICKET_BUTTON_ID}:close`)
-							.setLabel("Close ticket")
-							.setEmoji("🔒")
-							.setStyle(ButtonStyle.Danger),
-					),
-				],
+				components: BuildTicketRows(false),
 				// only the owner and the staff role, nobody else that ends up in the text
 				allowedMentions: { users: [user.id], roles: pingRoleId ? [pingRoleId] : [] },
 			})
@@ -220,7 +233,7 @@ export async function CloseQuestion(guildId: string): Promise<string> {
 	const logChannelId = await GetServerConfig(guildId, "logChannel");
 
 	return (
-		"Are you sure you want to close this ticket? The channel will be deleted." +
+		"Are you sure you want to close this ticket? Nobody can write in it anymore, the staff can delete it afterwards." +
 		(logChannelId
 			? "\nA copy of the messages is saved for the staff."
 			: "\nThere is no log channel set, so no copy of the messages is saved.")
@@ -277,14 +290,29 @@ async function BuildTranscript(channel: TextChannel, ownerId: string | null, clo
 	return lines.join("\n");
 }
 
+export const TICKET_RATING_ID = "ticketrate";
+
+function BuildRatingRow(guildId: string, claimerId: string | null): ActionRowBuilder<ButtonBuilder> {
+	return new ActionRowBuilder<ButtonBuilder>().addComponents(
+		[1, 2, 3, 4, 5].map((stars) =>
+			new ButtonBuilder()
+				.setCustomId(`${TICKET_RATING_ID}:${guildId}:${stars}:${claimerId ?? "0"}`)
+				.setLabel(`${stars}`)
+				.setEmoji("⭐")
+				.setStyle(ButtonStyle.Secondary),
+		),
+	);
+}
+
 /**
  * Saves a copy of the messages in the log channel and deletes the ticket
  * The ticket is only deleted if the copy was saved, or if there is no log channel
  * @returns Why it couldn't be closed, null if it was
  */
-export async function CloseTicket(channel: TextChannel, closedBy: User): Promise<string | null> {
+export async function CloseTicket(channel: TextChannel, closedBy: User, reason?: string): Promise<string | null> {
 	try {
 		const ownerId = GetTicketOwner(channel);
+		const claimerId = GetTicketClaimer(channel);
 		const logChannelId = await GetServerConfig(channel.guild.id, "logChannel");
 
 		if (logChannelId) {
@@ -300,19 +328,47 @@ export async function CloseTicket(channel: TextChannel, closedBy: User): Promise
 			if (!saved) return "I couldn't save a copy of the messages in the log channel, so the ticket is still open.";
 		}
 
-		await channel.delete(`Ticket closed by ${closedBy.username}`);
+		for (const overwrite of channel.permissionOverwrites.cache.values()) {
+			if (overwrite.type === OverwriteType.Member && overwrite.id !== channel.client.user.id) {
+				await channel.permissionOverwrites.edit(overwrite.id, { SendMessages: false, AddReactions: false });
+			}
+		}
 
-		// they know if they closed it themselves
-		if (ownerId && ownerId !== closedBy.id) {
+		await channel.send({
+			embeds: [
+				new EmbedBuilder()
+					.setColor(Colors.Red)
+					.setTitle("Ticket closed")
+					.setDescription(`Closed by <@${closedBy.id}>. Nobody can write here anymore, the staff can delete the channel.`),
+			],
+			components: BuildClosedRows(),
+			allowedMentions: { parse: [] },
+		});
+		await channel.setTopic(`${channel.topic ?? ""} | closed`);
+
+		// they know if they closed it themselves, unless they can rate the help
+		const canRate = !!logChannelId && !!ownerId;
+		if (ownerId && (ownerId !== closedBy.id || canRate)) {
 			const owner = await channel.client.users.fetch(ownerId).catch(() => null);
+			const why = reason ?? (ownerId === closedBy.id ? "You closed it." : `It was closed by ${closedBy.username}. If you still need help you can open a new one.`);
+
 			await owner
-				?.send(`## Your ticket in ${channel.guild.name} has been closed\nIt was closed by ${closedBy.username}. If you still need help you can open a new one.`)
+				?.send({
+					content: `## Your ticket in ${channel.guild.name} has been closed\n${why}${canRate ? "\n\nHow was the help? The staff can see who rated." : ""}`,
+					components: canRate ? [BuildRatingRow(channel.guild.id, claimerId)] : [],
+				})
 				.catch(() => null);
+		}
+
+		try {
+			await channel.setName(channel.name.replace(/^ticket-/, "closed-"), `Ticket closed by ${closedBy.username}`);
+		} catch (error) {
+			return `The ticket is closed, but I couldn't rename it: ${ExplainError(error)}`;
 		}
 
 		return null;
 	} catch (error) {
 		console.error("Could not close the ticket:", error);
-		return "Something went wrong while closing the ticket, check the console.";
+		return `Could not close the ticket: ${ExplainError(error)}`;
 	}
 }

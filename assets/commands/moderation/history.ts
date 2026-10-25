@@ -2,8 +2,9 @@ import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import type { ModActionType, NumberedAction } from "../../../utils/moderationManager.js";
 import { GetActiveBan, GetActiveMute } from "../../../utils/moderationManager.js";
+import { HasPermission } from "../../../utils/permissions.js";
 import { GetProfile } from "../../../utils/profileManager.js";
-import { CountByType, FormatAction, HasModPermission, MakePages, SendPages, Time, TYPE_CHOICES, TYPE_INFO } from "./shared.js";
+import { CountByType, FormatAction, MakePages, SendPages, Time, TYPE_CHOICES, TYPE_INFO } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -31,7 +32,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const type = interaction.options.getString("type") as ModActionType | null;
@@ -67,7 +68,7 @@ export default async function command(
 	const mute = GetActiveMute(profile);
 	const ban = GetActiveBan(profile);
 	if (mute) status.push(`🔇 **Muted** ${mute.action.until ? `until ${Time(mute.action.until)}` : "forever"} (case #${mute.number})`);
-	if (ban) status.push(`🔨 **Softbanned** ${ban.action.until ? `until ${Time(ban.action.until)}` : "forever"} (case #${ban.number})`);
+	if (ban) status.push(`🔨 **Banned** ${ban.action.until ? `until ${Time(ban.action.until)}` : "forever"} (case #${ban.number})`);
 
 	const header = [summary || "No actions", ...status].join("\n");
 	const pages = MakePages(entries.map((entry) => FormatAction(entry)));

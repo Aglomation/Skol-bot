@@ -39,7 +39,9 @@ export function GetColorRoles(guild: Guild): ColorRoles | null {
 		if (SEPARATOR.test(name)) break;
 
 		const label = name.match(LABEL)?.[1].trim();
-		if (!label || role.managed) continue;
+
+		// Safety check to make sure said color role doesnt have any perms
+		if (!label || role.managed || role.permissions.bitfield !== 0n) continue;
 		options.push({ roleId: role.id, label: label.slice(0, 100), hex: color });
 	}
 
@@ -92,9 +94,9 @@ export async function SetColor(member: GuildMember, colors: ColorRoles, choice: 
 export function BuildColorPicker(colors: ColorRoles, current: ColorOption | null, preview: ColorChoice | null = null) {
 	const shown = preview === "none" ? null : (preview ?? current);
 	const shownHex = shown ? (shown.hex === 0xffffff ? 0xfffffe : shown.hex) : null;
-	const overview = colors.options.map((option) => `${option.label} ${HexText(option.hex)}`).join("\n");
+	const overview = colors.options.map((option) => `**${option.label}** \`${HexText(option.hex)}\``).join("\n");
 
-	let text = `Din färg: ${current ? `**${current.label}**` : "ingen"}\n ⬅️ Förhandsvisning av färgen du valt.`;
+	let text = `Din nuvarande färg: ${current ? `**${current.label}**` : "ingen"}\n ⬅️ Förhandsvisning av färgen du valt.`;
 	if (preview === "none") text = "Vill du ta bort din färg?";
 	else if (preview) text = `⬅️ **${preview.label}** \`${HexText(preview.hex)}\`\nTryck på **Använd** för att välja den.`;
 
@@ -114,7 +116,7 @@ export function BuildColorPicker(colors: ColorRoles, current: ColorOption | null
 				description: HexText(option.hex),
 				default: selected !== null && selected !== "none" && selected.roleId === option.roleId,
 			})),
-			{ label: "Ingen färg", value: "none", emoji: { name: "✖️" }, description: "Ta bort din färg", default: selected === "none" },
+			{ label: "Ingen färg", value: "none", description: "Ta bort din färg", default: selected === "none" },
 		);
 
 	const rows: ActionRowBuilder<StringSelectMenuBuilder | ButtonBuilder>[] = [

@@ -13,20 +13,21 @@ type SchoolData = Record<string, { id: string; studentCount: number }>;
 // The unit codes from skolverket, the keys are the same as in CITIES (utils/verifyOptions.ts)
 // The name and the role id come from there so a city only has to be changed in one place
 const UNIT_CODES: Record<string, { schoolUnitCode: number; medieGymnasietSchoolUnitCode?: number }> = {
-	bor: { schoolUnitCode: 86888278 },
-	got: { schoolUnitCode: 53231578 },
-	hal: { schoolUnitCode: 47264019 },
-	hel: { schoolUnitCode: 68240485 },
-	jon: { schoolUnitCode: 18594470 },
-	lin: { schoolUnitCode: 86787111 },
-	lun: { schoolUnitCode: 51449748 },
-	mal: { schoolUnitCode: 97931189 },
-	nyk: { schoolUnitCode: 44285075 },
-	sthn: { schoolUnitCode: 18106851 },
-	sths: { schoolUnitCode: 46256929 },
-	tro: { schoolUnitCode: 21400668 },
-	vax: { schoolUnitCode: 17083056 },
-	ore: { schoolUnitCode: 94207720 },
+	bor: { schoolUnitCode: 86888278 }, // LBS Borås
+	got: { schoolUnitCode: 53231578 }, // LBS Göteborg
+	hal: { schoolUnitCode: 47264019 }, // LBS Halmstad
+	hel: { schoolUnitCode: 68240485 }, // LBS Helsingborg
+	jon: { schoolUnitCode: 18594470 }, // LBS Jönköping
+	kun: { schoolUnitCode: 64569393 }, // Drottning Blankas Gymnasieskola 🤢
+	lin: { schoolUnitCode: 86787111 }, // LBS Linköping
+	lun: { schoolUnitCode: 51449748 }, // LBS Lund
+	mal: { schoolUnitCode: 97931189 }, // LBS Malmö
+	nyk: { schoolUnitCode: 44285075 }, // LBS Nyköping
+	sthn: { schoolUnitCode: 18106851 }, // LBS Stockholm Norra
+	sths: { schoolUnitCode: 46256929 }, // LBS Stockholm Södra
+	tro: { schoolUnitCode: 21400668 }, // LBS Trollhättan
+	vax: { schoolUnitCode: 17083056 }, // LBS Växjö
+	ore: { schoolUnitCode: 94207720 }, // LBS Örebro
 };
 
 const CACHE_FILE = "./cache/schools.json";

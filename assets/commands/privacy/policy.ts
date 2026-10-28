@@ -23,6 +23,49 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
                 )
         );
 
+/**
+ * Splits text into chunks under a maximum character limit,
+ * prioritizing double line breaks (\n\n) then single line breaks (\n).
+ */
+function splitText(text: string, maxLength = 4000): string[] {
+    if (text.length <= maxLength) return [text];
+
+    const chunks: string[] = [];
+    let currentChunk = "";
+
+    // Split into paragraphs first to avoid cutting sections mid-sentence
+    const paragraphs = text.split("\n\n");
+
+    for (const paragraph of paragraphs) {
+        if ((`${currentChunk}\n\n${paragraph}`).length <= maxLength) {
+            currentChunk = currentChunk ? `${currentChunk}\n\n${paragraph}` : paragraph;
+        } else {
+            // If current chunk has content, save it
+            if (currentChunk) chunks.push(currentChunk);
+
+            // If a single paragraph is longer than maxLength, split by single line breaks (\n)
+            if (paragraph.length > maxLength) {
+                const lines = paragraph.split("\n");
+                currentChunk = "";
+                for (const line of lines) {
+                    if ((`${currentChunk}\n${line}`).length <= maxLength) {
+                        currentChunk = currentChunk ? `${currentChunk}\n${line}` : line;
+                    } else {
+                        if (currentChunk) chunks.push(currentChunk);
+                        currentChunk = line;
+                    }
+                }
+            } else {
+                currentChunk = paragraph;
+            }
+        }
+    }
+
+    if (currentChunk) chunks.push(currentChunk);
+
+    return chunks;
+}
+
 const svPolicy = 
     "Detta är integritetspolicyn för vår oberoende Discord-bot. **Observera: Denna server och bot drivs helt av elever och är INTE officiellt anslutna till, sponsrade av eller kopplade till LBS Kreativa Gymnasiet eller AcadeMedia.** Vi har åtagit oss att skydda dina personuppgifter i enlighet med EU:s dataskyddsförordning (GDPR) och svensk dataskyddslagstiftning.\n\n" +
     "## Vilka vi är & Kontakt\n" +
@@ -42,7 +85,7 @@ const svPolicy =
     "**- Discord-ID, e-post och verifieringskod:** Bevaras så länge du är kvar. När du lämnar gäller ditt val i `/privacy options`: standardvalet raderar bara födelsedatumet och behåller e-post och kod, så du slipper verifiera dig igen om du kommer tillbaka. Välj att radera allt för att ta bort även dem.\n" +
     "**- Födelsedatum:** Tills du tar bort det (`/birthday clear`), lämnar servern (om du inte valt att behålla allt) eller raderar dina uppgifter.\n" +
     "**- Modereringshistorik:** Bevaras så länge det behövs för reglerna och för att hindra att avstängningar kringgås. Den raderas **inte** av `/privacy deleteme` eller av att välja radera allt, kontakta oss om du vill att den ses över.\n" +
-    "**- Spelsessioner och påminnelser:** Sessionerna raderas 7 dagar efter att de är slut, påminnelsen när du verifierar dig eller lämnar.\n" +
+    "**- Spelsessioner:** Sessionerna raderas 7 dagar efter att de är slut.\n" +
     "**- Loggkanaler:** Meddelanden i de interna kanalerna (loggar, ticket-filer och betyg) finns kvar i Discord tills en moderator raderar dem.\n\n" +
     "## Dina Rättigheter & Kontroll (GDPR)\n" +
     "**- `/privacy mydata`:** (Rätt till tillgång) En kopia av uppgifterna i botens databas.\n" +
@@ -71,7 +114,7 @@ const enPolicy =
     "**- Discord ID, email and verification code:** Kept as long as you remain in the server. When you leave, your choice in `/privacy options` applies: the default only deletes your birthday and keeps the email and code, so you don't have to verify again if you return. Choose to delete everything to remove those too.\n" +
     "**- Birthday:** Until you remove it (`/birthday clear`), leave the server (unless you chose to keep everything) or delete your data.\n" +
     "**- Moderation History:** Kept as long as necessary to enforce the rules and prevent ban evasion. It is **not** deleted by `/privacy deleteme` or by choosing to delete everything, contact us if you want it reviewed.\n" +
-    "**- Game sessions and reminders:** Sessions are deleted 7 days after they end, the reminder when you verify or leave.\n" +
+    "**- Game sessions:** Sessions are deleted 7 days after they end.\n" +
     "**- Log channels:** Messages in the internal channels (logs, ticket files and ratings) stay in Discord until a moderator deletes them.\n\n" +
     "## Your Rights & Controls (GDPR)\n" +
     "**- `/privacy mydata`:** (Right of Access) A copy of the data in the bot's database.\n" +
@@ -86,18 +129,29 @@ export default async function command(
 ) {
     const language = interaction.options.getString("language") || "sv";
     const isEn = language === "en";
+    const rawPolicyText = isEn ? enPolicy : svPolicy;
+
+    // Dynamically split into clean chunks under 4000 characters
+    const chunks = splitText(rawPolicyText, 4000);
+
+    const embeds = chunks.map((chunk, index) => {
+        const titleBase = isEn ? "Privacy Policy" : "Integritetspolicy";
+
+        return {
+            title: index === 0 ? titleBase : undefined,
+            description: chunk,
+            color: 0xEED202,
+            // Add footer to the last embed only
+            ...(index === chunks.length - 1 && {
+                footer: {
+                    text: isEn ? "Last updated: " : "Senast uppdaterad: " + "2026-10-28",
+                },
+            }),
+        };
+    });
 
     await interaction.reply({
-        embeds: [
-            {
-                title: isEn ? "Privacy Policy" : "Integritetspolicy (Privacy Policy)",
-                description: isEn ? enPolicy : svPolicy,
-                color: 0xEED202,
-                footer: {
-                    text: isEn ? "Last updated: 2026-10-25" : "Senast uppdaterad: 2026-10-25",
-                },
-            },
-        ],
+        embeds,
         flags: MessageFlags.Ephemeral,
     });
 }

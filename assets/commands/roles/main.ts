@@ -11,6 +11,8 @@ const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("roles")
 		.setDescription("Change your pronouns, city, class and year roles")
+		.setDescriptionLocalization("en-US", "Change your pronouns, city, class and year roles")
+		.setDescriptionLocalization("sv-SE", "Ändra dina pronomen, stad, klass och årsroller")
 		.setContexts(InteractionContextType.Guild)
 
 		.addSubcommand(allBuilder)

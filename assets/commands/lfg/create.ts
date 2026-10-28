@@ -18,7 +18,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setMaxLength(40),
 		)
 		.addIntegerOption((option) =>
-			option.setName("players").setDescription("How many can join, you included (default: no limit)").setMinValue(2).setMaxValue(1000),
+			option.setName("players").setDescription("How many can join, you included (default: no limit)").setMinValue(2).setMaxValue(100),
 		)
 		.addStringOption((option) => option.setName("note").setDescription("Anything people should know").setMaxLength(200));
 

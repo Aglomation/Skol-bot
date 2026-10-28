@@ -332,6 +332,7 @@ function AtDayOffset(today: SwedenParts, offset: number, hour: number, minute: n
 	return SwedenToUtc(base.getUTCFullYear(), base.getUTCMonth() + 1, base.getUTCDate(), hour, minute);
 }
 
+// Crazy ai regex
 export function ParseWhen(input: string, now = Date.now()): number | null {
 	const text = input.trim().toLowerCase().replace(/\s+/g, " ");
 	if (text === "now" || text === "nu") return now;

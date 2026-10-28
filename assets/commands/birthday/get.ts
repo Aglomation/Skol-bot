@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, User } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
 import { FormatBirthday } from "../../../utils/birthdayUtils.js";
-import { getDisplayName } from "../../../utils/memberUtils.js";
+import { GetDisplayName } from "../../../utils/memberUtils.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 
 
@@ -39,7 +39,7 @@ export default async function get(
 		});
 
 	// the name is only found for members the bot has cached
-	const name = getDisplayName(interaction.guild, user.id) ?? user.displayName;
+	const name = GetDisplayName(interaction.guild, user.id) ?? user.displayName;
 
 	const embed = new EmbedBuilder()
 		.setTitle(`${name}'s Birthday`)

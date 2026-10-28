@@ -1,8 +1,8 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
-import { BuildStep } from "../../../utils/verifyFlow.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { BuildStep } from "../../../utils/verifyFlow.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand

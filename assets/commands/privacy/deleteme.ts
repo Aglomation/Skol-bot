@@ -12,12 +12,13 @@ import {
     MessageFlags,
 } from "discord.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
+import { RemoveUserFromLfg } from "../../../utils/lfg.js";
 import { DeletePersonalData } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
         .setName("deleteme")
-        .setDescription("Request deletion of your data. This action is irreversible.");
+        .setDescription("Request deletion of your data. This action is irreversible");
 
 export default async function command(
 	interaction: ChatInputCommandInteraction,
@@ -40,7 +41,7 @@ export default async function command(
             .setLabel("Cancel")
             .setStyle(ButtonStyle.Secondary),
     );
-    
+
     await interaction.reply({
         content: "Are you sure you want to delete your data? This action is irreversible and will remove your access to the server.",
         flags: MessageFlags.Ephemeral,
@@ -71,7 +72,7 @@ export default async function command(
             });
             return;
         }
-        
+
     // answering the button itself, otherwise discord shows "This interaction failed"
     await buttonInteraction.update({
             content: "Attempting to delete your data. This may take a moment...",
@@ -92,10 +93,11 @@ export default async function command(
 
         // moderation history is kept as the privacy policy allows, a full delete needs an admin
         const keptHistory = await DeletePersonalData(interaction.user.id, interaction.guild.id);
-
+        await RemoveUserFromLfg(interaction.client, interaction.guild.id, interaction.user.id);
         await interaction.editReply({
             content: "Deletion request completed. Your data has been deleted and your access to the server has been revoked." +
-                (keptHistory ? "\nYour moderation history is kept as described in the privacy policy, contact an admin if you want it removed." : ""),
+                (keptHistory ? "\nYour moderation history is kept as described in the privacy policy, contact an admin if you want it removed." : "") +
+                "\nTickets and the staff's log channels are not cleared automatically, contact an admin if you want that.",
             components: [],
         });
     } catch (error) {

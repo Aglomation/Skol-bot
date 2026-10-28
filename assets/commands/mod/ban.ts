@@ -3,18 +3,17 @@ import type {
 	GuildMember,
 	GuildTextBasedChannel,
 	SlashCommandSubcommandBuilder,
-	TextChannel,
 } from "discord.js";
 import {
 	MessageFlags,
-	PermissionsBitField,
+	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction, GetActiveBan, UntilFromDuration } from "../../../utils/moderationManager.js";
-import { CheckHierarchy } from "../../../utils/permissions.js";
-import { GetProfile } from "../../../utils/profileManager.js";
-import { purgeChannels } from "../../../utils/purgeMessages.js";
-import { parseDuration } from "../../../utils/stringConvert.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { AddModAction, GetActiveBan, SERVER_INVITE, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
+import { GetProfile } from "../../../utils/profileManager.js";
+import { PurgeChannels } from "../../../utils/purgeMessages.js";
+import { ParseDuration } from "../../../utils/stringConvert.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -81,17 +80,14 @@ export default async function command(
 	// Ensure interaction.member is treated as a GuildMember to access permissions
 	const executor = interaction.member as GuildMember;
 
-	if (!executor.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 	const targetUser = interaction.options.getUser("user", true);
 	const targetMember = interaction.options.getMember(
 		"user",
 	) as GuildMember | null;
 	const reason = interaction.options.getString("reason", true);
-	const date = parseDuration(interaction.options.getString("duration") || "");
-	const deleteMessagesDuration = parseDuration(
+	const date = ParseDuration(interaction.options.getString("duration") || "");
+	const deleteMessagesDuration = ParseDuration(
 		interaction.options.getString("deletemessages", false) || "",
 	);
 
@@ -175,7 +171,7 @@ export default async function command(
 				`**Reason:** ${reason}\n` +
 				`**Ends:** ${expiresAt ? `<t:${expiresAt}:F> (<t:${expiresAt}:R>)` : "Never (permanent)"}\n\n` +
 				`You can't join the server while the ban is active. If you think this is a mistake, reply to this message and the staff team will see it.` +
-				(expiresAt ? `\nYou can rejoin when it ends: https://discord.gg/dUYHv8Dv94` : ""),
+				(expiresAt ? `\nYou can rejoin when it ends: ${SERVER_INVITE}` : ""),
 			)
 			.catch(() => {
 				console.warn(
@@ -227,7 +223,7 @@ export default async function command(
 
 		// Purge messages if option is set
 		if (channelsToPurge.length > 0 && deleteMessagesDuration) {
-			const results = await purgeChannels(
+			const results = await PurgeChannels(
 				channelsToPurge,
 				targetUser.id,
 				deleteMessagesDuration,

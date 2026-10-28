@@ -8,6 +8,7 @@ import { builder as getBuilder } from "./get.js";
 import { builder as listBuilder } from "./list.js";
 import { builder as nextBuilder } from "./next.js";
 import { builder as setBuilder } from "./set.js";
+import { builder as todayBuilder } from "./today.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
@@ -21,7 +22,8 @@ const command: Command = {
 		.addSubcommand(clearBuilder)
 		.addSubcommand(getBuilder)
 		.addSubcommand(listBuilder)
-		.addSubcommand(nextBuilder),
+		.addSubcommand(nextBuilder)
+		.addSubcommand(todayBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await RunSubcommand(import.meta.url, interaction);

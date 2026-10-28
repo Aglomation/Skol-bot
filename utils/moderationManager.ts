@@ -12,7 +12,7 @@ export type NumberedAction = { number: number; action: ModAction };
 export type ServerAction = NumberedAction & { userId: string };
 
 /**
- * Turns a duration from parseDuration into the time it ends
+ * Turns a duration from ParseDuration into the time it ends
  * @returns The end time in ms, or null if it never ends (inf)
  */
 export function UntilFromDuration(duration: number): number | null {
@@ -215,3 +215,5 @@ export function LegacyToActions(
 
 	return actions;
 }
+
+export const SERVER_INVITE = "https://discord.gg/dUYHv8Dv94";

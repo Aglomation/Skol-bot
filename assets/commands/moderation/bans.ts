@@ -1,12 +1,13 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { FlattenActions, GetActiveBan, GetModProfiles } from "../../../utils/moderationManager.js";
-import { FormatAction, HasModPermission, MakePages, SendPages } from "./shared.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { FormatAction, MakePages, SendPages } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
 		.setName("bans")
-		.setDescription("See the latest softbans")
+		.setDescription("See the latest bans")
 		.addBooleanOption((option) =>
 			option
 				.setName("active")
@@ -19,7 +20,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const onlyActive = interaction.options.getBoolean("active") ?? false;
 
@@ -38,7 +39,7 @@ export default async function command(
 		.slice(0, 100);
 
 	if (entries.length === 0) {
-		await interaction.editReply(onlyActive ? "Nobody is softbanned right now." : "No softbans found.");
+		await interaction.editReply(onlyActive ? "Nobody is banned right now." : "No bans found.");
 		return;
 	}
 
@@ -48,7 +49,7 @@ export default async function command(
 
 	await SendPages(interaction, pages, (text, page, total) =>
 		new EmbedBuilder()
-			.setTitle(onlyActive ? "Active softbans" : "Latest softbans")
+			.setTitle(onlyActive ? "Active bans" : "Latest bans")
 			.setDescription(`🔴 active • ⚪ ended\n\n${text}`)
 			.setColor(0xE74C3C)
 			.setFooter({ text: `Page ${page + 1}/${total} • ${entries.length} entries` }),

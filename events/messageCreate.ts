@@ -9,7 +9,7 @@ import { IsSchoolEmail } from "../utils/emails.js";
 import { SendLog, SendToChannel } from "../utils/logChannel.js";
 import { AddModAction } from "../utils/moderationManager.js";
 import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../utils/profileManager.js";
-import { purgeChannels } from "../utils/purgeMessages.js";
+import { PurgeChannels } from "../utils/purgeMessages.js";
 import { CompleteVerification } from "../utils/verifyFlow.js";
 
 const CONFIG = {
@@ -105,7 +105,7 @@ async function handleHoneypot(message: Message) {
     // Purge logic
     const channels = message.guild.channels.cache.filter((c) => c.isTextBased());
     const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
-    const results = await purgeChannels(channelsArray, compromisedUserId);
+    const results = await PurgeChannels(channelsArray, compromisedUserId);
     const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
 
     await SendLog(client, message.guild.id, `Honeypot wipe complete. Wiped ${totalDeleted+1} messages from <@${compromisedUserId}>.`);
@@ -118,7 +118,7 @@ async function handleVerification(message: Message) {
 
     try {
         const [rawEmail, verify] = message.content.replace(/\s+/g, "").split("$$");
-        
+
         if (!rawEmail || !verify) {
             await message.reply("Invalid formatting, didn't include two parts split by $$").catch(() => null);
             return;
@@ -135,7 +135,7 @@ async function handleVerification(message: Message) {
             await message.reply("Verification code found but no ID was tied to it").catch(() => null);
             return;
         }
-        
+
         if (profile.email) {
             await message.reply(`This user already has an email tied to their account.\n[${profile.email}]`).catch(() => null);
             return;
@@ -214,7 +214,7 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
 async function sendEmailInUseNotice(client: Client, serverId: string, userId: string) {
     const guild = client.guilds.cache.get(serverId);
     const supportChannel = await GetServerConfig(serverId, "supportChannel");
-    
+
     const embed = new EmbedBuilder()
         .setTitle("❌ Mailen används redan")
         .setDescription(

@@ -6,14 +6,16 @@ import { RunSubcommand } from "../../../utils/subcommands.js";
 import { builder as addBuilder } from "./add.js";
 import { builder as closeBuilder } from "./close.js";
 import { builder as removeBuilder } from "./remove.js";
+import { builder as renameBuilder } from "./rename.js";
 
 const command: Command = {
 	data: new SlashCommandBuilder()
 		.setName("ticket")
-		.setDescription("Manage the ticket you are in.")
+		.setDescription("Manage the ticket you are in")
 		.setContexts(InteractionContextType.Guild)
 		.addSubcommand(addBuilder)
 		.addSubcommand(removeBuilder)
+		.addSubcommand(renameBuilder)
 		.addSubcommand(closeBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction) {

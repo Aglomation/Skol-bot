@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, EmbedBuilder, GuildMember } from "discord.js";
+import type { ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import {
 	ActionRowBuilder,
 	ButtonBuilder,
@@ -11,7 +11,7 @@ export const TYPE_INFO: Record<ModActionType, { emoji: string; label: string; co
 	warn: { emoji: "⚠️", label: "Warn", color: 0xFFA500 },
 	mute: { emoji: "🔇", label: "Mute", color: 0xE67E22 },
 	unmute: { emoji: "🔊", label: "Unmute", color: 0x2ECC71 },
-	softban: { emoji: "🔨", label: "Softban", color: 0xE74C3C },
+	softban: { emoji: "🔨", label: "Ban", color: 0xE74C3C },
 	unban: { emoji: "🕊️", label: "Unban", color: 0x2ECC71 },
 	note: { emoji: "📝", label: "Note", color: 0x95A5A6 },
 };
@@ -21,20 +21,6 @@ export const TYPE_CHOICES = (Object.keys(TYPE_INFO) as ModActionType[]).map((typ
 	name: TYPE_INFO[type].label,
 	value: type,
 }));
-
-/**
- * Checks if the mod is allowed to use the command, replies if they arent
- */
-export async function HasModPermission(
-	interaction: ChatInputCommandInteraction,
-	permission: bigint,
-): Promise<boolean> {
-	const executor = interaction.member as GuildMember;
-	if (executor.permissions.has(permission)) return true;
-
-	await interaction.editReply("You don't have permission to use this.");
-	return false;
-}
 
 /**
  * Discord timestamp, shows in everyones own timezone

@@ -2,15 +2,14 @@ import type {
 	ChatInputCommandInteraction,
 	GuildMember,
 	SlashCommandSubcommandBuilder,
-	TextChannel,
 } from "discord.js";
 import {
 	MessageFlags,
-	PermissionsBitField,
+	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction } from "../../../utils/moderationManager.js";
-import { CheckHierarchy } from "../../../utils/permissions.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { AddModAction } from "../../../utils/moderationManager.js";
+import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
@@ -56,10 +55,7 @@ export default async function command(
 	const executor = interaction.member as GuildMember;
 
 	// a timeout is the moderate members permission, mute members is the voice mute
-	if (!executor.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const targetUser = interaction.options.getUser("user", true);
 	const targetMember = interaction.options.getMember("user") as GuildMember | null;
@@ -98,7 +94,7 @@ export default async function command(
 			`**${targetUser.tag}** has been warned. (case #${caseNumber ?? "?"})` +
 				(caseNumber === null ? "\nI couldn't save the warning in the database, so it is not in their history." : ""),
 		);
-		
+
 		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has warned <@${targetUser.id}> for the reason: ${reason} (case #${caseNumber ?? "?"})`);
 	} catch (err) {
 		console.error(err);

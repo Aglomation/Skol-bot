@@ -28,9 +28,9 @@ export async function SendToChannel(client: Client, channelId: string, content: 
  * Sends a message in the log channel of the server, does nothing if there isnt one
  * @returns true if it was sent
  */
-export async function SendLog(client: Client, guildId: string, content: string): Promise<boolean> {
+export async function SendLog(client: Client, guildId: string, content: string, files: AttachmentBuilder[] = []): Promise<boolean> {
 	const channelId = await GetServerConfig(guildId, "logChannel");
 	if (!channelId) return false;
 
-	return SendToChannel(client, channelId, content);
+	return SendToChannel(client, channelId, content, files);
 }

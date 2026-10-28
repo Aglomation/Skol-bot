@@ -9,7 +9,7 @@ import { GetProfile } from "../../../utils/profileManager.js";
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
         .setName("mydata")
-        .setDescription("View your saved data.")
+        .setDescription("View your saved data")
 
 
 export default async function command(

@@ -2,7 +2,8 @@ import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from 
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import type { ModActionType } from "../../../utils/moderationManager.js";
 import { FlattenActions, GetModProfiles } from "../../../utils/moderationManager.js";
-import { FormatAction, HasModPermission, MakePages, SendPages, TYPE_CHOICES } from "./shared.js";
+import { HasPermission } from "../../../utils/permissions.js";
+import { FormatAction, MakePages, SendPages, TYPE_CHOICES } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -35,7 +36,7 @@ export default async function command(
 ) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasModPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const type = interaction.options.getString("type") as ModActionType | null;
 	const moderator = interaction.options.getUser("moderator");

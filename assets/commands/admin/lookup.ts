@@ -5,7 +5,7 @@ import {
 	PermissionFlagsBits,
 } from "discord.js";
 
-import { getDisplayName } from "../../../utils/memberUtils.js";
+import { GetDisplayName } from "../../../utils/memberUtils.js";
 import { HasPermission } from "../../../utils/permissions.js";
 import type { UserProfileKey } from "../../../utils/profileManager.js";
 import { FindByValue } from "../../../utils/profileManager.js";
@@ -66,7 +66,7 @@ export default async function command(
 
 	const embed = new EmbedBuilder()
 		.setTitle("User Found")
-		.setDescription(`Result: <@${result.discordId}> (${getDisplayName(interaction.guild, result.discordId)})`)
+		.setDescription(`Result: <@${result.discordId}> (${GetDisplayName(interaction.guild, result.discordId)})`)
 		.setThumbnail(
 			interaction.guild.members.cache
 				.get(result.discordId)

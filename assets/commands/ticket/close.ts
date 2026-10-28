@@ -5,7 +5,7 @@ import { CloseConfirmRow, CloseQuestion, GetTicketForMember } from "../../../uti
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
 		.setName("close")
-		.setDescription("Close this ticket.");
+		.setDescription("Close this ticket");
 
 export default async function command(interaction: ChatInputCommandInteraction) {
 	if (!interaction.guild) return;

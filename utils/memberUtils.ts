@@ -3,7 +3,7 @@ import type { Guild } from "discord.js";
 /**
  * Gets the most relevant display name for a user in a guild.
  */
-export const getDisplayName = (
+export const GetDisplayName = (
     guild: Guild | null, 
     userId: string | undefined, 
     maxLength?: number
@@ -20,7 +20,7 @@ export const getDisplayName = (
 /**
  * Counts members who have a primary role, and optionally filters by secondary roles.
  */
-export const getRoleUserCount = (
+export const GetRoleUserCount = (
     guild: Guild | null, 
     primaryRole: string, 
     needOneSecondary: boolean = false, 

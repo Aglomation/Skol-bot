@@ -1,7 +1,7 @@
 import type { VoiceChannel, VoiceState } from "discord.js";
 import { ChannelType, Events, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
-import { CanCreateTempChannel, ForgetTempChannel, IsTempChannel, SetTempOwner } from "../utils/tempVoice.js";
+import { CanCreateTempChannel, ForgetTempChannel, HandOverTempChannel, IsTempChannel, SetTempOwner } from "../utils/tempVoice.js";
 
 export default {
 	name: Events.VoiceStateUpdate,
@@ -9,20 +9,24 @@ export default {
     async execute(oldState: VoiceState, newState: VoiceState) {
         // muting, deafening and streaming also end up here, only joining, leaving and moving matters
         if (oldState.channelId === newState.channelId) return;
-        
+
         const guild = newState.guild;
         const tempChannelId = await GetServerConfig(guild.id, "tempVcMainChannel");
         const tempCategoryId = await GetServerConfig(guild.id, "tempvcCategory");
 
         // temporary voice channels aren't set up in this server
         if (!tempChannelId || !tempCategoryId) return;
-            
+
         // Deletes the temporary channel they left when nobody is in it anymore
         // channels that an admin put in the category by hand are not temporary, those stay
         const oldChannel = oldState.channel;
-        if (oldChannel && IsTempChannel(oldChannel, tempChannelId, tempCategoryId) && oldChannel.members.size === 0) {
-            ForgetTempChannel(oldChannel.id);
-            await oldChannel.delete().catch(() => null);
+        if (oldChannel && IsTempChannel(oldChannel, tempChannelId, tempCategoryId)) {
+            if (oldChannel.members.size === 0) {
+                ForgetTempChannel(oldChannel.id);
+                await oldChannel.delete().catch(() => null);
+            } else if (oldState.member) {
+                await HandOverTempChannel(oldChannel, oldState.member);
+            }
         }
 
         // Joining the main channel makes a new temporary channel, this also works when they come from another temporary one

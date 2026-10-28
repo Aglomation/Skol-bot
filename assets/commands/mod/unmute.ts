@@ -7,10 +7,10 @@ import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
-import { AddModAction, GetActiveMute } from "../../../utils/moderationManager.js";
-import { CheckHierarchy } from "../../../utils/permissions.js";
-import { GetProfile } from "../../../utils/profileManager.js";
 import { SendLog } from "../../../utils/logChannel.js";
+import { AddModAction, GetActiveMute } from "../../../utils/moderationManager.js";
+import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
+import { GetProfile } from "../../../utils/profileManager.js";
 
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -52,10 +52,7 @@ export default async function command(
 	const executor = interaction.member as GuildMember;
 
 	// a timeout is the moderate members permission, mute members is the voice mute
-	if (!executor.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-		await interaction.editReply("You don't have permission to use this.");
-		return;
-	}
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
 
 	const user = interaction.options.getUser("user", true);
 	const member = interaction.options.getMember("user") as GuildMember | null;

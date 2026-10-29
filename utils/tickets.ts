@@ -264,7 +264,7 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 		});
 
 		// the staff get a ping, one role is enough
-		const pingRoleId = "0" //"1560617409998757992";
+		const pingRoleId = "1560617409998757992";
 		// const pingRoleId = [adminRoleId, modRoleId].find((id) => !!id && staffRoleIds.includes(id));
 
 		const embed = new EmbedBuilder()

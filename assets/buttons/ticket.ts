@@ -11,6 +11,7 @@ import {
 	GetTicketClaimer,
 	GetTicketForMember,
 	IsStaff,
+	OpenTicket,
 	SetTicketClaimer,
 	TICKET_BUTTON_ID,
 } from "../../utils/tickets.js";
@@ -35,7 +36,7 @@ const button: Button = {
 
 		// the other buttons are in a ticket, the owner and the staff can use them
 		const member = interaction.member as GuildMember;
-		const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, member, action === "delete", action === "delete");
+		const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, member, action === "delete", action === "delete" || action === "open");
 
 		if (typeof ticket === "string") {
 			if (action === "confirm" || action === "cancel") await interaction.update({ content: ticket, components: [] });
@@ -51,6 +52,12 @@ const button: Button = {
 					flags: MessageFlags.Ephemeral,
 				});
 				break;
+			case "open": {
+				await interaction.update({ content: "Opening the ticket...", components: [] });
+				const error = await OpenTicket(ticket, interaction.user);
+				await interaction.editReply({ content: error ?? "The ticket is opened." }).catch(() => null);
+				break;
+			}
 			case "confirm": {
 				await interaction.update({ content: "Closing the ticket...", components: [] });
 

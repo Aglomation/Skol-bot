@@ -5,6 +5,7 @@ import { RunSubcommand } from "../../../utils/subcommands.js";
 
 import { builder as addBuilder } from "./add.js";
 import { builder as closeBuilder } from "./close.js";
+import { builder as openBuilder } from "./open.js";
 import { builder as removeBuilder } from "./remove.js";
 import { builder as renameBuilder } from "./rename.js";
 
@@ -16,7 +17,8 @@ const command: Command = {
 		.addSubcommand(addBuilder)
 		.addSubcommand(removeBuilder)
 		.addSubcommand(renameBuilder)
-		.addSubcommand(closeBuilder),
+		.addSubcommand(closeBuilder)
+		.addSubcommand(openBuilder),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await RunSubcommand(import.meta.url, interaction);

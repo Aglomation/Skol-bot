@@ -31,48 +31,116 @@ const TICKET_PERMISSIONS = [
 	PermissionFlagsBits.EmbedLinks,
 ];
 
+export interface TicketTopicData {
+    ownerId: string | null;
+    displayName: string | null;
+    claimerId: string | null;
+}
+
+/**
+ * Parses the full channel topic into structured data.
+ */
+export function ParseTicketTopic(topic: string | null | undefined): TicketTopicData {
+    if (!topic) {
+        return { ownerId: null, displayName: null, claimerId: null };
+    }
+
+    const parts = topic.split("|").map((p) => p.trim());
+
+    let ownerId: string | null = null;
+    let displayName: string | null = null;
+    let claimerId: string | null = null;
+
+    for (const part of parts) {
+        if (part.startsWith("ticket:")) {
+            ownerId = part.replace("ticket:", "").trim();
+        } else if (part.startsWith("displayName:")) {
+            displayName = part.replace("displayName:", "").trim();
+        } else if (part.startsWith("claimed:")) {
+            claimerId = part.replace("claimed:", "").trim();
+        }
+    }
+
+    return { ownerId, displayName, claimerId };
+}
+
+/**
+ * Rebuilds and sets the channel topic from structured data parts.
+ */
+async function SaveTicketTopic(channel: TextChannel, data: TicketTopicData): Promise<void> {
+    const parts: string[] = [];
+
+    if (data.ownerId) {
+        parts.push(`ticket:${data.ownerId}`);
+    }
+    if (data.displayName) {
+        parts.push(`displayName:${data.displayName}`);
+    }
+    if (data.claimerId) {
+        parts.push(`claimed:${data.claimerId}`);
+    }
+
+    const newTopic = parts.join(" | ");
+
+    if (newTopic !== channel.topic) {
+        await channel.setTopic(newTopic);
+    }
+}
+
 /**
  * Who opened the ticket
+ * @returns the user id of the owner if it is a ticket
  * @returns null if it isn't a ticket
  */
 export function GetTicketOwner(channel: GuildBasedChannel): string | null {
-	if (channel.type !== ChannelType.GuildText) return null;
-
-	const match = channel.topic?.match(/^ticket:(\d{15,25})/);
-	return match ? match[1] : null;
+    if (channel.type !== ChannelType.GuildText) return null;
+    return ParseTicketTopic(channel.topic).ownerId;
 }
 
 /**
  * A ticket is a text channel in the ticket category that has an owner in its topic
- * Other channels an admin put in the category are not tickets, so nobody can close them
+ * @returns true if it is a ticket channel
  */
 export function IsTicketChannel(channel: GuildBasedChannel, categoryId: string): channel is TextChannel {
-	return channel.type === ChannelType.GuildText && channel.parentId === categoryId && GetTicketOwner(channel) !== null;
+    return channel.type === ChannelType.GuildText && channel.parentId === categoryId && GetTicketOwner(channel) !== null;
 }
-
-const CLAIM_TOPIC = /\s*\| claimed:(\d{15,25})/;
 
 /**
- * The staff member who took the ticket, it is kept in the topic after the owner
+ * Gets the staff member who claimed the ticket, or null if it isn't claimed
+ * @returns the user id of the claimer if it is a ticket
+ * @returns null if it isn't a ticket or if it isn't claimed
  */
 export function GetTicketClaimer(channel: TextChannel): string | null {
-	return channel.topic?.match(CLAIM_TOPIC)?.[1] ?? null;
+    return ParseTicketTopic(channel.topic).claimerId;
 }
 
+/**
+ * Sets or clears the staff member who claimed the ticket
+ */
 export async function SetTicketClaimer(channel: TextChannel, userId: string | null): Promise<void> {
-	const base = (channel.topic ?? "").replace(CLAIM_TOPIC, "").trimEnd();
-	await channel.setTopic(userId ? `${base} | claimed:${userId}` : base);
+    const data = ParseTicketTopic(channel.topic);
+    data.claimerId = userId;
+    await SaveTicketTopic(channel, data);
 }
 
-const CLOSED_TOPIC = / \| closed$/;
+/**
+ * Checks if the ticket is closed by checking if the owner is blocked from sending messages.
+ */
+export function IsTicketClosed(channel: TextChannel): boolean {
+    const ownerId = GetTicketOwner(channel);
+    if (!ownerId) return false;
 
-export const IsTicketClosed = (channel: TextChannel) => CLOSED_TOPIC.test(channel.topic ?? "");
+    const overwrite = channel.permissionOverwrites.cache.get(ownerId);
+    // If the owner has an explicit deny for SendMessages, the ticket is closed
+    return overwrite?.deny.has(PermissionFlagsBits.SendMessages) ?? false;
+}
 
 export function BuildClosedRows(): ActionRowBuilder<ButtonBuilder>[] {
 	return [
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:delete`).setLabel("Delete ticket").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
-		),
+			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:open`).setLabel("Open ticket").setEmoji("🔓").setStyle(ButtonStyle.Success)
+		)
 	];
 }
 
@@ -196,7 +264,7 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 		});
 
 		// the staff get a ping, one role is enough
-		const pingRoleId = "1560617409998757992";
+		const pingRoleId = "0" //"1560617409998757992";
 		// const pingRoleId = [adminRoleId, modRoleId].find((id) => !!id && staffRoleIds.includes(id));
 
 		const embed = new EmbedBuilder()
@@ -344,7 +412,6 @@ export async function CloseTicket(channel: TextChannel, closedBy: User, reason?:
 			components: BuildClosedRows(),
 			allowedMentions: { parse: [] },
 		});
-		await channel.setTopic(`${channel.topic ?? ""} | closed`);
 
 		// they know if they closed it themselves, unless they can rate the help
 		const canRate = !!logChannelId && !!ownerId;
@@ -370,5 +437,51 @@ export async function CloseTicket(channel: TextChannel, closedBy: User, reason?:
 	} catch (error) {
 		console.error("Could not close the ticket:", error);
 		return `Could not close the ticket: ${ExplainError(error)}`;
+	}
+}
+
+export async function OpenTicket(channel: TextChannel, openedBy: User, reason?: string): Promise<string | null> {
+	if (!IsTicketClosed(channel)) return "This ticket is already open.";
+
+	try {
+		const ownerId = GetTicketOwner(channel);
+		const logChannelId = await GetServerConfig(channel.guild.id, "logChannel");
+
+		if (logChannelId) {
+			const saved = await SendLog(
+				channel.client,
+				channel.guild.id,
+				`Ticket **${channel.name}** of <@${ownerId}> was opened by <@${openedBy.id}>.${reason ? ` Reason: ${reason}` : ""}`,
+			);
+			if (!saved) return "I couldn't save a copy of the messages in the log channel, so the ticket is still open.";
+		}
+
+		for (const overwrite of channel.permissionOverwrites.cache.values()) {
+			if (overwrite.type === OverwriteType.Member && overwrite.id !== channel.client.user.id) {
+				await channel.permissionOverwrites.edit(overwrite.id, { SendMessages: true, AddReactions: true });
+			}
+		}
+
+		await channel.send({
+			embeds: [
+				new EmbedBuilder()
+					.setColor(Colors.Green)
+					.setTitle("Ticket opened")
+					.setDescription(`Opened by <@${openedBy.id}>. You can write here again.`),
+			],
+			allowedMentions: { parse: [] },
+		});
+
+		try {
+			await channel.setName(channel.name.replace(/^closed-/, "opened-"), `Ticket opened by ${openedBy.username}`);
+		} catch (error) {
+			return `The ticket is opened, but I couldn't rename it: ${ExplainError(error)}`;
+		}
+
+		return null;
+	} catch (error) {
+		console.error("Could not open the ticket:", error);
+		await SendLog(channel.client, channel.guild.id, `Failed to open ticket **${channel.name}** by <@${openedBy.id}>: ${ExplainError(error)}`);
+		return `Could not open the ticket: ${ExplainError(error)}`;
 	}
 }

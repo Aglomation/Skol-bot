@@ -1,6 +1,6 @@
-import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { CloseConfirmRow, CloseQuestion, GetTicketForMember } from "../../../utils/tickets.js";
+import { CloseConfirmRow, CloseQuestion, GetTicketForMember, IsTicketClosed } from "../../../utils/tickets.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -10,7 +10,11 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 export default async function command(interaction: ChatInputCommandInteraction) {
 	if (!interaction.guild) return;
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
+	const isClosed = IsTicketClosed(interaction.channel as TextChannel);
+	if (isClosed) {
+		await interaction.editReply("This ticket is already closed.");
+		return;
+	}
 	const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, interaction.member as GuildMember);
 	if (typeof ticket === "string") {
 		await interaction.editReply(ticket);

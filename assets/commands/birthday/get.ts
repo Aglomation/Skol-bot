@@ -1,12 +1,11 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder, User } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import { FormatBirthday } from "../../../utils/birthdayUtils.js";
+import { FormatBirthday } from "../../../features/birthdays.js";
 import { GetDisplayName } from "../../../utils/memberUtils.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 
-
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("get")
 		.setDescription("Gets your birthday")
 		.setDescriptionLocalizations({
@@ -18,7 +17,6 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setDescription("Get birthday for another user")
 				.setRequired(false),
 		);
-
 
 export default async function get(
 	interaction: ChatInputCommandInteraction,
@@ -33,10 +31,12 @@ export default async function get(
 	const birthday = profile?.birthday as UserProfile["birthday"] | null;
 
 	// 0 is a real date (1970-01-01)
-	if (birthday == null)
-		return await interaction.editReply({
+	if (birthday == null) {
+		await interaction.editReply({
 			content: "That user hasn't set their birthday yet.",
 		});
+		return;
+	}
 
 	// the name is only found for members the bot has cached
 	const name = GetDisplayName(interaction.guild, user.id) ?? user.displayName;

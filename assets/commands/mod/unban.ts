@@ -7,12 +7,13 @@ import {
 	PermissionFlagsBits,
 } from "discord.js";
 import { SendLog } from "../../../utils/logChannel.js";
-import { AddModAction, GetActiveBan, SERVER_INVITE } from "../../../utils/moderationManager.js";
+import { AddModAction, GetActiveBan } from "../../../utils/moderationManager.js";
 import { HasPermission } from "../../../utils/permissions.js";
 import { GetProfile } from "../../../utils/profileManager.js";
+import { SERVER_INVITE } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("unban")
 		.setDescription("Removes a user from the ban list")
 		.addUserOption((option) =>
@@ -24,7 +25,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setDescription("Reason for the unban")
 				.setMaxLength(400)
 				.setRequired(true),
-		)
+		);
 
 export default async function command(
 	interaction: ChatInputCommandInteraction
@@ -77,4 +78,4 @@ export default async function command(
 	);
 
 	await SendLog(interaction.client, interaction.guild.id, `<@${user.id}> has been unbanned by <@${interaction.user.id}> for the reason: ${reason} (case #${caseNumber})`);
-};
+}

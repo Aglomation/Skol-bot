@@ -1,6 +1,6 @@
 import type { StringSelectMenuInteraction } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { BuildStep, FinishVerify } from "../../utils/verifyFlow.js";
+import { BuildStep, FinishVerify } from "../../features/verify/flow.js";
 
 // The verify version of the menus, the custom id looks like verifyselect:<step>:<earlier answers>
 // The answers so far travel in the custom id, so nothing is stored until the last question

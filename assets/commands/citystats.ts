@@ -1,16 +1,25 @@
 import { existsSync, mkdirSync } from "node:fs";
-import fs from "node:fs/promises"; // Swapped to async fs promises
-import type { ChatInputCommandInteraction } from "discord.js";
+import fs from "node:fs/promises";
+import type { ChatInputCommandInteraction, Guild } from "discord.js";
 import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { FormatGrowth, GetSnapshots } from "../../features/memberHistory.js";
+import { YEARS } from "../../features/verify/options.js";
 import { GetServerConfig } from "../../utils/configManager.js";
-import { FormatGrowth, GetSnapshots } from "../../utils/memberHistory.js";
-import { GetRoleUserCount } from "../../utils/memberUtils.js";
-import { YEARS } from "../../utils/verifyOptions.js";
 
 // the year roles from the verify options (26, 25, 24, 23, 22), not the teacher one
 const STUDENT_YEARS = YEARS.filter((year) => year.roleId && /^\d+$/.test(year.key));
 // the ones that still go to the school
 const CURRENT_YEARS = STUDENT_YEARS.filter((year) => !year.alumni);
+
+/**
+ * Counts the members that have the role and all of the extra roles
+ */
+function CountMembers(guild: Guild, roleId: string, extraRoleIds: string[]): number {
+	const role = guild.roles.cache.get(roleId);
+	if (!role) return 0;
+
+	return role.members.filter((member) => extraRoleIds.every((id) => member.roles.cache.has(id))).size;
+}
 
 interface FinalSchoolData {
 	name: string;
@@ -59,7 +68,8 @@ const command: Command = {
 		),
 
 	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) return;
+		const guild = interaction.guild;
+		if (!guild) return;
 
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -90,7 +100,7 @@ const command: Command = {
 
 		// the counts come from the cache, so everyone has to be in it
 		if (interaction.guild.members.cache.size < interaction.guild.memberCount) {
-			await interaction.guild.members.fetch().catch((error) => console.error("Could not fetch the members for /stats:", error));
+			await interaction.guild.members.fetch().catch((error) => console.error("Could not fetch the members for /citystats:", error));
 		}
 
 		// which year roles are counted
@@ -120,7 +130,7 @@ const command: Command = {
 		for (const [key, roleData] of Object.entries(schoolData)) {
 			// members with the city role and (the verified role and) the year role, added up for every year
 			const activeCount = years.reduce(
-				(total, year) => total + GetRoleUserCount(interaction.guild, roleData.id, false, [verifiedRoleId, year.roleId as string]),
+				(total, year) => total + CountMembers(guild, roleData.id, [verifiedRoleId, year.roleId as string]),
 				0,
 			);
 
@@ -165,7 +175,6 @@ const command: Command = {
 				inline: false,
 			});
 		});
-
 
 		const embed = new EmbedBuilder()
 			.setTitle(`Deltagarstatistik per stad (${order === "all" ? "Total" : order === "current" ? "Nuvarande" : order}) ( ♻️ ${order === "current" ? "%" : "Antal"} )`)

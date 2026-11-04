@@ -1,20 +1,18 @@
 import type { ButtonInteraction, GuildMember } from "discord.js";
-import { EmbedBuilder, MessageFlags } from "discord.js";
-import { ExplainError } from "../../utils/errorText.js";
-import { SendLog } from "../../utils/logChannel.js";
+import { MessageFlags } from "discord.js";
 import {
-	BuildTicketRows,
+	ChangeClaim,
 	CloseConfirmRow,
 	CloseQuestion,
 	CloseTicket,
 	CreateTicket,
 	GetTicketClaimer,
 	GetTicketForMember,
-	IsStaff,
 	OpenTicket,
-	SetTicketClaimer,
 	TICKET_BUTTON_ID,
-} from "../../utils/tickets.js";
+} from "../../features/tickets.js";
+import { ExplainError } from "../../utils/errorText.js";
+import { SendLog } from "../../utils/logChannel.js";
 
 const button: Button = {
 	data: {
@@ -36,7 +34,9 @@ const button: Button = {
 
 		// the other buttons are in a ticket, the owner and the staff can use them
 		const member = interaction.member as GuildMember;
-		const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, member, action === "delete", action === "delete" || action === "open");
+		// deleting and opening a closed ticket is only for the staff, and works on closed tickets
+		const staffOnly = action === "delete" || action === "open";
+		const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, member, staffOnly, staffOnly);
 
 		if (typeof ticket === "string") {
 			if (action === "confirm" || action === "cancel") await interaction.update({ content: ticket, components: [] });
@@ -54,6 +54,7 @@ const button: Button = {
 				break;
 			case "open": {
 				await interaction.update({ content: "Opening the ticket...", components: [] });
+
 				const error = await OpenTicket(ticket, interaction.user);
 				await interaction.editReply({ content: error ?? "The ticket is opened." }).catch(() => null);
 				break;
@@ -80,37 +81,11 @@ const button: Button = {
 				await interaction.update({ content: "The ticket stays open.", components: [] });
 				break;
 			case "claim": {
-				const claimer = GetTicketClaimer(ticket);
-				if (!(await IsStaff(member))) {
-					await interaction.reply({ content: "Only the staff can do that.", flags: MessageFlags.Ephemeral });
-					break;
-				}
-				if (claimer && claimer !== member.id) {
-					await interaction.reply({ content: `<@${claimer}> is already handling this ticket.`, flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
-					break;
-				}
-
-				const claiming = !claimer;
 				await interaction.deferUpdate();
 
-				try {
-					await SetTicketClaimer(ticket, claiming ? member.id : null);
-				} catch (error) {
-					await interaction.followUp({ content: `I couldn't change that: ${ExplainError(error)}`, flags: MessageFlags.Ephemeral });
-					break;
-				}
-
-				const embed = interaction.message.embeds[0];
-				await interaction.editReply({
-					embeds: embed ? [EmbedBuilder.from(embed).setFooter(claiming ? { text: `Claimed by ${member.displayName}` } : null)] : undefined,
-					components: BuildTicketRows(claiming),
-				});
-				await ticket
-					.send({
-						content: claiming ? `✋ <@${member.id}> will help with this ticket.` : `<@${member.id}> is no longer handling this ticket.`,
-						allowedMentions: { parse: [] },
-					})
-					.catch(() => null);
+				// the button is a switch, it takes the ticket if nobody has it and lets go of it if you have it
+				const error = await ChangeClaim(ticket, member, !GetTicketClaimer(ticket), interaction.message);
+				if (error) await interaction.followUp({ content: error, flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
 				break;
 			}
 			default:

@@ -1,5 +1,5 @@
 import type {
-	ButtonInteraction,
+    ButtonInteraction,
     ChatInputCommandInteraction,
     SlashCommandSubcommandBuilder,
 } from "discord.js";
@@ -11,8 +11,8 @@ import {
     ComponentType,
     MessageFlags,
 } from "discord.js";
+import { RemoveUserFromLfg } from "../../../features/lfg.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
-import { RemoveUserFromLfg } from "../../../utils/lfg.js";
 import { DeletePersonalData } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
@@ -21,7 +21,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         .setDescription("Request deletion of your data. This action is irreversible");
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction,
 ) {
     if (!interaction.guild || !interaction.member) {
         await interaction.reply({

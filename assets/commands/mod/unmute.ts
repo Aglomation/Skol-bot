@@ -3,18 +3,15 @@ import type {
 	GuildMember,
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
-import {
-	MessageFlags,
-	PermissionFlagsBits,
-} from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
 import { SendLog } from "../../../utils/logChannel.js";
 import { AddModAction, GetActiveMute } from "../../../utils/moderationManager.js";
 import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
 import { GetProfile } from "../../../utils/profileManager.js";
-
+import { DeferReply } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("unmute")
 		.setDescription("Unmutes a user (timeout)")
 		.addUserOption((option) =>
@@ -28,20 +25,16 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setRequired(true),
 		)
 		.addBooleanOption((option) =>
-			option 
+			option
 				.setName("announce")
-				.setDescription("Whether to send the ban command publicly or not")
+				.setDescription("Whether to send the unmute command publicly or not")
 				.setRequired(false)
 		);
 
 export default async function command(
 	interaction: ChatInputCommandInteraction
 ) {
-	if (interaction.options.getBoolean("announce")) {
-		await interaction.deferReply();
-	} else {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	}
+	await DeferReply(interaction);
 	if (!interaction.guild) {
 		await interaction.editReply({
 			content: "This command can only be used in a server.",
@@ -110,4 +103,4 @@ export default async function command(
 			"I got an error while trying to unmute that user. Make sure my role is high enough (or my code is just bad).",
 		);
 	}
-};
+}

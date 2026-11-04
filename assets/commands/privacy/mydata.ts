@@ -4,16 +4,16 @@ import type {
 } from "discord.js";
 
 import { AttachmentBuilder, MessageFlags } from "discord.js";
+import { GetSessions } from "../../../features/lfg.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
         .setName("mydata")
-        .setDescription("View your saved data")
-
+        .setDescription("View your saved data");
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction,
 ) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -21,7 +21,17 @@ export default async function command(
     const guildId = interaction.guild?.id as string;
     const profile = await GetProfile(userId, guildId);
 
-    if (!profile) {
+    // the sign-ups for game sessions are not in the database, they are in a file
+    const lfgSessions = (await GetSessions(guildId))
+        .filter((session) => [session.hostId, ...session.going, ...session.maybe, ...session.waitlist].includes(userId))
+        .map((session) => ({
+            game: session.game,
+            startsAt: session.startsAt,
+            status: session.status,
+            as: session.hostId === userId ? "host" : session.going.includes(userId) ? "going" : session.maybe.includes(userId) ? "maybe" : "waitlist",
+        }));
+
+    if (!profile && lfgSessions.length === 0) {
         await interaction.editReply({
             content: "No data found for your user ID.",
         });
@@ -31,11 +41,16 @@ export default async function command(
     // staff notes are not shown to the user.
     const data = {
         ...profile,
-        moderation: profile.moderation.map((action) =>
-            action.type === "note"
-                ? { type: action.type, at: action.at, reason: "<hidden>", by: "<hidden>" }
-                : action,
-        ),
+        ...(profile
+            ? {
+                moderation: profile.moderation.map((action) =>
+                    action.type === "note"
+                        ? { type: action.type, at: action.at, reason: "<hidden>", by: "<hidden>" }
+                        : action,
+                ),
+            }
+            : {}),
+        lfgSessions,
     };
     const json = JSON.stringify(data, null, 2);
 

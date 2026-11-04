@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { LegacyToActions } from "../utils/moderationManager.js";
+import { LegacyToActions } from "./legacyModeration.js";
 
 // Moves the old timeout/banned/banreason/banduration columns into the new moderation column
 // Run this BEFORE you push the new schema, otherwise drizzle-kit drops the old columns with the data in them

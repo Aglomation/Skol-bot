@@ -6,11 +6,12 @@ import {
 	EmbedBuilder,
 	StringSelectMenuBuilder,
 } from "discord.js";
-import { GetServerConfig } from "./configManager.js";
-import { IsTeacherEmail } from "./emails.js";
-import { GetProfile, PROFILE_DUPLICATE, UpdateProfile } from "./profileManager.js";
-import type { VerifyOption } from "./verifyOptions.js";
-import { CITIES, CLASSES, PRONOUNS, ROLE_GROUPS, YEARS } from "./verifyOptions.js";
+import { GetServerConfig } from "../../utils/configManager.js";
+import { SafeError } from "../../utils/errorText.js";
+import { GetProfile, PROFILE_DUPLICATE, UpdateProfile } from "../../utils/profileManager.js";
+import { IsTeacherEmail } from "../emails.js";
+import type { VerifyOption } from "./options.js";
+import { CITIES, CLASSES, PRONOUNS, ROLE_GROUPS, YEARS } from "./options.js";
 
 const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdiCU7923760A1fP07hDDfgcrvUxUUQFd_yWAdXggellFVW9w/viewform?usp=pp_url&entry.952629899=";
 
@@ -191,7 +192,7 @@ export async function ApplyVerifyRoles(member: GuildMember, roleIds: string[], a
 		if (toAdd.length > 0) await member.roles.add(toAdd);
 		return true;
 	} catch (error) {
-		console.error("Could not give the verify roles:", error);
+		console.error("Could not give the verify roles:", SafeError(error));
 		return false;
 	}
 }
@@ -288,7 +289,7 @@ export async function CompleteVerification(member: GuildMember, email: string): 
 		const verifiedRole = verifiedRoleId ? guild.roles.cache.get(verifiedRoleId) : undefined;
 		if (verifiedRole) await member.roles.add(verifiedRole);
 	} catch (error) {
-		console.error("Could not give the verified role:", error);
+		console.error("Could not give the verified role:", SafeError(error));
 		return false;
 	}
 
@@ -304,7 +305,7 @@ export async function CompleteVerification(member: GuildMember, email: string): 
 	try {
 		await GiveTeacherRole(member, email);
 	} catch (error) {
-		console.error("Could not give the teacher role:", error);
+		console.error("Could not give the teacher role:", SafeError(error));
 		return false;
 	}
 

@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
+import { GetTicketForMember, Slug } from "../../../features/tickets.js";
 import { ExplainError } from "../../../utils/errorText.js";
-import { GetTicketForMember, Slug } from "../../../utils/tickets.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand

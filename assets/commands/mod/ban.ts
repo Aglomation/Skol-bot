@@ -8,16 +8,16 @@ import {
 	MessageFlags,
 	PermissionFlagsBits,
 } from "discord.js";
+import { ParseDuration } from "../../../utils/duration.js";
 import { SendLog } from "../../../utils/logChannel.js";
-import { AddModAction, GetActiveBan, SERVER_INVITE, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { AddModAction, GetActiveBan, UntilFromDuration } from "../../../utils/moderationManager.js";
 import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
 import { GetProfile } from "../../../utils/profileManager.js";
 import { PurgeChannels } from "../../../utils/purgeMessages.js";
-import { ParseDuration } from "../../../utils/stringConvert.js";
-
+import { DeferReply, DELETE_MESSAGES_CHOICES, INVALID_DURATION, SERVER_INVITE } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("ban")
 		.setDescription("Bans a user from the server (ban)")
 		.addUserOption((option) =>
@@ -44,18 +44,10 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setName("deletemessages")
 				.setDescription("Whether to delete the user's messages")
 				.setRequired(false)
-				.setChoices(
-					{ name: "None", value: "0" },
-					{ name: "1 Hour", value: "1h" },
-					{ name: "3 Hours", value: "3h" },
-					{ name: "6 Hours", value: "6h" },
-					{ name: "12 Hours", value: "12h" },
-					{ name: "1 Day", value: "24h" },
-					{ name: "2 Days", value: "48h" },
-				),
+				.setChoices(...DELETE_MESSAGES_CHOICES),
 		)
 		.addBooleanOption((option) =>
-			option 
+			option
 				.setName("announce")
 				.setDescription("Whether to send the ban command publicly or not")
 				.setRequired(false)
@@ -71,11 +63,7 @@ export default async function command(
 		});
 		return;
 	}
-	if (interaction.options.getBoolean("announce")) {
-		await interaction.deferReply();
-	} else {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	}
+	await DeferReply(interaction);
 
 	// Ensure interaction.member is treated as a GuildMember to access permissions
 	const executor = interaction.member as GuildMember;
@@ -100,7 +88,7 @@ export default async function command(
 	const profile = await GetProfile(targetUser.id, interaction.guild.id);
 
 	if (!date) {
-		await interaction.editReply("Invalid duration format. Make sure to follow the format!\nExample: `1h` for 1 hour, `30m` for 30 minutes, `inf` for indefinite.");
+		await interaction.editReply(INVALID_DURATION);
 		return;
 	}
 
@@ -151,7 +139,7 @@ export default async function command(
 			`User is already on the ban list. Edited their ban instead. (case #${editNumber})${stillInServer}`,
 		);
 
-		SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber})`);
+		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has edited the ban of <@${targetUser.id}>, now until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${editNumber})`);
 		return;
 	}
 
@@ -237,4 +225,4 @@ export default async function command(
 			`An error occurred while trying to ban the user. Please ensure I have the appropriate permissions and try again.\nError: ${err instanceof Error ? err.message : String(err)}`,
 		);
 	}
-};
+}

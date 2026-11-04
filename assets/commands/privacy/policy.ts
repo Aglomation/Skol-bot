@@ -144,7 +144,7 @@ export default async function command(
             // Add footer to the last embed only
             ...(index === chunks.length - 1 && {
                 footer: {
-                    text: isEn ? "Last updated: " : "Senast uppdaterad: " + "2026-10-28",
+                    text: `${isEn ? "Last updated: " : "Senast uppdaterad: "}2026-11-01`,
                 },
             }),
         };

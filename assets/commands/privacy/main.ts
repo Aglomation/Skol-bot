@@ -14,9 +14,9 @@ const command: Command = {
 		.setDescription("Handles your privacy preferences")
 		.setContexts(InteractionContextType.Guild)
 		.addSubcommand(Policy)
-        .addSubcommand(Option)
-        .addSubcommand(DeleteMe)
-        .addSubcommand(myData),
+		.addSubcommand(Option)
+		.addSubcommand(DeleteMe)
+		.addSubcommand(myData),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await RunSubcommand(import.meta.url, interaction);

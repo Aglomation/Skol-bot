@@ -1,9 +1,9 @@
 import type { Client, GuildTextBasedChannel } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import { CreateJsonStore } from "./jsonStore.js";
-import { ParseDuration } from "./stringConvert.js";
-import type { SwedenParts } from "./swedenTime.js";
-import { GetSwedenParts, SwedenToUtc } from "./swedenTime.js";
+import { ParseDuration } from "../utils/duration.js";
+import { CreateJsonStore } from "../utils/jsonStore.js";
+import type { SwedenParts } from "../utils/swedenTime.js";
+import { GetSwedenParts, SwedenToUtc } from "../utils/swedenTime.js";
 
 export const LFG_BUTTON_ID = "lfg";
 
@@ -257,6 +257,15 @@ export async function CancelSession(client: Client, session: LfgSession, byId: s
 	const channel = GetChannel(client, session);
 	const others = [...session.going, ...session.waitlist].filter((id) => id !== byId);
 	if (channel) await Say(channel, session, `🗑️ **${session.game}** was cancelled by <@${byId}>.${others.length > 0 ? `\n${Mentions(others)}` : ""}`, others);
+}
+
+/**
+ * Deletes the sessions of a server, used when the bot has been removed from it for good
+ */
+export async function RemoveGuildFromLfg(guildId: string): Promise<void> {
+	for (const session of await GetSessions(guildId)) sessions.delete(session.id);
+
+	await SaveSessions();
 }
 
 export async function RemoveUserFromLfg(client: Client, guildId: string, userId: string): Promise<void> {

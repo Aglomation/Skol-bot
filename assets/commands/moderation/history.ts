@@ -59,7 +59,7 @@ export default async function command(
 
 	// short summary at the top
 	const counts = CountByType(actions);
-	const summary = (["warn", "mute", "softban", "note"] as const)
+	const summary = (["warn", "mute", "kick", "softban", "note"] as const)
 		.filter((t) => counts[t] > 0)
 		.map((t) => `${TYPE_INFO[t].emoji} ${counts[t]} ${TYPE_INFO[t].label.toLowerCase()}${counts[t] === 1 ? "" : "s"}`)
 		.join(" • ");

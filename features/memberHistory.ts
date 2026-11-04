@@ -1,8 +1,8 @@
 import type { Guild } from "discord.js";
-import { GetFullServerConfig } from "./configManager.js";
-import { CreateJsonStore } from "./jsonStore.js";
-import { GetSwedenParts } from "./swedenTime.js";
-import { CITIES } from "./verifyOptions.js";
+import { GetFullServerConfig } from "../utils/configManager.js";
+import { CreateJsonStore } from "../utils/jsonStore.js";
+import { GetSwedenParts } from "../utils/swedenTime.js";
+import { CITIES } from "./verify/options.js";
 
 export type Snapshot = {
 	total: number;
@@ -52,6 +52,14 @@ export async function RecordSnapshot(guild: Guild, now = Date.now()): Promise<bo
 
 	await store.Save();
 	return true;
+}
+
+/**
+ * Deletes the history of a server, used when the bot has been removed from it for good
+ */
+export async function DeleteGuildHistory(guildId: string): Promise<void> {
+	delete (await store.Get())[guildId];
+	await store.Save();
 }
 
 export async function GetSnapshots(guildId: string, days: number, now = Date.now()): Promise<[string, Snapshot][]> {

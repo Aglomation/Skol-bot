@@ -1,15 +1,15 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import { IsEmail, IsTeacherEmail } from "../../../../utils/emails.js";
+import { IsEmail, IsTeacherEmail } from "../../../../features/emails.js";
+import { CompleteVerification } from "../../../../features/verify/flow.js";
 import { SendLog } from "../../../../utils/logChannel.js";
 import { HasPermission } from "../../../../utils/permissions.js";
 import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../../../../utils/profileManager.js";
-import { CompleteVerification } from "../../../../utils/verifyFlow.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName("manual")
-		.setDescription("Manually verifies a user by setting their email and giving them the verify role")
+        .setName("manual")
+        .setDescription("Manually verifies a user by setting their email and giving them the verify role")
         .addUserOption((option) =>
             option
                 .setName("user")
@@ -30,10 +30,10 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         );
 
 export default async function command(
-	interaction: ChatInputCommandInteraction
+    interaction: ChatInputCommandInteraction
 ) {
     if (!interaction.guild) return;
-	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // Ban Members assumes you're a moderator or admin
     if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
@@ -42,6 +42,12 @@ export default async function command(
     // lowercase, emails are compared as typed so Name@lbs.se would be a different one from name@lbs.se
     const email = interaction.options.getString("email", true).trim().toLowerCase();
     const force = interaction.options.getBoolean("force") ?? false;
+
+    // a + makes an alias of another address, the same mailbox could get a second account
+    if (email.includes("+")) {
+        await interaction.editReply("Emails with a + in them are not allowed, they are aliases of another address. Use the address without it.");
+        return;
+    }
 
     // alumni can have any email, but it has to be one
     if (!IsEmail(email)) {

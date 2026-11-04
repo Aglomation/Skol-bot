@@ -4,26 +4,25 @@ import type {
 	SlashCommandSubcommandBuilder,
 } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import { FormatBirthday, HIDDEN_YEAR, TodayInSweden } from "../../../utils/birthdayUtils.js";
+import { AnnounceBirthdays, FormatBirthday, HIDDEN_YEAR, TodayInSweden } from "../../../features/birthdays.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 import { GetProfile, PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
-import { AnnounceBirthdays } from "../../repeating/birthday.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
-        .setName("set")
-        .setDescription("Sets your birthday")
-        .setDescriptionLocalizations({
-            "sv-SE": "Ändrar din födelsedag",
-        })
-        .addStringOption((option) =>
-            option
-                .setName("date")
-                .setDescription("Your birthday (YYYY-MM-DD)")
-                .setDescriptionLocalizations({
-                    "sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
-                })
-                .setRequired(true),
+	subcommand
+		.setName("set")
+		.setDescription("Sets your birthday")
+		.setDescriptionLocalizations({
+			"sv-SE": "Ändrar din födelsedag",
+		})
+		.addStringOption((option) =>
+			option
+				.setName("date")
+				.setDescription("Your birthday (YYYY-MM-DD)")
+				.setDescriptionLocalizations({
+					"sv-SE": "Din födelsedag (ÅÅÅÅ-MM-DD)",
+				})
+				.setRequired(true),
 		)
 		.addBooleanOption((option) =>
 			option
@@ -32,7 +31,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setDescriptionLocalizations({
 					"sv-SE": "Spara och visa inte ditt födelseår och din ålder",
 				}),
-        );
+		);
 
 export default async function set(
 	interaction: ChatInputCommandInteraction
@@ -59,7 +58,6 @@ export default async function set(
 		});
 		return;
 	}
-
 
 	// no years in the future, and Date.UTC treats the years 0-99 as 1900-1999
 	if (year < 1900 || year > currentYear) {

@@ -1,6 +1,6 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import { GetUpcoming } from "../../../utils/lfg.js";
+import { GetUpcoming } from "../../../features/lfg.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand.setName("list").setDescription("Shows the list of sessions");

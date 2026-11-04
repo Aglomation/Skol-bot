@@ -5,19 +5,17 @@ import type {
 	SlashCommandSubcommandBuilder,
 	TextChannel,
 } from "discord.js";
-import {
-	MessageFlags,
-	PermissionFlagsBits,
-} from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
+import { ParseDuration } from "../../../utils/duration.js";
 import { SendLog } from "../../../utils/logChannel.js";
 import { AddModAction, TimeoutLength, UntilFromDuration } from "../../../utils/moderationManager.js";
 import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
 import { PurgeChannels } from "../../../utils/purgeMessages.js";
-import { ParseDuration } from "../../../utils/stringConvert.js";
+import { DeferReply, DELETE_MESSAGES_CHOICES, INVALID_DURATION } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
-        .setName("mute")
+	subcommand
+		.setName("mute")
 		.setDescription("Mutes a user (timeout)")
 		.addUserOption((option) =>
 			option.setName("user").setDescription("User to mute").setRequired(true),
@@ -42,32 +40,19 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setName("deletemessages")
 				.setDescription("Whether to delete the user's messages")
 				.setRequired(false)
-				.setChoices(
-					{ name: "None", value: "0" },
-					{ name: "1 Hour", value: "1h" },
-					{ name: "3 Hours", value: "3h" },
-					{ name: "6 Hours", value: "6h" },
-					{ name: "12 Hours", value: "12h" },
-					{ name: "1 Day", value: "24h" },
-					{ name: "2 Days", value: "48h" },
-				),
+				.setChoices(...DELETE_MESSAGES_CHOICES),
 		)
 		.addBooleanOption((option) =>
-			option 
+			option
 				.setName("announce")
 				.setDescription("Whether to send the mute command publicly or not")
 				.setRequired(false)
 		);
 
-
 export default async function command(
 	interaction: ChatInputCommandInteraction
 ) {
-	if (interaction.options.getBoolean("announce")) {
-		await interaction.deferReply();
-	} else {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	}
+	await DeferReply(interaction);
 	if (!interaction.guild) {
 		await interaction.editReply({
 			content: "This command can only be used in a server.",
@@ -100,7 +85,7 @@ export default async function command(
 	}
 
 	if (!date) {
-		await interaction.editReply("Invalid duration format. Make sure to follow the format!\nExample: `1h` for 1 hour, `30m` for 30 minutes, `inf` for indefinite.");
+		await interaction.editReply(INVALID_DURATION);
 		return;
 	}
 
@@ -162,4 +147,4 @@ export default async function command(
 			"I got an error while trying to mute that user. Make sure my role is high enough (or my code is just bad).",
 		);
 	}
-};
+}

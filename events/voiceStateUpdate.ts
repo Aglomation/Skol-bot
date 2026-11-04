@@ -1,11 +1,11 @@
 import type { VoiceChannel, VoiceState } from "discord.js";
 import { ChannelType, Events, PermissionFlagsBits } from "discord.js";
+import { CanCreateTempChannel, ForgetTempChannel, HandOverTempChannel, IsTempChannel, SetTempOwner } from "../features/tempVoice.js";
 import { GetServerConfig } from "../utils/configManager.js";
-import { CanCreateTempChannel, ForgetTempChannel, HandOverTempChannel, IsTempChannel, SetTempOwner } from "../utils/tempVoice.js";
 
 export default {
-	name: Events.VoiceStateUpdate,
-	once: false,
+    name: Events.VoiceStateUpdate,
+    once: false,
     async execute(oldState: VoiceState, newState: VoiceState) {
         // muting, deafening and streaming also end up here, only joining, leaving and moving matters
         if (oldState.channelId === newState.channelId) return;
@@ -83,5 +83,5 @@ export default {
                 await channel.delete().catch(() => null);
             }
         }
-	},
+    },
 };

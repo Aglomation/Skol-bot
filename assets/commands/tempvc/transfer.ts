@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
+import { GetTempOwner, SetTempOwner } from "../../../features/tempVoice.js";
 import { ExplainError } from "../../../utils/errorText.js";
-import { GetTempOwner, SetTempOwner } from "../../../utils/tempVoice.js";
 import { GetTempChannel, WithChannelOption } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>

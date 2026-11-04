@@ -1,9 +1,9 @@
 import type { ButtonInteraction, GuildMember } from "discord.js";
 import { MessageFlags } from "discord.js";
 
+import { BuildStep } from "../../features/verify/flow.js";
 import { GetActiveBan } from "../../utils/moderationManager.js";
 import { GetProfileStrict } from "../../utils/profileManager.js";
-import { BuildStep } from "../../utils/verifyFlow.js";
 
 const button: Button = {
 	data: {

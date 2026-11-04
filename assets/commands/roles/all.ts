@@ -1,8 +1,8 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
+import { BuildStep } from "../../../features/verify/flow.js";
 import { GetServerConfig } from "../../../utils/configManager.js";
 import { SendLog } from "../../../utils/logChannel.js";
-import { BuildStep } from "../../../utils/verifyFlow.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -23,7 +23,7 @@ export default async function command(
 		await interaction.editReply("Du måste vara verifierad för att använda det här kommandot.");
 		return;
 	}
-	SendLog(interaction.client, interaction.guild.id, 
+	await SendLog(interaction.client, interaction.guild.id,
 		`User ${member.user.tag} (${member.id}) used the /roles all command.\n
 		Previous roles: ${member.roles.cache.map((role) => role.name).join(", ")}\n`
 	);

@@ -54,7 +54,7 @@ export default async function command(
 		recent[action.type] = (recent[action.type] ?? 0) + 1;
 
 		// notes and the unmutes/unbans dont say much about how much a mod or user is involved
-		if (action.type === "warn" || action.type === "mute" || action.type === "softban") {
+		if (action.type === "warn" || action.type === "mute" || action.type === "kick" || action.type === "softban") {
 			users.set(userId, (users.get(userId) ?? 0) + 1);
 			if (action.by) moderators.set(action.by, (moderators.get(action.by) ?? 0) + 1);
 		}

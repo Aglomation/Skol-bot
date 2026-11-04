@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 import { sql } from "drizzle-orm";
 import { db } from "./db/client.js";
 import { serverConfigTable } from "./db/schema.js";
+import { SafeError } from "./utils/errorText.js";
 import { RecordTaskRun, RegisterTask } from "./utils/taskStatus.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -122,9 +123,9 @@ async function startBot() {
 	}
 
 	const autocompletesPath = path.join(__dirname, "assets", "autocompletes");
-	const autcompleteFiles = fs.readdirSync(autocompletesPath).filter(fileFilter);
+	const autocompleteFiles = fs.readdirSync(autocompletesPath).filter(fileFilter);
 
-	for (const file of autcompleteFiles) {
+	for (const file of autocompleteFiles) {
 		const filePath = path.join(autocompletesPath, file);
 		const { default: autocomplete } = await import(
 			pathToFileURL(filePath).href
@@ -169,7 +170,7 @@ async function loadRepeatingTasks() {
 				await repeating.execute(client);
 				RecordTaskRun(name);
 			} catch (error) {
-				console.error(`[Error] Repeating task ${file}:`, error);
+				console.error(`[Error] Repeating task ${file}:`, SafeError(error));
 				RecordTaskRun(name, error);
 			}
 		};
@@ -211,7 +212,7 @@ client.once("clientReady", () => {
 
 // logs instead of crashing, the bot should keep running if one thing fails
 client.on("error", (error) => console.error("[Error] Discord client:", error));
-process.on("unhandledRejection", (reason) => console.error("[Error] Unhandled rejection:", reason));
+process.on("unhandledRejection", (reason) => console.error("[Error] Unhandled rejection:", SafeError(reason)));
 
 // Execute the function to start the bot
 startBot().catch(console.error);

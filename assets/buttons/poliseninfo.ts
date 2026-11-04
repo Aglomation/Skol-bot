@@ -1,32 +1,15 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import type { ButtonInteraction } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import type { PolisenEvent } from "../repeating/polisen.js";
-import { GetEventTime, ParsePolisenTime } from "../repeating/polisen.js";
+import { GetEventTime, IsEventPath, LoadPolisenCache, ParsePolisenTime } from "../../features/polisen.js";
 
-const CACHE_DIR = "./cache";
-const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
-
-type PolisenEventType = { lastUpdated: string | null ; mainContent: string; writer: string };
-
-async function loadCache(): Promise<Map<number, PolisenEvent>> {
-    try {
-        await fs.mkdir(CACHE_DIR, { recursive: true });
-        const data = await fs.readFile(CACHE_FILE, "utf-8");
-        const parsedData = JSON.parse(data);
-        return new Map(parsedData.map((item: PolisenEvent) => [item.id, item]));
-    } catch {
-        return new Map(); // Return empty map if file doesn't exist or is invalid
-    }
-}
+type EventDetails = { lastUpdated: string | null; mainContent: string; writer: string };
 
 /**
  * Scrapes the individual event article for updates and details.
  */
-async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | null ; mainContent: string; writer: string }> {
+async function scrapeEventDetails(url: string): Promise<EventDetails> {
     const { data } = await axios.get(`https://polisen.se${url}`, {
         timeout: 15000,
         headers: {
@@ -44,27 +27,27 @@ async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | 
         },
     });
     const $ = cheerio.load(data);
-    const contentDiv = $('div.event-page.editorial-content').eq(0);
+    const contentDiv = $("div.event-page.editorial-content").eq(0);
 
-    const lastUpdated = contentDiv.
-        find('span.text')
-            .first()
-            .text()
-            .trim() || null;
+    const lastUpdated = contentDiv
+        .find("span.text")
+        .first()
+        .text()
+        .trim() || null;
 
-    const mainContent = contentDiv.
-        find('div.text-body.editorial-html')
-            .first()
-            .text()
-            .trim() || "No additional details provided.";
+    const mainContent = contentDiv
+        .find("div.text-body.editorial-html")
+        .first()
+        .text()
+        .trim() || "No additional details provided.";
 
-    const writer = contentDiv.
-        find('div.page-meta-data')
-            .first()
-            .find('dd')
-                .first()
-                .text()
-                .trim() || "Okänd";
+    const writer = contentDiv
+        .find("div.page-meta-data")
+        .first()
+        .find("dd")
+        .first()
+        .text()
+        .trim() || "Okänd";
 
     return { lastUpdated, mainContent, writer };
 }
@@ -92,8 +75,7 @@ const formatMainContent = (text: string) => {
         })
         .join("\n");
 
-    return formatted
-
+    return formatted;
 };
 
 const truncateText = (text: string, maxLength: number) => {
@@ -108,17 +90,16 @@ const button: Button = {
     async execute(
         interaction: ButtonInteraction,
     ): Promise<void> {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-		const id = parseInt(interaction.customId.split(":")[1], 10) || null;
-		if (!id) {
-			await interaction.editReply({
-				content: "Invalid page number.",
-			});
-			return;
-		}
-        const database = await loadCache();
-        const event = database.get(id);
+        const id = parseInt(interaction.customId.split(":")[1], 10) || null;
+        if (!id) {
+            await interaction.editReply({
+                content: "Invalid event id.",
+            });
+            return;
+        }
+        const event = (await LoadPolisenCache()).find((item) => item.id === id);
         if (!event) {
             await interaction.editReply({
                 content: "Event not found in local database, erm contact Vera.",
@@ -126,8 +107,14 @@ const button: Button = {
             return;
         }
 
-		// webscrape the page for more info
-        let details: PolisenEventType;
+        // the url is put after the host, so it has to be a path (something like "@other.site" would make the bot fetch another site)
+        if (!IsEventPath(event.url)) {
+            await interaction.editReply({ content: "That event has an invalid link." });
+            return;
+        }
+
+        // webscrape the page for more info
+        let details: EventDetails;
         try {
             details = await scrapeEventDetails(event.url);
         } catch (error) {
@@ -141,7 +128,7 @@ const button: Button = {
         const time = GetEventTime(event);
 
         const embed = new EmbedBuilder()
-            
+
             .setTitle(event.name)
             .setURL(`https://polisen.se${event.url}`)
             // Put main content in the description to utilize the 4096 char limit
@@ -153,7 +140,7 @@ const button: Button = {
                 { name: "Skribent", value: writer || "Okänd", inline: true },
             )
             .setColor(0x005293)
-            .setFooter({ 
+            .setFooter({
                 text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Publicerad`,
                 iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
             })

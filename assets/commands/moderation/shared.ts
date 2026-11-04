@@ -11,6 +11,7 @@ export const TYPE_INFO: Record<ModActionType, { emoji: string; label: string; co
 	warn: { emoji: "⚠️", label: "Warn", color: 0xFFA500 },
 	mute: { emoji: "🔇", label: "Mute", color: 0xE67E22 },
 	unmute: { emoji: "🔊", label: "Unmute", color: 0x2ECC71 },
+	kick: { emoji: "👢", label: "Kick", color: 0xD35400 },
 	softban: { emoji: "🔨", label: "Ban", color: 0xE74C3C },
 	unban: { emoji: "🕊️", label: "Unban", color: 0x2ECC71 },
 	note: { emoji: "📝", label: "Note", color: 0x95A5A6 },
@@ -25,7 +26,7 @@ export const TYPE_CHOICES = (Object.keys(TYPE_INFO) as ModActionType[]).map((typ
 /**
  * Discord timestamp, shows in everyones own timezone
  */
-export function Time(ms: number, style: "f" | "R" | "d" = "f"): string {
+export function Time(ms: number, style: "f" | "F" | "R" | "d" = "f"): string {
 	return `<t:${Math.floor(ms / 1000)}:${style}>`;
 }
 
@@ -67,7 +68,7 @@ export function FormatAction(entry: NumberedAction, userId?: string): string {
  * Counts the actions that arent voided
  */
 export function CountByType(actions: ModAction[]): Record<ModActionType, number> {
-	const counts: Record<ModActionType, number> = { warn: 0, mute: 0, unmute: 0, softban: 0, unban: 0, note: 0 };
+	const counts: Record<ModActionType, number> = { warn: 0, mute: 0, unmute: 0, kick: 0, softban: 0, unban: 0, note: 0 };
 	for (const action of actions) {
 		if (!action.voided) counts[action.type]++;
 	}

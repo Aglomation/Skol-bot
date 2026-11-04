@@ -4,6 +4,7 @@ import { InteractionContextType, PermissionFlagsBits, SlashCommandBuilder } from
 import { RunSubcommand } from "../../../utils/subcommands.js";
 
 import { builder as banBuilder } from "./ban.js";
+import { builder as kickBuilder } from "./kick.js";
 import { builder as muteBuilder } from "./mute.js";
 import { builder as purgeBuilder } from "./purge.js";
 import { builder as slowmodeBuilder } from "./slowmode.js";
@@ -16,12 +17,13 @@ const command: Command = {
 		.setName("mod")
 		.setDescription("moderation commands")
 		.setContexts(InteractionContextType.Guild)
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
-        .addSubcommand(banBuilder)
-        .addSubcommand(muteBuilder)
-        .addSubcommand(warnBuilder)
-        .addSubcommand(unbanBuilder)
+		.addSubcommand(banBuilder)
+		.addSubcommand(kickBuilder)
+		.addSubcommand(muteBuilder)
+		.addSubcommand(warnBuilder)
+		.addSubcommand(unbanBuilder)
 		.addSubcommand(unmuteBuilder)
 		.addSubcommand(purgeBuilder)
 		.addSubcommand(slowmodeBuilder),

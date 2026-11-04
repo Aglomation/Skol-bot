@@ -6,22 +6,23 @@ import {
     PermissionFlagsBits,
 } from "discord.js";
 import { HasPermission } from "../../../../utils/permissions.js";
+import { GetPostChannel } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName('rules')
+        .setName("rules")
         .setDescription("Posts the server rules embed into the current channel");
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction,
 ) {
     if (!interaction.guild) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
+    if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
     const rulesEmbed = new EmbedBuilder()
-        .setAuthor({ name: 'Rules & Guidelines', iconURL: interaction.guild?.iconURL() ?? undefined })
+        .setAuthor({ name: "Rules & Guidelines", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setDescription(
             `**By being a member of this server, you agree to follow these rules.**\n` +
             `We apply common sense; if you are intentionally being disruptive, "it wasn't explicitly in the rules" will not be an excuse.\n\n` +
@@ -30,8 +31,8 @@ export default async function command(
         .setColor(Colors.Red)
         .addFields(
             {
-                name: '*1. CONDUCT & RESPECT*',
-                value: 
+                name: "*1. CONDUCT & RESPECT*",
+                value:
                     `​\n**1 § Harassment & Bullying:**\n` +
                     `Zero tolerance for bullying, exclusion, or personal attacks. We do not tolerate racism, sexism, homophobia, transphobia, or any form of hate speech.\n` +
                     `*Penalty:* Instant Permanent Ban for hate speech/severe attacks. For other harassment: (1-3d) Mute -> Permanent Ban.\n\n` +
@@ -43,7 +44,7 @@ export default async function command(
                     `*Penalty:* Instant non-appealable Permanent Ban.\n​`
             },
             {
-                name: '*2. CONTENT & MEDIA*',
+                name: "*2. CONTENT & MEDIA*",
                 value:
                     `​\n**1 § NSFW (18+):**\n` +
                     `All content (images, text, links) that is pornographic, violent, or otherwise inappropriate is strictly prohibited. This is a school-aligned community.\n` +
@@ -56,7 +57,7 @@ export default async function command(
                     `*Penalty:* Instant Ban.\n​`
             },
             {
-                name: '*3. CHAT & COMMUNICATION*',
+                name: "*3. CHAT & COMMUNICATION*",
                 value:
                     `​\n**1 § Spam & Disruptions:**\n` +
                     `No mass-pings, excessive caps, or emoji/image spamming. Screaming or playing loud music/noises in voice channels is prohibited.\n` +
@@ -72,14 +73,14 @@ export default async function command(
                     `*Penalty:* Verbal Reminder -> (1-3d) Mute.\n​`
             },
             {
-                name: '*4. MEMBERSHIP*',
+                name: "*4. MEMBERSHIP*",
                 value:
                     `​\n**1 § Profile Integrity:**\n` +
                     `Your username and profile picture must not be offensive or impersonate others.\n` +
                     `*Penalty:* Request to change -> Kick.\n`
             },
             {
-                name: '*5. PRIVACY POLICY*',
+                name: "*5. PRIVACY POLICY*",
                 value:
                     `​\n**1 § Privacy Policy:**\n` +
                     `\`/privacy policy\` to review the privacy policy.\n` +
@@ -90,28 +91,18 @@ export default async function command(
                     `\`/privacy deleteme\` to delete your data and revoke server access.\n`
             }
         )
-        .setFooter({ 
-            text: 'Please treat others with kindness and help us keep the vibes positive!\n' +
-                'If you have any questions, contact a moderator or administrator.\n' +
-                'If you see someone breaking the rules, please open a #🚩・report!\n' +
-                'These rules were last updated on 8/7/2026.' 
+        .setFooter({
+            text: "Please treat others with kindness and help us keep the vibes positive!\n" +
+                "If you have any questions, contact a moderator or administrator.\n" +
+                "If you see someone breaking the rules, please open a #🚩・report!\n" +
+                "These rules were last updated on 8/7/2026."
         });
 
-
-    const channel = interaction.channel;
-    if (!channel?.isTextBased() || channel.isDMBased()) {
-        await interaction.editReply("This command must be run in a server text channel.");
-        return;
-    }
-
-    const botMember = interaction.guild.members.me;
-    if (!botMember || !channel.permissionsFor(botMember).has(PermissionFlagsBits.SendMessages)) {
-        await interaction.editReply("I don't have permission to send messages in this channel.");
-        return;
-    }
+    const channel = await GetPostChannel(interaction);
+    if (!channel) return;
 
     await channel.send({ embeds: [rulesEmbed] });
     await channel.send("**Channels mentioned in the rules:**\n§2.2: <#1497140071391039520>\n§3.4: <#1497140071864864769>\nFooter: <#1499885683995840683>");
 
     await interaction.deleteReply();
-};
+}

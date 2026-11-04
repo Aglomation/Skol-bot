@@ -1,5 +1,5 @@
 import type { GuildMember, StringSelectMenuInteraction } from "discord.js";
-import { BuildColorPicker, COLOR_SELECT_ID, GetColorRoles, GetCurrentColor, ParseChoice } from "../../utils/colorRoles.js";
+import { BuildColorPicker, COLOR_SELECT_ID, GetColorRoles, GetCurrentColor, ParseChoice } from "../../features/colorRoles.js";
 import { IsVerified } from "../../utils/permissions.js";
 
 const selectMenu: SelectMenu = {

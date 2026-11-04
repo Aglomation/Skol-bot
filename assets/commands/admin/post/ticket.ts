@@ -8,34 +8,26 @@ import {
     MessageFlags,
     PermissionFlagsBits,
 } from "discord.js";
+import { TICKET_BUTTON_ID } from "../../../../features/tickets.js";
 import { GetServerConfig } from "../../../../utils/configManager.js";
 import { HasPermission } from "../../../../utils/permissions.js";
-import { TICKET_BUTTON_ID } from "../../../../utils/tickets.js";
+import { GetPostChannel } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName('ticket')
+        .setName("ticket")
         .setDescription("Posts the ticket button into the current channel");
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction,
 ) {
     if (!interaction.guild) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
+    if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
-    const channel = interaction.channel;
-    if (!channel?.isTextBased() || channel.isDMBased()) {
-        await interaction.editReply("This command must be run in a server text channel.");
-        return;
-    }
-    
-    const botMember = interaction.guild.members.me;
-    if (!botMember || !channel.permissionsFor(botMember).has(PermissionFlagsBits.SendMessages)) {
-        await interaction.editReply("I don't have permission to send messages in this channel.");
-        return;
-    }
+    const channel = await GetPostChannel(interaction);
+    if (!channel) return;
 
     // a button that makes tickets in a category that isn't set would only give errors
     const categoryId = await GetServerConfig(interaction.guild.id, "ticketCategory");
@@ -82,4 +74,4 @@ export default async function command(
     }
 
     await interaction.deleteReply();
-};
+}

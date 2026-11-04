@@ -6,9 +6,10 @@ import {
 	COLOR_BUTTON_ID,
 	GetColorRoles,
 	GetCurrentColor,
+	HexText,
 	ParseChoice,
 	SetColor,
-} from "../../utils/colorRoles.js";
+} from "../../features/colorRoles.js";
 import { IsVerified } from "../../utils/permissions.js";
 
 const button: Button = {
@@ -23,54 +24,54 @@ const button: Button = {
 		}
 
 		if (action === "preview") {
-            const colors = GetColorRoles(interaction.guild);
-            if (!colors) {
-                await interaction.reply({ content: "Det finns inga färgroller på servern längre.", embeds: [], components: [], flags: MessageFlags.Ephemeral });
-                return;
-            }
-            await interaction.reply({ content: "Skickar alla färger, vänligen kolla på stapeln till vänster om embeden.", embeds: [], components: [], flags: MessageFlags.Ephemeral });
-            
-            // Loop through color options in chunks of 10 (The maximum amount of embeds per message)
-            for (let i = 0; i < colors.options.length; i += 10) {
-                const chunk = colors.options.slice(i, i + 10);
+			const colors = GetColorRoles(interaction.guild);
+			if (!colors) {
+				await interaction.reply({ content: "Det finns inga färgroller på servern längre.", embeds: [], components: [], flags: MessageFlags.Ephemeral });
+				return;
+			}
+			await interaction.reply({ content: "Skickar alla färger, vänligen kolla på stapeln till vänster om embeden.", embeds: [], components: [], flags: MessageFlags.Ephemeral });
 
-                const embeds = chunk.map(color => 
-                    new EmbedBuilder()
-                        .setColor(color.hex === 0xFFFFFF ? 0xFFFFFE : color.hex)
-                        .setDescription(`⬅️ — ${color.label} \`#${color.hex.toString(16).padStart(6, "0").toUpperCase()}\``)
-                );
+			// Loop through color options in chunks of 10 (The maximum amount of embeds per message)
+			for (let i = 0; i < colors.options.length; i += 10) {
+				const chunk = colors.options.slice(i, i + 10);
 
-                const buttons = chunk.map(color => 
-                    new ButtonBuilder()
-                        .setCustomId(`${COLOR_BUTTON_ID}:apply:${color.roleId}`)
-                        .setLabel(color.label)
-                        .setStyle(ButtonStyle.Secondary)
-                );
+				const embeds = chunk.map(color =>
+					new EmbedBuilder()
+						.setColor(color.hex === 0xFFFFFF ? 0xFFFFFE : color.hex)
+						.setDescription(`⬅️ — ${color.label} \`${HexText(color.hex)}\``)
+				);
 
-                const components = [];
-                for (let j = 0; j < buttons.length; j += 5) {
-                    const rowButtons = buttons.slice(j, j + 5);
-                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(rowButtons);
-                    components.push(row);
-                }
+				const buttons = chunk.map(color =>
+					new ButtonBuilder()
+						.setCustomId(`${COLOR_BUTTON_ID}:apply:${color.roleId}`)
+						.setLabel(color.label)
+						.setStyle(ButtonStyle.Secondary)
+				);
 
-                // Send the chunk
-                await interaction.followUp({ embeds, components, flags: MessageFlags.Ephemeral });
-            }
+				const components = [];
+				for (let j = 0; j < buttons.length; j += 5) {
+					const rowButtons = buttons.slice(j, j + 5);
+					const row = new ActionRowBuilder<ButtonBuilder>().addComponents(rowButtons);
+					components.push(row);
+				}
 
-            // Finally, send the "Ta bort färg" message
-            const removeEmbed = new EmbedBuilder()
-                .setDescription(`❌ — Ta bort färg`);
-            const removeButton = new ButtonBuilder()
-                .setCustomId(`${COLOR_BUTTON_ID}:apply:none`)
-                .setLabel("Ta bort färg")
-                .setStyle(ButtonStyle.Danger);
-            const removeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(removeButton);
-            
-            await interaction.followUp({ embeds: [removeEmbed], components: [removeRow], flags: MessageFlags.Ephemeral });
+				// Send the chunk
+				await interaction.followUp({ embeds, components, flags: MessageFlags.Ephemeral });
+			}
 
-            return;
-        }
+			// Finally, send the "Ta bort färg" message
+			const removeEmbed = new EmbedBuilder()
+				.setDescription(`❌ — Ta bort färg`);
+			const removeButton = new ButtonBuilder()
+				.setCustomId(`${COLOR_BUTTON_ID}:apply:none`)
+				.setLabel("Ta bort färg")
+				.setStyle(ButtonStyle.Danger);
+			const removeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(removeButton);
+
+			await interaction.followUp({ embeds: [removeEmbed], components: [removeRow], flags: MessageFlags.Ephemeral });
+
+			return;
+		}
 
 		const member = interaction.member as GuildMember;
 		if (action !== "apply" || !(await IsVerified(member))) {

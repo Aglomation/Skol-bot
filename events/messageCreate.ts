@@ -4,13 +4,15 @@ import type {
     Message,
 } from "discord.js";
 import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
+import { MaskEmail } from "../features/emails.js";
+import { IsSchoolEmail } from "../features/emails.js";
+import { CompleteVerification } from "../features/verify/flow.js";
 import { GetServerConfig } from "../utils/configManager.js";
-import { IsSchoolEmail } from "../utils/emails.js";
+import { SafeError } from "../utils/errorText.js";
 import { SendLog, SendToChannel } from "../utils/logChannel.js";
 import { AddModAction } from "../utils/moderationManager.js";
 import { FindByValue, PROFILE_DUPLICATE, UpdateProfile } from "../utils/profileManager.js";
 import { PurgeChannels } from "../utils/purgeMessages.js";
-import { CompleteVerification } from "../utils/verifyFlow.js";
 
 const CONFIG = {
     CHANNELS: {
@@ -31,7 +33,7 @@ export default {
             if (message.author.id !== client.user?.id && !message.author.bot) {
                 await handleDMLogging(message);
             }
-            return; 
+            return;
         }
 
         // comes from the cache so it doesnt hit the database on every message
@@ -56,7 +58,7 @@ export default {
 
 async function handleDMLogging(message: Message) {
     // dms only goes to the private log channel, by its id (SendLog wants a server)
-    const attachments = message.attachments.size > 0 ? `\n(${message.attachments.size} attachment(s)` : "";
+    const attachments = message.attachments.size > 0 ? `\n(${message.attachments.size} attachment(s))` : "";
     const logged = await SendToChannel(
         message.client,
         CONFIG.CHANNELS.PRIVATELOG,
@@ -137,7 +139,7 @@ async function handleVerification(message: Message) {
         }
 
         if (profile.email) {
-            await message.reply(`This user already has an email tied to their account.\n[${profile.email}]`).catch(() => null);
+            await message.reply(`This user already has an email tied to their account.\n[${MaskEmail(profile.email)}]`).catch(() => null);
             return;
         }
 
@@ -153,7 +155,7 @@ async function handleVerification(message: Message) {
         const saved = await UpdateProfile(userId, profile.serverId, { email });
         if (saved === PROFILE_DUPLICATE) {
             // the email is unique, so another account already uses it, nobody gets verified on it twice
-            await message.reply(`This email is already linked to another account.\n[${email}]`).catch(() => null);
+            await message.reply(`This email is already linked to another account.\n[${MaskEmail(email)}]`).catch(() => null);
             await sendEmailInUseNotice(client, profile.serverId, userId);
             return;
         }
@@ -179,7 +181,7 @@ async function handleVerification(message: Message) {
         await message.delete().catch(() => null);
 
     } catch (error) {
-        console.error("Error processing verification webhook:", error);
+        console.error("Error processing verification webhook:", SafeError(error));
     }
 }
 
@@ -187,11 +189,16 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
     await message.reply(`Sending dm to <@${userId}> about invalid email`).catch(() => null);
     const supportChannel = await GetServerConfig(message.guild?.id || "", "supportChannel") as string | undefined;
 
+    // a + is an alias of another address, which is not allowed, and the reason is not the ending
+    const reason = email.includes("+")
+        ? `\`${email}\` innehåller ett +, använd mailen utan + och försök igen!`
+        : `\`${email}\` Slutar inte med @lbs.se, byt konto och försök igen!`;
+
     const embed = new EmbedBuilder()
         .setTitle("❌ Ogiltig LBS-mail")
         .setDescription(
             `Mailen du försökte verifiera med är inte en giltig LBS-mail.\n\n` +
-            `\`${email}\` Slutar inte med @lbs.se, byt konto och försök igen!` +
+            reason +
             (supportChannel ? `\n\n*Problem? Skapa en ticket i <#${supportChannel}>.*` : "")
         )
         .setColor(0xFF0000);
@@ -204,9 +211,9 @@ async function sendInvalidEmailNotice(message: Message, userId: string, email: s
 
     const member = message.guild?.members.cache.get(userId);
     if (member) {
-        await member.send({ 
-            embeds: [embed], 
-            components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)] 
+        await member.send({
+            embeds: [embed],
+            components: [new ActionRowBuilder<ButtonBuilder>().addComponents(button)]
         }).catch(() => null);
     }
 }

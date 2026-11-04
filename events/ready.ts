@@ -1,6 +1,6 @@
 import type { Client } from "discord.js";
 import { Events } from "discord.js";
-import { SweepTempChannels } from "../utils/tempVoice.js";
+import { SweepTempChannels } from "../features/tempVoice.js";
 
 export default {
 	name: Events.ClientReady,

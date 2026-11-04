@@ -1,6 +1,7 @@
-import { eq, isNotNull, isNull } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { serverConfigTable } from "../db/schema.js";
+import { SafeError } from "./errorText.js";
 
 export type ServerConfig = typeof serverConfigTable.$inferSelect;
 export type ServerConfigKey = keyof ServerConfig;
@@ -73,7 +74,7 @@ export async function UpdateServerConfig(
 		else ClearServerConfigCache(id);
 	} catch (err: unknown) {
 		ClearServerConfigCache(id);
-		console.error("Error upserting server config:", err);
+		console.error("Error upserting server config:", SafeError(err));
 	}
 }
 
@@ -103,7 +104,7 @@ export async function GetFullServerConfig(id: string, force = false): Promise<Se
 				SaveToCache(id, config);
 				return config;
 			} catch (error) {
-				console.error("Error getting server config:", error);
+				console.error("Error getting server config:", SafeError(error));
 				return force ? null : (cached?.config ?? null);
 			} finally {
 				pending.delete(id);
@@ -132,60 +133,15 @@ export async function GetServerConfig<K extends ServerConfigKey>(id: string, key
 		}
 		return serverConfig[key] ?? null;
 	} catch (error) {
-		console.error("Error getting value by key:", error);
+		console.error("Error getting value by key:", SafeError(error));
 		return null;
 	}
 }
 
 /**
- * Find a server config by a specific field
- * @param key The server config field to search by
- * @param value The value to search for
- * @returns The server config matching the search
- */
-export async function FindByValue(
-	key: ServerConfigKey,
-	value: string | null,
-): Promise<ServerConfig | null> {
-	try {
-		const query = db.select().from(serverConfigTable).limit(1);
-		const result = await (value === null
-			? query.where(isNull(serverConfigTable[key]))
-			: query.where(eq(serverConfigTable[key], value)));
-		return result.length > 0 ? result[0] : null;
-	} catch (error) {
-		console.error("Error finding server config by value:", error);
-		return null;
-	}
-}
-
-/**
- * Find all server configs by a specific field
- * @param key The field to search by
- * @param value The value to search for
- * @returns An array of server configs matching the search
- */
-export async function FindAllByValue(
-	key: ServerConfigKey,
-	value: string | null,
-): Promise<ServerConfig[]> {
-	try {
-		const query = db.select().from(serverConfigTable);
-		const result = await (value === null
-			? query.where(isNull(serverConfigTable[key]))
-			: query.where(eq(serverConfigTable[key], value)));
-		return result.length > 0 ? result : [];
-	} catch (error) {
-		console.error("Error finding server config by value:", error);
-		return [];
-	}
-}
-
-/**
- * Find all server configs by a specific field
- * @param key The field to search by
- * @param value The value to search for
- * @returns An array of server configs matching the search criteria
+ * Find all server configs that have a value in a specific field
+ * @param key The field to look at
+ * @returns An array of server configs that have a value there
  */
 export async function FindAllNonNullKeysConfig(
 	key: ServerConfigKey,
@@ -197,19 +153,15 @@ export async function FindAllNonNullKeysConfig(
 			.where(isNotNull(serverConfigTable[key]));
 		return result.length > 0 ? result : [];
 	} catch (error) {
-		console.error("Error finding all non-null keys:", error);
+		console.error("Error finding all non-null keys:", SafeError(error));
 		return [];
 	}
 }
 
 /**
- * Remove a server config
+ * Remove the config of a server, used when the bot has been removed from it for good
  */
 export async function DeleteServerConfig(id: string): Promise<void> {
-	try {
-		await db.delete(serverConfigTable).where(eq(serverConfigTable.id, id));
-		ClearServerConfigCache(id);
-	} catch (error) {
-		console.error("Error deleting server config:", error);
-	}
+	await db.delete(serverConfigTable).where(eq(serverConfigTable.id, id));
+	ClearServerConfigCache(id);
 }

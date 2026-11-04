@@ -10,9 +10,10 @@ import {
 import { SendLog } from "../../../utils/logChannel.js";
 import { AddModAction } from "../../../utils/moderationManager.js";
 import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
+import { DeferReply } from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("warn")
 		.setDescription("Warns a user in the server")
 		.addUserOption((option) =>
@@ -29,11 +30,11 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setRequired(true),
 		)
 		.addBooleanOption((option) =>
-			option 
+			option
 				.setName("announce")
 				.setDescription("Whether to send the warning publicly or not")
 				.setRequired(false)
-		)
+		);
 
 export default async function command(
 	interaction: ChatInputCommandInteraction
@@ -45,11 +46,7 @@ export default async function command(
 		});
 		return;
 	}
-	if (interaction.options.getBoolean("announce")) {
-		await interaction.deferReply();
-	} else {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	}
+	await DeferReply(interaction);
 
 	// Ensure interaction.member is treated as a GuildMember to access permissions
 	const executor = interaction.member as GuildMember;
@@ -102,4 +99,4 @@ export default async function command(
 			`An error occurred while trying to warn the user. Please ensure I have the appropriate permissions and try again.\nError: ${err instanceof Error ? err.message : String(err)}`,
 		);
 	}
-};
+}

@@ -2,7 +2,7 @@ import { bigint, boolean, jsonb, pgTable, unique, varchar } from "drizzle-orm/pg
 
 // Everything the moderators do to a user gets saved as one of these in user_profiles.moderation
 // The case number is just the position in the list (#1 is the first one), entries are never deleted so the numbers stay the same
-export type ModActionType = "warn" | "mute" | "unmute" | "softban" | "unban" | "note";
+export type ModActionType = "warn" | "mute" | "unmute" | "kick" | "softban" | "unban" | "note";
 
 export type ModAction = {
 	type: ModActionType;
@@ -13,6 +13,13 @@ export type ModAction = {
 	dm?: boolean; // only saved if the dm failed (false)
 	voided?: { by: string; at: number; reason: string }; // set if a mod voided the case
 };
+
+// What happens to the data of a member when they leave, saved in user_profiles.privacyOption
+export const PRIVACY_PREFERENCE = {
+	KEEP_ALL: 1,
+	DELETE_OPTIONAL: 2, // Default
+	DELETE_ALL: 3,
+} as const;
 
 export const serverConfigTable = pgTable("server_config", {
 	id: varchar("id", { length: 255 }).primaryKey().notNull(),

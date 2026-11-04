@@ -5,7 +5,7 @@ import type{
 
 import { MessageFlags } from "discord.js";
 
-import { PRIVACY_PREFERENCE } from "../../../utils/privacyOptions.js";
+import { PRIVACY_PREFERENCE } from "../../../db/schema.js";
 import { PROFILE_FAILED, UpdateProfile } from "../../../utils/profileManager.js";
 
 const privacyChoices = [
@@ -28,7 +28,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         );
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction,
 ) {
     if (!interaction.guild) {
         await interaction.reply({
@@ -37,7 +37,7 @@ export default async function command(
         });
         return;
     }
-    
+
     const optionValue = interaction.options.getInteger("option", true);
     const selectedChoiceName = privacyChoices.find(c => c.value === optionValue)?.name;
 
@@ -54,4 +54,4 @@ export default async function command(
         content: `Your privacy preference has been updated to: **${selectedChoiceName}**`,
         flags: MessageFlags.Ephemeral,
     });
-};
+}

@@ -11,10 +11,10 @@ import {
 	OverwriteType,
 	PermissionFlagsBits,
 } from "discord.js";
-import { GetServerConfig } from "./configManager.js";
-import { ExplainError } from "./errorText.js";
-import { SendLog, SendToChannel } from "./logChannel.js";
-
+import { GetServerConfig } from "../utils/configManager.js";
+import { ExplainError, SafeError } from "../utils/errorText.js";
+import { SendLog, SendToChannel } from "../utils/logChannel.js";
+import { IsStaff } from "../utils/permissions.js";
 
 export const TICKET_BUTTON_ID = "ticket";
 
@@ -32,115 +32,98 @@ const TICKET_PERMISSIONS = [
 ];
 
 export interface TicketTopicData {
-    ownerId: string | null;
-    displayName: string | null;
-    claimerId: string | null;
+	ownerId: string | null;
+	displayName: string | null;
+	claimerId: string | null;
 }
 
+const TOPIC_ID = /^\d{15,25}$/;
+
 /**
- * Parses the full channel topic into structured data.
+ * Reads the topic of a ticket channel ("ticket:<owner> | displayName:<name> | claimed:<staff>")
+ * The ids have to be real ids, the topic can be edited by anyone with Manage Channels
  */
 export function ParseTicketTopic(topic: string | null | undefined): TicketTopicData {
-    if (!topic) {
-        return { ownerId: null, displayName: null, claimerId: null };
-    }
+	const data: TicketTopicData = { ownerId: null, displayName: null, claimerId: null };
+	if (!topic) return data;
 
-    const parts = topic.split("|").map((p) => p.trim());
+	for (const part of topic.split("|").map((item) => item.trim())) {
+		if (part.startsWith("ticket:")) {
+			const id = part.slice("ticket:".length).trim();
+			if (TOPIC_ID.test(id)) data.ownerId = id;
+		} else if (part.startsWith("displayName:")) {
+			data.displayName = part.slice("displayName:".length).trim() || null;
+		} else if (part.startsWith("claimed:")) {
+			const id = part.slice("claimed:".length).trim();
+			if (TOPIC_ID.test(id)) data.claimerId = id;
+		}
+	}
 
-    let ownerId: string | null = null;
-    let displayName: string | null = null;
-    let claimerId: string | null = null;
-
-    for (const part of parts) {
-        if (part.startsWith("ticket:")) {
-            ownerId = part.replace("ticket:", "").trim();
-        } else if (part.startsWith("displayName:")) {
-            displayName = part.replace("displayName:", "").trim();
-        } else if (part.startsWith("claimed:")) {
-            claimerId = part.replace("claimed:", "").trim();
-        }
-    }
-
-    return { ownerId, displayName, claimerId };
+	return data;
 }
 
 /**
- * Rebuilds and sets the channel topic from structured data parts.
+ * Writes the topic of a ticket channel, only when it changed because discord rate limits topic changes hard
  */
 async function SaveTicketTopic(channel: TextChannel, data: TicketTopicData): Promise<void> {
-    const parts: string[] = [];
+	const parts: string[] = [];
 
-    if (data.ownerId) {
-        parts.push(`ticket:${data.ownerId}`);
-    }
-    if (data.displayName) {
-        parts.push(`displayName:${data.displayName}`);
-    }
-    if (data.claimerId) {
-        parts.push(`claimed:${data.claimerId}`);
-    }
+	if (data.ownerId) parts.push(`ticket:${data.ownerId}`);
+	// the topic is split on | so it can't be in the name
+	if (data.displayName) parts.push(`displayName:${data.displayName.replace(/\|/g, "/")}`);
+	if (data.claimerId) parts.push(`claimed:${data.claimerId}`);
 
-    const newTopic = parts.join(" | ");
-
-    if (newTopic !== channel.topic) {
-        await channel.setTopic(newTopic);
-    }
+	const topic = parts.join(" | ");
+	if (topic !== channel.topic) await channel.setTopic(topic);
 }
 
 /**
  * Who opened the ticket
- * @returns the user id of the owner if it is a ticket
  * @returns null if it isn't a ticket
  */
 export function GetTicketOwner(channel: GuildBasedChannel): string | null {
-    if (channel.type !== ChannelType.GuildText) return null;
-    return ParseTicketTopic(channel.topic).ownerId;
+	if (channel.type !== ChannelType.GuildText) return null;
+
+	return ParseTicketTopic(channel.topic).ownerId;
 }
 
 /**
  * A ticket is a text channel in the ticket category that has an owner in its topic
- * @returns true if it is a ticket channel
+ * Other channels an admin put in the category are not tickets, so nobody can close them
  */
 export function IsTicketChannel(channel: GuildBasedChannel, categoryId: string): channel is TextChannel {
-    return channel.type === ChannelType.GuildText && channel.parentId === categoryId && GetTicketOwner(channel) !== null;
+	return channel.type === ChannelType.GuildText && channel.parentId === categoryId && GetTicketOwner(channel) !== null;
 }
 
 /**
- * Gets the staff member who claimed the ticket, or null if it isn't claimed
- * @returns the user id of the claimer if it is a ticket
- * @returns null if it isn't a ticket or if it isn't claimed
+ * The staff member who took the ticket, it is kept in the topic after the owner
  */
 export function GetTicketClaimer(channel: TextChannel): string | null {
-    return ParseTicketTopic(channel.topic).claimerId;
+	return ParseTicketTopic(channel.topic).claimerId;
 }
 
-/**
- * Sets or clears the staff member who claimed the ticket
- */
 export async function SetTicketClaimer(channel: TextChannel, userId: string | null): Promise<void> {
-    const data = ParseTicketTopic(channel.topic);
-    data.claimerId = userId;
-    await SaveTicketTopic(channel, data);
+	const data = ParseTicketTopic(channel.topic);
+	data.claimerId = userId;
+	await SaveTicketTopic(channel, data);
 }
 
 /**
- * Checks if the ticket is closed by checking if the owner is blocked from sending messages.
+ * A closed ticket is one where the owner can't write anymore, closing it stops everyone, so this is not kept in the topic
  */
 export function IsTicketClosed(channel: TextChannel): boolean {
-    const ownerId = GetTicketOwner(channel);
-    if (!ownerId) return false;
+	const ownerId = GetTicketOwner(channel);
+	if (!ownerId) return false;
 
-    const overwrite = channel.permissionOverwrites.cache.get(ownerId);
-    // If the owner has an explicit deny for SendMessages, the ticket is closed
-    return overwrite?.deny.has(PermissionFlagsBits.SendMessages) ?? false;
+	return channel.permissionOverwrites.cache.get(ownerId)?.deny.has(PermissionFlagsBits.SendMessages) ?? false;
 }
 
 export function BuildClosedRows(): ActionRowBuilder<ButtonBuilder>[] {
 	return [
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:delete`).setLabel("Delete ticket").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
-			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:open`).setLabel("Open ticket").setEmoji("🔓").setStyle(ButtonStyle.Success)
-		)
+			new ButtonBuilder().setCustomId(`${TICKET_BUTTON_ID}:open`).setLabel("Open ticket").setEmoji("🔓").setStyle(ButtonStyle.Success),
+		),
 	];
 }
 
@@ -155,18 +138,6 @@ export function BuildTicketRows(claimed: boolean): ActionRowBuilder<ButtonBuilde
 				.setStyle(ButtonStyle.Secondary),
 		),
 	];
-}
-
-/**
- * Staff are the admins and the people with the mod or admin role of the server
- */
-export async function IsStaff(member: GuildMember): Promise<boolean> {
-	if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-
-	const modRoleId = await GetServerConfig(member.guild.id, "modRoleId");
-	const adminRoleId = await GetServerConfig(member.guild.id, "adminRoleId");
-
-	return [modRoleId, adminRoleId].some((id) => !!id && member.roles.cache.has(id));
 }
 
 /**
@@ -284,12 +255,12 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 				// only the owner and the staff role, nobody else that ends up in the text
 				allowedMentions: { users: [user.id], roles: pingRoleId ? [pingRoleId] : [] },
 			})
-			.catch((error) => console.error("Could not send the welcome message in a ticket:", error));
+			.catch((error) => console.error("Could not send the welcome message in a ticket:", SafeError(error)));
 
 		await interaction.editReply(`Your ticket has been created: <#${channel.id}>`);
 		await SendLog(interaction.client, guild.id, `<@${user.id}> opened a ticket: <#${channel.id}>`);
 	} catch (error) {
-		console.error("Could not create a ticket:", error);
+		console.error("Could not create a ticket:", SafeError(error));
 		await interaction.editReply("Something went wrong while making your ticket, please contact a moderator.").catch(() => null);
 	}
 }
@@ -316,7 +287,7 @@ export function CloseConfirmRow(): ActionRowBuilder<ButtonBuilder> {
 }
 
 // the messages of a ticket as text, oldest first
-async function BuildTranscript(channel: TextChannel, ownerId: string | null, closedBy: User): Promise<string> {
+async function BuildTranscript(channel: TextChannel, ownerId: string | null, by: User, label: string): Promise<string> {
 	const messages: Message[] = [];
 	let before: string | undefined;
 	let reachedStart = false;
@@ -339,7 +310,7 @@ async function BuildTranscript(channel: TextChannel, ownerId: string | null, clo
 	const lines = [
 		`Ticket: ${channel.name}`,
 		`Owner: ${ownerId}`,
-		`Closed by: ${closedBy.username} (${closedBy.id}) at ${time(Date.now())}`,
+		`${label}: ${by.username} (${by.id}) at ${time(Date.now())}`,
 		...(reachedStart ? [] : [`The ${messages.length} newest messages are in here, older ones are left out.`]),
 		"",
 	];
@@ -373,6 +344,65 @@ function BuildRatingRow(guildId: string, claimerId: string | null): ActionRowBui
 }
 
 /**
+ * The messages of a ticket as a text file
+ * @param label What the person did with it, "Closed by" or "Requested by"
+ */
+export async function BuildTranscriptFile(channel: TextChannel, by: User, label: string): Promise<AttachmentBuilder> {
+	const transcript = await BuildTranscript(channel, GetTicketOwner(channel), by, label);
+
+	return new AttachmentBuilder(Buffer.from(transcript, "utf-8"), { name: `${channel.name}.txt` });
+}
+
+/**
+ * Takes a ticket for a staff member or lets go of it, and updates the buttons in the ticket
+ * @param panel The message with the close and claim buttons, it is looked for if it isn't given
+ * @returns null if it worked, otherwise why it didn't
+ */
+export async function ChangeClaim(channel: TextChannel, member: GuildMember, claiming: boolean, panel?: Message | null): Promise<string | null> {
+	if (!(await IsStaff(member))) return "Only the staff can do that.";
+
+	const claimer = GetTicketClaimer(channel);
+	if (claiming && claimer === member.id) return "You are already handling this ticket.";
+	if (claiming && claimer) return `<@${claimer}> is already handling this ticket.`;
+	if (!claiming && !claimer) return "Nobody is handling this ticket.";
+	if (!claiming && claimer !== member.id) return `<@${claimer}> is handling this ticket, only they can let go of it.`;
+
+	try {
+		await SetTicketClaimer(channel, claiming ? member.id : null);
+	} catch (error) {
+		return `I couldn't change that: ${ExplainError(error)}`;
+	}
+
+	// the buttons say Claim or Unclaim, and the first message shows who is handling it
+	const message = panel ?? (await FindTicketPanel(channel));
+	const embed = message?.embeds[0];
+	await message
+		?.edit({
+			embeds: embed ? [EmbedBuilder.from(embed).setFooter(claiming ? { text: `Claimed by ${member.displayName}` } : null)] : undefined,
+			components: BuildTicketRows(claiming),
+		})
+		.catch(() => null);
+
+	await channel
+		.send({
+			content: claiming ? `✋ <@${member.id}> will help with this ticket.` : `<@${member.id}> is no longer handling this ticket.`,
+			allowedMentions: { parse: [] },
+		})
+		.catch(() => null);
+
+	return null;
+}
+
+/**
+ * The first message of a ticket, the one the bot sent with the close and claim buttons
+ */
+async function FindTicketPanel(channel: TextChannel): Promise<Message | null> {
+	const first = (await channel.messages.fetch({ after: "0", limit: 1 }).catch(() => null))?.first();
+
+	return first && first.author.id === channel.client.user.id && first.components.length > 0 ? first : null;
+}
+
+/**
  * Saves a copy of the messages in the log channel and deletes the ticket
  * The ticket is only deleted if the copy was saved, or if there is no log channel
  * @returns Why it couldn't be closed, null if it was
@@ -384,8 +414,7 @@ export async function CloseTicket(channel: TextChannel, closedBy: User, reason?:
 		const logChannelId = await GetServerConfig(channel.guild.id, "logChannel");
 
 		if (logChannelId) {
-			const transcript = await BuildTranscript(channel, ownerId, closedBy);
-			const file = new AttachmentBuilder(Buffer.from(transcript, "utf-8"), { name: `${channel.name}.txt` });
+			const file = await BuildTranscriptFile(channel, closedBy, "Closed by");
 
 			const saved = await SendToChannel(
 				channel.client,
@@ -421,7 +450,7 @@ export async function CloseTicket(channel: TextChannel, closedBy: User, reason?:
 
 			await owner
 				?.send({
-					content: `## Your ticket in ${channel.guild.name} has been closed\n${why}${canRate ? "\n\nHow was the help? The staff can see who rated." : ""}`,
+					content: `## Your ticket in ${channel.guild.name} has been closed\n${why}${canRate ? "\n\nHow was the help? The staff can see who rated.\nYou can also send feedback in this DM to send it to staff." : ""}`,
 					components: canRate ? [BuildRatingRow(channel.guild.id, claimerId)] : [],
 				})
 				.catch(() => null);
@@ -435,30 +464,23 @@ export async function CloseTicket(channel: TextChannel, closedBy: User, reason?:
 
 		return null;
 	} catch (error) {
-		console.error("Could not close the ticket:", error);
+		console.error("Could not close the ticket:", SafeError(error));
 		return `Could not close the ticket: ${ExplainError(error)}`;
 	}
 }
 
+/**
+ * Opens a closed ticket again, the owner and everyone that was added can write in it
+ * @returns null if it worked, otherwise why it didn't
+ */
 export async function OpenTicket(channel: TextChannel, openedBy: User, reason?: string): Promise<string | null> {
 	if (!IsTicketClosed(channel)) return "This ticket is already open.";
 
 	try {
-		const ownerId = GetTicketOwner(channel);
-		const logChannelId = await GetServerConfig(channel.guild.id, "logChannel");
-
-		if (logChannelId) {
-			const saved = await SendLog(
-				channel.client,
-				channel.guild.id,
-				`Ticket **${channel.name}** of <@${ownerId}> was opened by <@${openedBy.id}>.${reason ? ` Reason: ${reason}` : ""}`,
-			);
-			if (!saved) return "I couldn't save a copy of the messages in the log channel, so the ticket is still open.";
-		}
-
+		// the people can write again, reactions go back to what the channel says (what closing took away)
 		for (const overwrite of channel.permissionOverwrites.cache.values()) {
 			if (overwrite.type === OverwriteType.Member && overwrite.id !== channel.client.user.id) {
-				await channel.permissionOverwrites.edit(overwrite.id, { SendMessages: true, AddReactions: true });
+				await channel.permissionOverwrites.edit(overwrite.id, { SendMessages: true, AddReactions: null });
 			}
 		}
 
@@ -467,21 +489,23 @@ export async function OpenTicket(channel: TextChannel, openedBy: User, reason?: 
 				new EmbedBuilder()
 					.setColor(Colors.Green)
 					.setTitle("Ticket opened")
-					.setDescription(`Opened by <@${openedBy.id}>. You can write here again.`),
+					.setDescription(`Opened by <@${openedBy.id}>. You can write here again.${reason ? `\nReason: ${reason}` : ""}`),
 			],
 			allowedMentions: { parse: [] },
 		});
 
+		// the log is only for the staff, it doesn't stop the ticket from opening
+		await SendLog(channel.client, channel.guild.id, `Ticket **${channel.name}** of <@${GetTicketOwner(channel)}> was opened by <@${openedBy.id}>.${reason ? ` Reason: ${reason}` : ""}`);
+
 		try {
-			await channel.setName(channel.name.replace(/^closed-/, "opened-"), `Ticket opened by ${openedBy.username}`);
+			await channel.setName(channel.name.replace(/^closed-/, "ticket-"), `Ticket opened by ${openedBy.username}`);
 		} catch (error) {
 			return `The ticket is opened, but I couldn't rename it: ${ExplainError(error)}`;
 		}
 
 		return null;
 	} catch (error) {
-		console.error("Could not open the ticket:", error);
-		await SendLog(channel.client, channel.guild.id, `Failed to open ticket **${channel.name}** by <@${openedBy.id}>: ${ExplainError(error)}`);
+		console.error("Could not open the ticket:", SafeError(error));
 		return `Could not open the ticket: ${ExplainError(error)}`;
 	}
 }

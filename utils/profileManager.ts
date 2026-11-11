@@ -1,55 +1,58 @@
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { userProfileTable } from "../db/schema.js";
-
-export type UserProfile = typeof userProfileTable.$inferSelect;
-export type UserProfileKey = keyof UserProfile;
+import { SafeError } from "./errorText.js";
 
 // What UpdateProfile returns, null means it saved
 export const PROFILE_DUPLICATE = 1; // a unique value (email or verify code) is already used by someone else
 export const PROFILE_FAILED = 2; // something else went wrong, it is in the console
 
 /**
- * Update a user's profile, if not exist make one
- * @returns null if it saved, otherwise PROFILE_DUPLICATE or PROFILE_FAILED
+ * Postgres says 23505 for a unique violation, drizzle wraps that error in its own so the code is on the cause
  */
-export async function UpdateProfile(
-    discordId: string,
-    serverId: string,
-    newData: Partial<UserProfile>,
-): Promise<number | null> {
-    try {
-        await db.insert(userProfileTable)
-            .values({
-                discordId,
-                serverId,
-                ...newData 
-            })
-            .onConflictDoUpdate({
-                target: [userProfileTable.discordId, userProfileTable.serverId],
-                set: newData
-            });
-    } catch (err: unknown) {
-		if (err instanceof Error) {
-            const pgError = err as Error & { code?: string };
-            
-            // Postgres error code 23505 means "unique_violation"
-            if (pgError.code === '23505' || pgError.message.includes("unique constraint")) {
-                console.warn("Unique constraint violation in UpdateProfile.");
-                return PROFILE_DUPLICATE;
-            }
-        }
-
-        console.error("Error upserting profile:", err);
-        return PROFILE_FAILED;
-    }
-    return null;
+function IsUniqueViolation(error: unknown): boolean {
+	for (let current = error, depth = 0; current instanceof Error && depth < 5; depth++) {
+		if ((current as Error & { code?: string }).code === "23505") return true;
+		current = current.cause;
+	}
+	return false;
 }
 
 /**
- * Get a single profile, throws if the database fails
- * Use this when a database that is down must not look the same as a user without a profile (like the ban list)
- * @returns The user's profile object, or null if they don't have one
+ * Saves the given fields of a profile, the profile is made if it doesn't exist yet
+ * @returns null if it saved, otherwise PROFILE_DUPLICATE or PROFILE_FAILED
+ */
+export async function UpdateProfile(
+	discordId: string,
+	serverId: string,
+	newData: Partial<UserProfile>,
+): Promise<number | null> {
+	try {
+		await db.insert(userProfileTable)
+			.values({
+				discordId,
+				serverId,
+				...newData,
+			})
+			.onConflictDoUpdate({
+				target: [userProfileTable.discordId, userProfileTable.serverId],
+				set: newData,
+			});
+	} catch (err: unknown) {
+		if (IsUniqueViolation(err)) {
+			console.warn("Unique constraint violation in UpdateProfile.");
+			return PROFILE_DUPLICATE;
+		}
+
+		console.error("Error upserting profile:", SafeError(err));
+		return PROFILE_FAILED;
+	}
+	return null;
+}
+
+/**
+ * A user's profile, null if they don't have one
+ * Throws if the database fails: use this when a database that is down must not look the same as a user without a profile (like the ban list)
  */
 export async function GetProfileStrict(userId: string, serverId: string): Promise<UserProfile | null> {
 	const result = await db
@@ -57,29 +60,24 @@ export async function GetProfileStrict(userId: string, serverId: string): Promis
 		.from(userProfileTable)
 		.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)))
 		.limit(1);
-	return result.length > 0 ? result[0] : null;
+	return result[0] ?? null;
 }
 
 /**
- * Get a single profile
- * @param userId The ID of the user whose profile to retrieve
- * @returns The user's profile object, or null if not found (also when the database fails, it is in the console)
+ * A user's profile, null if they don't have one or if the database fails (it is in the console)
  */
 export async function GetProfile(userId: string, serverId: string): Promise<UserProfile | null> {
 	try {
 		return await GetProfileStrict(userId, serverId);
 	} catch (error) {
-		console.error("Error getting profile:", error);
+		console.error("Error getting profile:", SafeError(error));
 		return null;
 	}
 }
 
 /**
- * Find a user by a specific profile field
- * @param key The profile field to search by
- * @param value The value to search for
- * @param serverId Only look in this server, leave empty to look in all of them
- * @returns The user profile matching the search
+ * The first profile where a field has the value (null looks for an empty field)
+ * @param serverId Only look in this server, leave out to look in all of them
  */
 export async function FindByValue(
 	key: UserProfileKey,
@@ -95,40 +93,16 @@ export async function FindByValue(
 			.from(userProfileTable)
 			.where(serverId ? and(condition, eq(userProfileTable.serverId, serverId)) : condition)
 			.limit(1);
-		return result.length > 0 ? result[0] : null;
+		return result[0] ?? null;
 	} catch (error) {
-		console.error("Error finding user by value:", error);
+		console.error("Error finding user by value:", SafeError(error));
 		return null;
 	}
 }
 
 /**
- * Find all users by a specific profile field
- * @param key The profile field to search by
- * @param value The value to search for
- * @returns An array of user profiles matching the search
- */
-export async function FindAllByValue(
-	key: UserProfileKey,
-	value: string | null,
-): Promise<UserProfile[]> {
-	try {
-		const query = db.select().from(userProfileTable);
-		const result = await (value === null
-			? query.where(isNull(userProfileTable[key]))
-			: query.where(eq(userProfileTable[key], value)));
-		return result.length > 0 ? result : [];
-	} catch (error) {
-		console.error("Error finding user by value:", error);
-		return [];
-	}
-}
-
-/**
- * Find all users by a specific profile field
- * @param key The profile field to search by
- * @param value The value to search for
- * @returns An array of user profiles matching the search criteria
+ * Every profile that has a value in the field
+ * @param serverId Only look in this server, leave out to look in all of them
  */
 export async function FindAllNonNullKeys(
 	key: UserProfileKey,
@@ -143,9 +117,9 @@ export async function FindAllNonNullKeys(
 					? and(isNotNull(userProfileTable[key]), eq(userProfileTable.serverId, serverId))
 					: isNotNull(userProfileTable[key]),
 			);
-		return result.length > 0 ? result : [];
+		return result;
 	} catch (error) {
-		console.error("Error finding all non-null keys:", error);
+		console.error("Error finding all non-null keys:", SafeError(error));
 		return [];
 	}
 }
@@ -172,13 +146,4 @@ export async function DeletePersonalData(userId: string, serverId: string): Prom
 		.where(isTheirs)
 		.returning({ id: userProfileTable.id });
 	return kept.length > 0;
-}
-
-/**
- * Remove a profile completely, including the moderation history
- * Throws if the database fails
- */
-export async function DeleteProfile(userId: string, serverId: string): Promise<void> {
-		await db.delete(userProfileTable)
-			.where(and(eq(userProfileTable.discordId, userId), eq(userProfileTable.serverId, serverId)));
 }

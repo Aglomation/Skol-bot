@@ -1,38 +1,38 @@
 import type { AutocompleteInteraction, ButtonInteraction, ChatInputCommandInteraction, Client, Interaction, StringSelectMenuInteraction } from "discord.js";
 import { Events, MessageFlags } from "discord.js";
+import { SafeError } from "../utils/errorText.js";
 
 // buttons a command waits for itself with a collector, they have no handler here and that is fine
 const COLLECTOR_BUTTONS = ["privacy_deleteme_", "modprev", "modnext"];
 
 export default {
-	name: Events.InteractionCreate,
-	once: false,
-	async execute(interaction: Interaction, client: Client) {
-		if (interaction.isChatInputCommand()) {
-			await handleChatInputCommand(interaction, client)
-			return;
-		}
+    name: Events.InteractionCreate,
+    once: false,
+    async execute(interaction: Interaction, client: Client) {
+        if (interaction.isChatInputCommand()) {
+            await handleChatInputCommand(interaction, client);
+            return;
+        }
 
-		if (interaction.isAutocomplete()) {
-			await handleAutocomplete(interaction, client);
-			return;
-		}
-		
-		if (interaction.isButton()) {
-			await handleButton(interaction, client);
+        if (interaction.isAutocomplete()) {
+            await handleAutocomplete(interaction, client);
+            return;
+        }
+
+        if (interaction.isButton()) {
+            await handleButton(interaction, client);
             return;
         }
 
         if (interaction.isStringSelectMenu()) {
             await handleSelectMenu(interaction, client);
-		}
-	},
+        }
+    },
 };
 
-
 async function handleChatInputCommand(interaction: ChatInputCommandInteraction, client: Client) {
-	const command = client.commands.get(interaction.commandName);
-    
+    const command = client.commands.get(interaction.commandName);
+
     if (!command) {
         console.warn(`[Warning] No command matching ${interaction.commandName} was found.`);
         return;
@@ -41,24 +41,24 @@ async function handleChatInputCommand(interaction: ChatInputCommandInteraction, 
     try {
         await command.execute(interaction);
     } catch (error) {
-        console.error(`[Error] Executing command ${interaction.commandName}:`, error);
+        console.error(`[Error] Executing command ${interaction.commandName}:`, SafeError(error));
 
         if (interaction.replied || interaction.deferred) {
-            await interaction.editReply({ content: 'There was an error while executing this command!' }).catch(() => null);
+            await interaction.editReply({ content: "There was an error while executing this command!" }).catch(() => null);
         } else {
-            await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral }).catch(() => null);
+            await interaction.reply({ content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral }).catch(() => null);
         }
     }
 }
 
 async function handleAutocomplete(interaction: AutocompleteInteraction, client: Client) {
     const standaloneAutocomplete = client.autocompletes.get(interaction.commandName);
-    
+
     if (standaloneAutocomplete) {
         try {
             await standaloneAutocomplete.execute(interaction);
         } catch (error) {
-            console.error(`[Error] Executing standalone autocomplete for ${interaction.commandName}:`, error);
+            console.error(`[Error] Executing standalone autocomplete for ${interaction.commandName}:`, SafeError(error));
         }
         return;
     }
@@ -70,32 +70,31 @@ async function handleAutocomplete(interaction: AutocompleteInteraction, client: 
     try {
         await command.autocomplete(interaction);
     } catch (error) {
-        console.error(`[Error] Executing command autocomplete for ${interaction.commandName}:`, error);
+        console.error(`[Error] Executing command autocomplete for ${interaction.commandName}:`, SafeError(error));
     }
 }
 
 async function handleButton(interaction: ButtonInteraction, client: Client) {
-	const customId = interaction.customId.includes(":")
-		? interaction.customId.split(":")[0]
-		: interaction.customId;
+    const customId = interaction.customId.includes(":")
+        ? interaction.customId.split(":")[0]
+        : interaction.customId;
 
-	if (COLLECTOR_BUTTONS.some((prefix) => customId.startsWith(prefix))) return;
+    if (COLLECTOR_BUTTONS.some((prefix) => customId.startsWith(prefix))) return;
 
-	const buttonCommand = client.buttons.get(customId);
+    const buttonCommand = client.buttons.get(customId);
 
-	if (!buttonCommand){
-		console.warn(`[Warning] No button handler found for ${customId}.`);
-		return;
-	}
+    if (!buttonCommand){
+        console.warn(`[Warning] No button handler found for ${customId}.`);
+        return;
+    }
 
-	try {
-		await buttonCommand.execute(interaction);
-	} catch (error) {
-		console.error(`[Error] Executing button ${customId}:`, error);
+    try {
+        await buttonCommand.execute(interaction);
+    } catch (error) {
+        console.error(`[Error] Executing button ${customId}:`, SafeError(error));
         await ReplyWithError(interaction);
-	}
+    }
 }
-
 
 async function handleSelectMenu(interaction: StringSelectMenuInteraction, client: Client) {
     // custom ids look like <handler>:<step>:<earlier answers>, only the first part picks the handler
@@ -111,7 +110,7 @@ async function handleSelectMenu(interaction: StringSelectMenuInteraction, client
     try {
         await selectMenu.execute(interaction);
     } catch (error) {
-        console.error(`[Error] Executing select menu ${customId}:`, error);
+        console.error(`[Error] Executing select menu ${customId}:`, SafeError(error));
         await ReplyWithError(interaction);
     }
 }

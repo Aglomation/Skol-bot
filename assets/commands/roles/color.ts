@@ -1,6 +1,6 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { BuildColorPicker, GetColorRoles, GetCurrentColor } from "../../../utils/colorRoles.js";
+import { BuildColorPicker, GetColorRoles, GetCurrentColor } from "../../../features/colorRoles.js";
 import { IsVerified } from "../../../utils/permissions.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>

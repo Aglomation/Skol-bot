@@ -1,6 +1,6 @@
 import type { ButtonInteraction, GuildMember } from "discord.js";
 import { MessageFlags } from "discord.js";
-import type { Signup } from "../../utils/lfg.js";
+import type { Signup } from "../../features/lfg.js";
 import {
 	ApplySignup,
 	BuildEmbed,
@@ -10,8 +10,8 @@ import {
 	LFG_BUTTON_ID,
 	SaveSessions,
 	StartSession,
-} from "../../utils/lfg.js";
-import { IsStaff } from "../../utils/tickets.js";
+} from "../../features/lfg.js";
+import { IsStaff } from "../../utils/permissions.js";
 
 const SIGNUPS: Signup[] = ["join", "maybe", "leave"];
 

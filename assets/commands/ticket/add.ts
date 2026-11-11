@@ -1,6 +1,6 @@
-import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder, TextChannel } from "discord.js";
+import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { GetTicketForMember, IsTicketClosed } from "../../../utils/tickets.js";
+import { GetTicketForMember, IsTicketClosed } from "../../../features/tickets.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -17,7 +17,7 @@ export default async function command(interaction: ChatInputCommandInteraction) 
 		await interaction.editReply(ticket);
 		return;
 	}
-	const isClosed = IsTicketClosed(interaction.channel as TextChannel);
+
 	const user = interaction.options.getUser("user", true);
 	const target = await interaction.guild.members.fetch(user.id).catch(() => null);
 	if (!target || target.user.bot) {
@@ -29,7 +29,7 @@ export default async function command(interaction: ChatInputCommandInteraction) 
 	try {
 		await ticket.permissionOverwrites.edit(target, {
 			ViewChannel: true,
-			SendMessages: !isClosed,
+			SendMessages: !IsTicketClosed(ticket),
 			ReadMessageHistory: true,
 			AttachFiles: true,
 			EmbedLinks: true,

@@ -1,6 +1,6 @@
-import { Client, GatewayIntentBits } from 'discord.js';
-import dotenv from "dotenv";
 import path from "node:path";
+import { Client, GatewayIntentBits } from "discord.js";
+import dotenv from "dotenv";
 
 const client = new Client({
   intents: [
@@ -10,15 +10,15 @@ const client = new Client({
 });
 dotenv.config({ path: path.join(process.cwd(), ".env"), quiet: true });
 
-client.once('ready', async () => {
+client.once("ready", async () => {
   try {
-    const TARGET_ROLE_ID = '1497140069843079223';
-    const EXCLUDE_ROLE_ID = '1498832228145168514';
+    const TARGET_ROLE_ID = "1497140069843079223";
+    const EXCLUDE_ROLE_ID = "1498832228145168514";
 
     // Fetch all guilds the bot is in
     const guild = client.guilds.cache.get("1497140069746741338");
     if (!guild) {
-      console.error('Guild not found. Make sure the bot is in the guild.');
+      console.error("Guild not found. Make sure the bot is in the guild.");
       return;
     }
 
@@ -39,9 +39,9 @@ client.once('ready', async () => {
     console.log(`- ${member.user.tag} <@${member.id}>`);
     });
   } catch (error) {
-    console.error('Error fetching members:', error);
+    console.error("Error fetching members:", error);
   } finally {
-    console.log('\nTask complete. Closing client...');
+    console.log("\nTask complete. Closing client...");
     client.destroy();
     process.exit(0);
   }

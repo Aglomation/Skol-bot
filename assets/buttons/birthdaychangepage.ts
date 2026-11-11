@@ -1,5 +1,5 @@
 import type { ButtonInteraction } from "discord.js";
-import { GenerateBirthdayPage } from "../commands/birthday/list.js";
+import { GenerateBirthdayPage } from "../../features/birthdayList.js";
 
 const button: Button = {
 	data: {
@@ -10,7 +10,7 @@ const button: Button = {
 	): Promise<void> {
 		const page = parseInt(interaction.customId.split(":")[1], 10) || 1;
 
-		const pageData = await GenerateBirthdayPage(page, interaction.guild);
+		const pageData = await GenerateBirthdayPage(interaction.guild, page);
 
 		if (!pageData) {
 			await interaction.update({

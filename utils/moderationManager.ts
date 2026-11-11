@@ -2,6 +2,7 @@ import { and, eq, or, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import type { ModAction, ModActionType } from "../db/schema.js";
 import { userProfileTable } from "../db/schema.js";
+import { SafeError } from "./errorText.js";
 
 export type { ModAction, ModActionType };
 
@@ -54,7 +55,7 @@ export async function AddModAction(
 
 		return Number(row.count);
 	} catch (error) {
-		console.error("Error adding mod action:", error);
+		console.error("Error adding mod action:", SafeError(error));
 		return null;
 	}
 }
@@ -89,7 +90,7 @@ export async function VoidModAction(
 
 		return result.length > 0;
 	} catch (error) {
-		console.error("Error voiding mod action:", error);
+		console.error("Error voiding mod action:", SafeError(error));
 		return false;
 	}
 }
@@ -118,7 +119,7 @@ export async function GetModProfiles(
 
 		return rows;
 	} catch (error) {
-		console.error("Error getting mod profiles:", error);
+		console.error("Error getting mod profiles:", SafeError(error));
 		return [];
 	}
 }
@@ -176,44 +177,3 @@ export function GetActiveBan(profile: HasModeration): NumberedAction | null {
 	const state = LastState(profile, "softban");
 	return IsActive(state, "softban") ? state : null;
 }
-
-/**
- * Turns the old timeout/banned/banreason/banduration columns into actions, used when moving the old data over
- */
-export function LegacyToActions(
-	old: {
-		timeout?: number | null;
-		banned?: boolean | null;
-		banreason?: string | null;
-		banduration?: string | null;
-	},
-	now = Date.now(),
-): ModAction[] {
-	const actions: ModAction[] = [];
-
-	// we dont know when or who did the old ones
-	if (old.banduration || old.banreason) {
-		const until = parseInt(old.banduration ?? "", 10);
-		actions.push({
-			type: "softban",
-			at: now,
-			by: null,
-			reason: `${old.banreason ?? "No reason saved"} (migrated)`,
-			until: Number.isNaN(until) ? null : until,
-		});
-	}
-
-	if (old.timeout && old.timeout > now) {
-		actions.push({
-			type: "mute",
-			at: now,
-			by: null,
-			reason: "Migrated from the old data",
-			until: old.timeout,
-		});
-	}
-
-	return actions;
-}
-
-export const SERVER_INVITE = "https://discord.gg/dUYHv8Dv94";

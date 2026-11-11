@@ -1,8 +1,8 @@
 import type { Guild } from "discord.js";
-import { GetFullServerConfig } from "./configManager.js";
-import { CreateJsonStore } from "./jsonStore.js";
-import { GetSwedenParts } from "./swedenTime.js";
-import { CITIES } from "./verifyOptions.js";
+import { GetFullServerConfig } from "../utils/configManager.js";
+import { CreateJsonStore } from "../utils/jsonStore.js";
+import { GetSwedenParts } from "../utils/swedenTime.js";
+import { CITIES } from "./verify/options.js";
 
 export type Snapshot = {
 	total: number;
@@ -42,7 +42,8 @@ export async function RecordSnapshot(guild: Guild, now = Date.now()): Promise<bo
 	}
 
 	const all = await store.Get();
-	const days = (all[guild.id] ??= {});
+	const days = all[guild.id] ?? {};
+	if (!all[guild.id]) all[guild.id] = days;
 	days[GetDateKey(now)] = { total: verified.members.size, cities };
 
 	const oldest = GetDateKey(now - KEEP_DAYS * 86400000);

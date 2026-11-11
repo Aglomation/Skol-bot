@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { MessageFlags } from "discord.js";
+import { SafeError } from "./errorText.js";
 
 /**
  * Runs the file of the subcommand that was used, this is all the main.ts of a command folder has to do
@@ -42,7 +43,7 @@ export async function RunSubcommand(
 
 		await handler(interaction);
 	} catch (err) {
-		console.error(`[Error] Running subcommand ${name}:`, err);
+		console.error(`[Error] Running subcommand ${name}:`, SafeError(err));
 		await Reply(interaction, `Error running subcommand: ${name}`);
 	}
 }

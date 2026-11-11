@@ -1,5 +1,5 @@
 import type { Client } from "discord.js";
-import { RunLfgTick } from "../../utils/lfg.js";
+import { RunLfgTick } from "../../features/lfg.js";
 
 const repeating: Repeating = {
 	data: {

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import axios from "axios";
 import type { Client } from "discord.js";
-import { CITIES } from "../../utils/verifyOptions.js";
+import { CITIES } from "../../features/verify/options.js";
 
 interface UnitsResponsePartial {
 	valueType: string;
@@ -10,7 +10,7 @@ interface UnitsResponsePartial {
 
 type SchoolData = Record<string, { id: string; studentCount: number }>;
 
-// The unit codes from skolverket, the keys are the same as in CITIES (utils/verifyOptions.ts)
+// The unit codes from skolverket, the keys are the same as in CITIES (features/verify/options.ts)
 // The name and the role id come from there so a city only has to be changed in one place
 const UNIT_CODES: Record<string, { schoolUnitCode: number; medieGymnasietSchoolUnitCode?: number }> = {
 	bor: { schoolUnitCode: 86888278 }, // LBS Borås
@@ -46,7 +46,7 @@ const repeating: Repeating = {
 
 		fs.mkdirSync("./cache", { recursive: true });
 
-		// written to another file first and then renamed, so /stats never reads half of it
+		// written to another file first and then renamed, so /citystats never reads half of it
 		fs.writeFileSync(`${CACHE_FILE}.tmp`, JSON.stringify(schoolData, null, 4));
 		fs.renameSync(`${CACHE_FILE}.tmp`, CACHE_FILE);
 	},

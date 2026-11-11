@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction, GuildMember, SlashCommandSubcommandBuilder } from "discord.js";
 import { MessageFlags } from "discord.js";
-import type { LfgSession } from "../../../utils/lfg.js";
-import { AddSession, BuildEmbed, BuildRows, ParseWhen, REMIND_BEFORE_MS } from "../../../utils/lfg.js";
+import type { LfgSession } from "../../../features/lfg.js";
+import { AddSession, BuildEmbed, BuildRows, ParseWhen, REMIND_BEFORE_MS } from "../../../features/lfg.js";
 import { IsVerified } from "../../../utils/permissions.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>

@@ -1,9 +1,9 @@
 import type { Client, GuildTextBasedChannel } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import { CreateJsonStore } from "./jsonStore.js";
-import { ParseDuration } from "./stringConvert.js";
-import type { SwedenParts } from "./swedenTime.js";
-import { GetSwedenParts, SwedenToUtc } from "./swedenTime.js";
+import { ParseDuration } from "../utils/duration.js";
+import { CreateJsonStore } from "../utils/jsonStore.js";
+import type { SwedenParts } from "../utils/swedenTime.js";
+import { GetSwedenParts, SwedenToUtc } from "../utils/swedenTime.js";
 
 export const LFG_BUTTON_ID = "lfg";
 

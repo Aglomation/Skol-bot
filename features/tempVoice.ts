@@ -1,6 +1,6 @@
 import type { Client, GuildBasedChannel, GuildMember, VoiceChannel } from "discord.js";
 import { ChannelType, OverwriteType, PermissionFlagsBits } from "discord.js";
-import { GetServerConfig } from "./configManager.js";
+import { GetServerConfig } from "../utils/configManager.js";
 
 // Who made which temporary channel, so an operator can't take it from them
 // This is only in memory, after a restart the owner of the older channels isn't known and that check is skipped

@@ -76,6 +76,7 @@ const svPolicy =
     "**- Födelsedatum (frivilligt):** Sparas baserat på ditt **samtycke**. Du kan dölja året när du sätter det, då sparas och visas varken ditt födelseår eller din ålder. **Observera:** alla på servern kan se ditt födelsedatum via `/birthday`, och boten gratulerar dig offentligt i födelsedagskanalen, med ålder om du sparat året.\n" +
     "**- Modereringshistorik:** Varningar, anteckningar, avstängningar och bannlysningar med orsak, tid och ansvarig moderator (**Berättigat intresse**, Art. 6.1 f GDPR). Loggas även i en intern moderatorkanal.\n" +
     "**- Spelsessioner (`/lfg`):** Ditt ID sparas i sessionen när du anmäler dig, och finns kvar högst 7 dagar efter att den är slut.\n" +
+    "**- Giveaways (`/giveaway`):** Om du deltar (knappen) sparas ditt ID, det sparas även om du vinner, tills giveawayen har varit slut i 7 dagar, så att en ny vinnare kan lottas.\n" +
     "**- Direktmeddelanden till boten:** Vidarebefordras med innehåll och ditt ID till en privat moderatorkanal (**Berättigat intresse**: support och missbruk).\n" +
     "**- Tickets:** Meddelandena i en ticket sparas som en textfil i den privata moderatorkanalen när ticketen stängs (**Berättigat intresse**: support). En ticket stängs av sig själv om ingen skriver i den på några dagar, och om du betygsätter hjälpen sparas betyget med ditt ID i den privata moderatorkanalen.\n" +
     "Boten sparar annars inte dina meddelanden.\n\n" +
@@ -105,6 +106,7 @@ const enPolicy =
     "**- Birthday (voluntary):** Stored based on your **Consent**. You can hide the year when you set it, then neither your birth year nor your age is saved or shown. **Note:** everyone on the server can see your birth date through `/birthday`, and the bot congratulates you publicly in the birthday channel, with your age if you saved the year.\n" +
     "**- Moderation History:** Warnings, notes, mutes and bans with the reason, time and responsible moderator (**Legitimate Interests**, Art. 6(1)(f)). Also logged in an internal moderator channel.\n" +
     "**- Game sessions (`/lfg`):** Your ID is saved in the session when you sign up, and kept for at most 7 days after it ends.\n" +
+    "**- Giveaways (`/giveaway`):** If you enter (the button), your ID is saved, and it is saved if you win as well, until the giveaway has been over for 7 days, so that a new winner can be drawn.\n" +
     "**- Direct messages to the bot:** Forwarded with their content and your ID to a private moderator channel (**Legitimate Interests**: support and abuse).\n" +
     "**- Tickets:** The messages in a ticket are saved as a text file in the private moderator channel when the ticket is closed (**Legitimate Interests**: support). A ticket closes by itself if nobody writes in it for a few days, and if you rate the help the rating is saved with your ID in the private moderator channel.\n" +
     "Otherwise the bot does not store your messages.\n\n" +
@@ -124,17 +126,18 @@ const enPolicy =
     "You can also request deletion by contacting us at `me+gdpr@lazyllama.xyz` from the email you want to delete.\n\n" +
     "*You have the right to lodge a complaint with the Swedish Authority for Privacy Protection (IMY).*";
 
-export default async function command(
-    interaction: ChatInputCommandInteraction
-) {
-    const language = interaction.options.getString("language") || "sv";
+    /**
+ * Returns an array of formatted privacy policy embed objects.
+ * @param language The language code ("sv" or "en"). Defaults to "sv".
+ */
+export function getPrivacyPolicyEmbeds(language: string = "sv") {
     const isEn = language === "en";
     const rawPolicyText = isEn ? enPolicy : svPolicy;
 
     // Dynamically split into clean chunks under 4000 characters
     const chunks = splitText(rawPolicyText, 4000);
 
-    const embeds = chunks.map((chunk, index) => {
+    return chunks.map((chunk, index) => {
         const titleBase = isEn ? "Privacy Policy" : "Integritetspolicy";
 
         return {
@@ -144,11 +147,18 @@ export default async function command(
             // Add footer to the last embed only
             ...(index === chunks.length - 1 && {
                 footer: {
-                    text: isEn ? "Last updated: " : "Senast uppdaterad: " + "2026-10-28",
+                    text: `${isEn ? "Last updated: " : "Senast uppdaterad: "}2026-11-01`,
                 },
             }),
         };
     });
+}
+
+export default async function command(
+    interaction: ChatInputCommandInteraction
+) {
+    const language = interaction.options.getString("language") || "sv";
+    const embeds = getPrivacyPolicyEmbeds(language);
 
     await interaction.reply({
         embeds,

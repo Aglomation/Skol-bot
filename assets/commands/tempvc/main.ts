@@ -33,9 +33,9 @@ const command: Command = {
 		.addSubcommand(typeBuilder),
 
 	// the channel option is the only one with autocomplete, in every subcommand
-    async autocomplete(interaction: AutocompleteInteraction) {
+	async autocomplete(interaction: AutocompleteInteraction) {
 		await ChannelAutocomplete(interaction);
-    },
+	},
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await RunSubcommand(import.meta.url, interaction);

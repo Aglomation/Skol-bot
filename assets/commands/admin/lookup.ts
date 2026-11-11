@@ -5,13 +5,13 @@ import {
 	PermissionFlagsBits,
 } from "discord.js";
 
+import { SendLog } from "../../../utils/logChannel.js";
 import { GetDisplayName } from "../../../utils/memberUtils.js";
 import { HasPermission } from "../../../utils/permissions.js";
-import type { UserProfileKey } from "../../../utils/profileManager.js";
 import { FindByValue } from "../../../utils/profileManager.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("lookup")
 		.setDescription("String lookup for user profiles (for support only)")
 		.addStringOption((option) => {
@@ -94,4 +94,7 @@ export default async function command(
 	await interaction.editReply({
 		embeds: [embed],
 	});
-};
+
+	// who looked up whose data is kept in the log, the result has an email and a code in it
+	await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} looked up the data of <@${result.discordId}> (searched by ${lookup}).`);
+}

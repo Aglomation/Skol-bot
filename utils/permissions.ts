@@ -1,5 +1,6 @@
 import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
-import { GetFullServerConfig } from "./configManager.js";
+import { PermissionFlagsBits } from "discord.js";
+import { GetFullServerConfig, GetServerConfig } from "./configManager.js";
 
 /**
  * Checks if the member is allowed to use a command, replies if they arent
@@ -42,4 +43,16 @@ export function CheckHierarchy(executor: GuildMember, target: GuildMember): stri
 export async function IsVerified(member: GuildMember): Promise<boolean> {
 	const config = await GetFullServerConfig(member.guild.id);
 	return !!config?.verifiedRoleId && member.roles.cache.has(config.verifiedRoleId);
+}
+
+/**
+ * Staff are the admins and the people with the mod or admin role of the server
+ */
+export async function IsStaff(member: GuildMember): Promise<boolean> {
+	if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
+
+	const modRoleId = await GetServerConfig(member.guild.id, "modRoleId");
+	const adminRoleId = await GetServerConfig(member.guild.id, "adminRoleId");
+
+	return [modRoleId, adminRoleId].some((id) => !!id && member.roles.cache.has(id));
 }

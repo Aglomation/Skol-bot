@@ -30,46 +30,22 @@ export function ParseDuration(input: string): number | null {
 
 	let totalMs = 0;
 	let match: RegExpExecArray | null;
-	
+
 	match = re.exec(cleaned);
 	while (match !== null) {
 		const unit = match[2];
 		if (unit === "inf") return Infinity;
 
 		const value = match[1] ? parseInt(match[1], 10) : 1;
-		
+
 		if (!Number.isNaN(value) && multipliers[unit]) {
 			totalMs += value * multipliers[unit];
 		}
 		match = re.exec(cleaned);
-		
+
 	}
 
 	if (totalMs > MAX_DURATION_MS) return null;
 
 	return totalMs ? totalMs : null;
-}
-
-const MONTHS = [
-	"January",
-	"February",
-	"March",
-	"April",
-	"May",
-	"June",
-	"July",
-	"August",
-	"September",
-	"October",
-	"November",
-	"December",
-];
-
-/**
- * Converts a month number (1-12) to its corresponding month name. Overflow rolls over (13 -> January)
- * @param input The input month number (1-12)
- * @returns The corresponding month name or "Unknown" if invalid
- */
-export function NumToMonth(input: number): string {
-	return MONTHS[(((input - 1) % 12) + 12) % 12] ?? "Unknown";
 }

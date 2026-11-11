@@ -1,70 +1,53 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import type { ButtonInteraction } from "discord.js";
 import { EmbedBuilder, MessageFlags } from "discord.js";
-import type { PolisenEvent } from "../repeating/polisen.js";
-import { GetEventTime, ParsePolisenTime } from "../repeating/polisen.js";
+import type { PolisenEvent } from "../../features/polisen.js";
+import { GetEventTime, IsEventPath, LoadPolisenCache, ParsePolisenTime } from "../../features/polisen.js";
 
-const CACHE_DIR = "./cache";
-const CACHE_FILE = path.join(CACHE_DIR, "polisen.json");
+type EventDetails = { lastUpdated: string | null; mainContent: string; writer: string };
 
-type PolisenEventType = { lastUpdated: string | null ; mainContent: string; writer: string };
+// the event page is the website and not the API, so the request looks like a browser's
+const SCRAPE_TIMEOUT_MS = 15000;
+const BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+};
 
-async function loadCache(): Promise<Map<number, PolisenEvent>> {
-    try {
-        await fs.mkdir(CACHE_DIR, { recursive: true });
-        const data = await fs.readFile(CACHE_FILE, "utf-8");
-        const parsedData = JSON.parse(data);
-        return new Map(parsedData.map((item: PolisenEvent) => [item.id, item]));
-    } catch {
-        return new Map(); // Return empty map if file doesn't exist or is invalid
-    }
-}
-
-/**
- * Scrapes the individual event article for updates and details.
- */
-async function scrapeEventDetails(url: string): Promise<{ lastUpdated: string | null ; mainContent: string; writer: string }> {
-    const { data } = await axios.get(`https://polisen.se${url}`, {
-        timeout: 15000,
-        headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-        },
-    });
+/** The article of the event on polisen.se: when it was last updated, the text and who wrote it */
+async function scrapeEventDetails(url: string): Promise<EventDetails> {
+    const { data } = await axios.get(`https://polisen.se${url}`, { timeout: SCRAPE_TIMEOUT_MS, headers: BROWSER_HEADERS });
     const $ = cheerio.load(data);
-    const contentDiv = $('div.event-page.editorial-content').eq(0);
+    const contentDiv = $("div.event-page.editorial-content").eq(0);
 
-    const lastUpdated = contentDiv.
-        find('span.text')
-            .first()
-            .text()
-            .trim() || null;
+    const lastUpdated = contentDiv
+        .find("span.text")
+        .first()
+        .text()
+        .trim() || null;
 
-    const mainContent = contentDiv.
-        find('div.text-body.editorial-html')
-            .first()
-            .text()
-            .trim() || "No additional details provided.";
+    const mainContent = contentDiv
+        .find("div.text-body.editorial-html")
+        .first()
+        .text()
+        .trim() || "No additional details provided.";
 
-    const writer = contentDiv.
-        find('div.page-meta-data')
-            .first()
-            .find('dd')
-                .first()
-                .text()
-                .trim() || "Okänd";
+    const writer = contentDiv
+        .find("div.page-meta-data")
+        .first()
+        .find("dd")
+        .first()
+        .text()
+        .trim() || "Okänd";
 
     return { lastUpdated, mainContent, writer };
 }
@@ -92,14 +75,37 @@ const formatMainContent = (text: string) => {
         })
         .join("\n");
 
-    return formatted
-
+    return formatted;
 };
 
 const truncateText = (text: string, maxLength: number) => {
     if (!text) return "";
     return text.length > maxLength ? `${text.substring(0, maxLength - 3)}...` : text;
 };
+
+/** The message with the event and what the article says about it */
+function BuildEventEmbed(event: PolisenEvent, { lastUpdated, mainContent, writer }: EventDetails) {
+    // the time is in the name (with Swedish month names), the datetime of the event is when it was published
+    const time = GetEventTime(event);
+
+    return new EmbedBuilder()
+        .setTitle(event.name)
+        .setURL(`https://polisen.se${event.url}`)
+        // Put main content in the description to utilize the 4096 char limit
+        .setDescription(truncateText(formatMainContent(mainContent), 4000))
+        .addFields(
+            { name: "Typ", value: event.type, inline: true },
+            { name: "Plats", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
+            { name: "Tid", value: time ? `<t:${Math.floor(time.getTime() / 1000)}:R>` : "Okänd", inline: true },
+            { name: "Skribent", value: writer || "Okänd", inline: true },
+        )
+        .setColor(0x005293)
+        .setFooter({
+            text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Publicerad`,
+            iconURL: "https://polisen.se/images/icons/favicon-32x32.png",
+        })
+        .setTimestamp(ParsePolisenTime(event.datetime));
+}
 
 const button: Button = {
     data: {
@@ -108,17 +114,16 @@ const button: Button = {
     async execute(
         interaction: ButtonInteraction,
     ): Promise<void> {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-		const id = parseInt(interaction.customId.split(":")[1], 10) || null;
-		if (!id) {
-			await interaction.editReply({
-				content: "Invalid page number.",
-			});
-			return;
-		}
-        const database = await loadCache();
-        const event = database.get(id);
+        const id = parseInt(interaction.customId.split(":")[1], 10) || null;
+        if (!id) {
+            await interaction.editReply({
+                content: "Invalid event id.",
+            });
+            return;
+        }
+        const event = (await LoadPolisenCache()).find((item) => item.id === id);
         if (!event) {
             await interaction.editReply({
                 content: "Event not found in local database, erm contact Vera.",
@@ -126,8 +131,14 @@ const button: Button = {
             return;
         }
 
-		// webscrape the page for more info
-        let details: PolisenEventType;
+        // the url is put after the host, so it has to be a path (something like "@other.site" would make the bot fetch another site)
+        if (!IsEventPath(event.url)) {
+            await interaction.editReply({ content: "That event has an invalid link." });
+            return;
+        }
+
+        // webscrape the page for more info
+        let details: EventDetails;
         try {
             details = await scrapeEventDetails(event.url);
         } catch (error) {
@@ -135,35 +146,7 @@ const button: Button = {
             await interaction.editReply({ content: "Couldn't get the page from polisen.se right now, try again later." });
             return;
         }
-        const { lastUpdated, mainContent, writer } = details;
-
-        // the time is in the name (with Swedish month names), the datetime of the event is when it was published
-        const time = GetEventTime(event);
-
-        const embed = new EmbedBuilder()
-            
-            .setTitle(event.name)
-            .setURL(`https://polisen.se${event.url}`)
-            // Put main content in the description to utilize the 4096 char limit
-            .setDescription(truncateText(formatMainContent(mainContent), 4000))
-            .addFields(
-                { name: "Typ", value: event.type, inline: true },
-                { name: "Plats", value: `[${event.location.name}](https://www.google.com/maps/search/${encodeURIComponent(event.location.name)})`, inline: true },
-                { name: "Tid", value: time ? `<t:${Math.floor(time.getTime() / 1000)}:R>` : "Okänd", inline: true },
-                { name: "Skribent", value: writer || "Okänd", inline: true },
-            )
-            .setColor(0x005293)
-            .setFooter({ 
-                text: `${lastUpdated ? lastUpdated : "Polisen.se"} ・ Publicerad`,
-                iconURL: "https://polisen.se/images/icons/favicon-32x32.png"
-            })
-            .setTimestamp(ParsePolisenTime(event.datetime));
-
-        // Actually send the embed instead of dumping raw text
-        await interaction.editReply({
-            content: null, // Clear out any previous text
-            embeds: [embed],
-        });
+        await interaction.editReply({ content: null, embeds: [BuildEventEmbed(event, details)] });
     },
 };
 

@@ -7,7 +7,7 @@ import { GetProfileStrict, PROFILE_FAILED, UpdateProfile } from "../../../../uti
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
     subcommand
-		.setName("clear")
+        .setName("clear")
         .setDescription("Removes the email and the verify roles from the selected user")
         .addUserOption((option) =>
             option
@@ -17,10 +17,10 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         );
 
 export default async function command(
-	interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction,
 ) {
     if (!interaction.guild) return;
-	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // Ban Members assumes you're a moderator or admin
     if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
@@ -52,14 +52,14 @@ export default async function command(
         await SendLog(interaction.client, interaction.guild.id, `<@${interaction.user.id}> cleared the email of <@${user.id}>, they aren't in the server.`);
         return;
     }
-    
+
     const roleIds = [
         await GetServerConfig(interaction.guild.id, "verifiedRoleId"),
         await GetServerConfig(interaction.guild.id, "teacherRoleId"),
     ].filter((id): id is string => !!id && member.roles.cache.has(id));
 
     if (roleIds.length > 0) await member.roles.remove(roleIds);
-    
+
     await interaction.editReply({
         content: "Email and verify roles cleared for the user.",
     });

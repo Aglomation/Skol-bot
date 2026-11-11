@@ -1,9 +1,10 @@
 import type { ButtonInteraction, GuildMember } from "discord.js";
 import { MessageFlags } from "discord.js";
 
+import { BuildStep } from "../../features/verify/flow.js";
 import { GetActiveBan } from "../../utils/moderationManager.js";
 import { GetProfileStrict } from "../../utils/profileManager.js";
-import { BuildStep } from "../../utils/verifyFlow.js";
+import { getPrivacyPolicyEmbeds } from "../commands/privacy/policy.js";
 
 const button: Button = {
 	data: {
@@ -40,6 +41,14 @@ const button: Button = {
 
 			await member.kick();
 			return;
+		}
+		if (interaction.customId === "verify:privacy") {
+			const userLocale = interaction.locale;
+			const language = userLocale.startsWith("sv") ? "sv" : "en";
+			const embeds = getPrivacyPolicyEmbeds(language);
+
+			await interaction.editReply({embeds, components: []});
+			return
 		}
 
 		await interaction.editReply(BuildStep("city", [], "verify"));

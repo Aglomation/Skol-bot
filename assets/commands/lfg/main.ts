@@ -1,6 +1,6 @@
 import type { AutocompleteInteraction, ChatInputCommandInteraction } from "discord.js";
 import { InteractionContextType, SlashCommandBuilder } from "discord.js";
-import { GetGameSuggestions } from "../../../utils/lfg.js";
+import { GetGameSuggestions } from "../../../features/lfg.js";
 import { RunSubcommand } from "../../../utils/subcommands.js";
 import { builder as createBuilder } from "./create.js";
 import { builder as listBuilder } from "./list.js";

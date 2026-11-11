@@ -1,6 +1,6 @@
 import type { ButtonInteraction } from "discord.js";
+import { TICKET_RATING_ID } from "../../features/tickets.js";
 import { SendLog } from "../../utils/logChannel.js";
-import { TICKET_RATING_ID } from "../../utils/tickets.js";
 
 const button: Button = {
 	data: {

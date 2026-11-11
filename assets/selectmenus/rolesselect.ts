@@ -1,6 +1,6 @@
 import type { StringSelectMenuInteraction } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { BuildStep, FinishRoles, SetPronouns } from "../../utils/verifyFlow.js";
+import { BuildStep, FinishRoles, SetPronouns } from "../../features/verify/flow.js";
 
 // The /roles version of the verify menus, the custom id looks like rolesselect:<step>:<earlier answers>
 const selectMenu: SelectMenu = {

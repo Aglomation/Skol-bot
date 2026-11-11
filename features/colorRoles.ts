@@ -21,7 +21,7 @@ const COLOR_HEADER = /^-{3,}\s*(colou?rs?|färg(er)?)\s*-{3,}$/i;
 const SEPARATOR = /^-{3,}[^{}]*-{3,}$/;
 const LABEL = /\{(.+?)\}/;
 
-const HexText = (hex: number) => (hex === 0 ? "Ingen färg" : `#${hex.toString(16).padStart(6, "0").toUpperCase()}`);
+export const HexText = (hex: number) => (hex === 0 ? "Ingen färg" : `#${hex.toString(16).padStart(6, "0").toUpperCase()}`);
 
 /**
  * Finds the color roles on the server, the {Name} roles under the Color separator until the next separator

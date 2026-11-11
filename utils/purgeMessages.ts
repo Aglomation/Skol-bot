@@ -1,15 +1,11 @@
 import type { GuildTextBasedChannel } from "discord.js";
 import { SnowflakeUtil } from "discord.js";
 
-const MAX_PAGES = 50;
-
 /**
- *
- * @param channel
- * @param targetUserId
- * @returns
+ * Deletes the messages of a user that are still in the cache of the channel and not older than the time
+ * @returns How many messages were deleted
  */
-export async function PurgeMessages(
+async function PurgeMessages(
 	channel: GuildTextBasedChannel,
 	targetUserId: string,
 	deleteOlderThanMs = 60 * 60 * 1000, // Default to 1 hour
@@ -17,11 +13,11 @@ export async function PurgeMessages(
 	try {
 		const cutoffTimestamp = Date.now() - deleteOlderThanMs;
 
-		let messagesToDelete = channel.messages.cache.filter(
-            (msg) =>
-                msg.author.id === targetUserId &&
-                msg.createdTimestamp >= cutoffTimestamp
-        );
+		const messagesToDelete = channel.messages.cache.filter(
+			(msg) =>
+				msg.author.id === targetUserId &&
+				msg.createdTimestamp >= cutoffTimestamp
+		);
 
 		// Delete messages if found
 		// bulkDelete takes 100 messages at most, sending more fails and deletes nothing
@@ -43,22 +39,20 @@ export async function PurgeChannels(
 	deleteOlderThanMs = 60 * 60 * 1000, // Default to 1 hour
 ) {
 	const purgePromises = channels.map(async (channel) => {
-		const textChannel = channel as GuildTextBasedChannel;
-
 		// Skip inactive channels
-		if (textChannel.lastMessageId) {
+		if (channel.lastMessageId) {
 			const lastMessageTime = SnowflakeUtil.timestampFrom(
-				textChannel.lastMessageId,
+				channel.lastMessageId,
 			);
 			if (lastMessageTime < Date.now() - deleteOlderThanMs) {
 				return 0;
 			}
 		}
 
-		return await PurgeMessages(textChannel, targetUserId, deleteOlderThanMs);
+		return await PurgeMessages(channel, targetUserId, deleteOlderThanMs);
 	});
 
-	// deletes in parrallel
+	// deletes in parallel
 	const results = await Promise.all(purgePromises);
 	return results;
 }

@@ -1,6 +1,6 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder } from "discord.js";
-import { GetSortedBirthdays, HasBirthYear, IsBirthdayOn, TodayInSweden } from "../../../utils/birthdayUtils.js";
+import { GetSortedBirthdays, HasBirthYear, IsBirthdayOn, TodayInSweden } from "../../../features/birthdays.js";
 import { GetDisplayName } from "../../../utils/memberUtils.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>

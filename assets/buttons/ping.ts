@@ -1,15 +1,15 @@
-import type { ButtonInteraction, Client, ClientUser, TextChannel } from "discord.js";
+import type { ButtonInteraction, Client, TextChannel } from "discord.js";
 import {
-	MessageFlags,
+    MessageFlags,
     PermissionFlagsBits,
 } from "discord.js";
 
 const button: Button = {
-	data: {
-		customId: "ping",
-	},
-	async execute(interaction: ButtonInteraction) {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    data: {
+        customId: "ping",
+    },
+    async execute(interaction: ButtonInteraction) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const client = interaction.client as Client;
 
         const userid = interaction.customId.split(":")[1] || "1";
@@ -44,12 +44,15 @@ const button: Button = {
         }
 
         const channel = client.channels.cache.get(interaction.channel?.id as string) as TextChannel;
-        if (client?.user || !channel?.permissionsFor(client.user as ClientUser)?.has(PermissionFlagsBits.SendMessages)) return;
+        if (!client.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) {
+            await interaction.editReply({ content: "I can't send messages in this channel." });
+            return;
+        }
 
         await channel.send({ content: `<@${interaction.user.id}> has requested your help <@${userid}>` });
-        
-        interaction.deleteReply();
-	},
+
+        await interaction.deleteReply().catch(() => null);
+    },
 };
 
 export default button;

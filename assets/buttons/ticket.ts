@@ -1,21 +1,63 @@
-import type { ButtonInteraction, GuildMember } from "discord.js";
-import { EmbedBuilder, MessageFlags } from "discord.js";
-import { ExplainError } from "../../utils/errorText.js";
-import { SendLog } from "../../utils/logChannel.js";
+import type { ButtonInteraction, GuildMember, TextChannel } from "discord.js";
+import { MessageFlags } from "discord.js";
 import {
-	BuildTicketRows,
+	ChangeClaim,
 	CloseConfirmRow,
 	CloseQuestion,
 	CloseTicket,
 	CreateTicket,
 	GetTicketClaimer,
 	GetTicketForMember,
-	IsStaff,
 	OpenTicket,
-	SetTicketClaimer,
 	TICKET_BUTTON_ID,
-} from "../../utils/tickets.js";
+} from "../../features/tickets.js";
+import { ExplainError } from "../../utils/errorText.js";
+import { SendLog } from "../../utils/logChannel.js";
 
+/** The close button: asks "are you sure" before anything happens */
+async function AskToClose(interaction: ButtonInteraction, guildId: string) {
+	await interaction.reply({
+		content: await CloseQuestion(guildId),
+		components: [CloseConfirmRow()],
+		flags: MessageFlags.Ephemeral,
+	});
+}
+
+async function ReopenTicket(interaction: ButtonInteraction, ticket: TextChannel) {
+	await interaction.update({ content: "Opening the ticket...", components: [] });
+
+	const error = await OpenTicket(ticket, interaction.user);
+	await interaction.editReply({ content: error ?? "The ticket is opened." }).catch(() => null);
+}
+
+/** The "yes, close it" button of the question AskToClose asked */
+async function CloseConfirmed(interaction: ButtonInteraction, ticket: TextChannel) {
+	await interaction.update({ content: "Closing the ticket...", components: [] });
+
+	const error = await CloseTicket(ticket, interaction.user);
+	await interaction.editReply({ content: error ?? "The ticket is closed." }).catch(() => null);
+}
+
+async function DeleteTicket(interaction: ButtonInteraction, guildId: string, ticket: TextChannel) {
+	await interaction.reply({ content: "Deleting the ticket...", flags: MessageFlags.Ephemeral });
+
+	try {
+		await ticket.delete(`Ticket deleted by ${interaction.user.username}`);
+		await SendLog(interaction.client, guildId, `Ticket **${ticket.name}** was deleted by <@${interaction.user.id}>.`);
+	} catch (error) {
+		await interaction.editReply(`I couldn't delete it: ${ExplainError(error)}`);
+	}
+}
+
+/** The claim button is a switch: it takes the ticket if nobody has it, and lets go of it if you have it */
+async function ToggleClaim(interaction: ButtonInteraction, ticket: TextChannel, member: GuildMember) {
+	await interaction.deferUpdate();
+
+	const error = await ChangeClaim(ticket, member, !GetTicketClaimer(ticket), interaction.message);
+	if (error) await interaction.followUp({ content: error, flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
+}
+
+// the id of the buttons is "ticket:<action>"
 const button: Button = {
 	data: {
 		customId: TICKET_BUTTON_ID,
@@ -28,15 +70,16 @@ const button: Button = {
 
 		const action = interaction.customId.split(":")[1];
 
-		// the button in the panel
+		// the button in the panel, everything else is a button inside a ticket
 		if (action === "create") {
 			await CreateTicket(interaction);
 			return;
 		}
 
-		// the other buttons are in a ticket, the owner and the staff can use them
+		// the owner and the staff can use them, but deleting and opening a closed ticket is only for the staff (and works on closed tickets)
 		const member = interaction.member as GuildMember;
-		const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, member, action === "delete", action === "delete" || action === "open");
+		const staffOnly = action === "delete" || action === "open";
+		const ticket = await GetTicketForMember(interaction.guild, interaction.channelId, member, staffOnly, staffOnly);
 
 		if (typeof ticket === "string") {
 			if (action === "confirm" || action === "cancel") await interaction.update({ content: ticket, components: [] });
@@ -46,73 +89,18 @@ const button: Button = {
 
 		switch (action) {
 			case "close":
-				await interaction.reply({
-					content: await CloseQuestion(interaction.guild.id),
-					components: [CloseConfirmRow()],
-					flags: MessageFlags.Ephemeral,
-				});
-				break;
-			case "open": {
-				await interaction.update({ content: "Opening the ticket...", components: [] });
-				const error = await OpenTicket(ticket, interaction.user);
-				await interaction.editReply({ content: error ?? "The ticket is opened." }).catch(() => null);
-				break;
-			}
-			case "confirm": {
-				await interaction.update({ content: "Closing the ticket...", components: [] });
-
-				const error = await CloseTicket(ticket, interaction.user);
-				await interaction.editReply({ content: error ?? "The ticket is closed." }).catch(() => null);
-				break;
-			}
-			case "delete": {
-				await interaction.reply({ content: "Deleting the ticket...", flags: MessageFlags.Ephemeral });
-
-				try {
-					await ticket.delete(`Ticket deleted by ${interaction.user.username}`);
-					await SendLog(interaction.client, interaction.guild.id, `Ticket **${ticket.name}** was deleted by <@${interaction.user.id}>.`);
-				} catch (error) {
-					await interaction.editReply(`I couldn't delete it: ${ExplainError(error)}`);
-				}
-				break;
-			}
+				return await AskToClose(interaction, interaction.guild.id);
+			case "open":
+				return await ReopenTicket(interaction, ticket);
+			case "confirm":
+				return await CloseConfirmed(interaction, ticket);
+			case "delete":
+				return await DeleteTicket(interaction, interaction.guild.id, ticket);
 			case "cancel":
 				await interaction.update({ content: "The ticket stays open.", components: [] });
-				break;
-			case "claim": {
-				const claimer = GetTicketClaimer(ticket);
-				if (!(await IsStaff(member))) {
-					await interaction.reply({ content: "Only the staff can do that.", flags: MessageFlags.Ephemeral });
-					break;
-				}
-				if (claimer && claimer !== member.id) {
-					await interaction.reply({ content: `<@${claimer}> is already handling this ticket.`, flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
-					break;
-				}
-
-				const claiming = !claimer;
-				await interaction.deferUpdate();
-
-				try {
-					await SetTicketClaimer(ticket, claiming ? member.id : null);
-				} catch (error) {
-					await interaction.followUp({ content: `I couldn't change that: ${ExplainError(error)}`, flags: MessageFlags.Ephemeral });
-					break;
-				}
-
-				const embed = interaction.message.embeds[0];
-				await interaction.editReply({
-					embeds: embed ? [EmbedBuilder.from(embed).setFooter(claiming ? { text: `Claimed by ${member.displayName}` } : null)] : undefined,
-					components: BuildTicketRows(claiming),
-				});
-				await ticket
-					.send({
-						content: claiming ? `✋ <@${member.id}> will help with this ticket.` : `<@${member.id}> is no longer handling this ticket.`,
-						allowedMentions: { parse: [] },
-					})
-					.catch(() => null);
-				break;
-			}
+				return;
+			case "claim":
+				return await ToggleClaim(interaction, ticket, member);
 			default:
 				await interaction.reply({ content: "Unknown button.", flags: MessageFlags.Ephemeral });
 		}

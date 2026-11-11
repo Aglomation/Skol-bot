@@ -1,16 +1,16 @@
 import type { Client, GuildMember, TextChannel } from "discord.js";
 import { EmbedBuilder, Events, PermissionFlagsBits } from "discord.js";
 import { GetServerConfig } from "../utils/configManager.js";
+import { SafeError } from "../utils/errorText.js";
 import { SendLog } from "../utils/logChannel.js";
 import { GetActiveBan, GetActiveMute, TimeoutLength } from "../utils/moderationManager.js";
 import { GetProfileStrict } from "../utils/profileManager.js";
 
-
 export default {
-	name: Events.GuildMemberAdd,
-	once: false,
-	async execute(member: GuildMember, client: Client) {
-		const profile = await loadProfile(member, client);
+    name: Events.GuildMemberAdd,
+    once: false,
+    async execute(member: GuildMember, client: Client) {
+        const profile = await loadProfile(member, client);
 
         // Check if the user is banned
         const isBanned = await handleBanCheck(member, profile);
@@ -31,7 +31,7 @@ async function loadProfile(member: GuildMember, client: Client): Promise<UserPro
         try {
             return await GetProfileStrict(member.id, member.guild.id);
         } catch (err) {
-            console.error(`Could not check the ban list for ${member.id} (attempt ${attempt}):`, err);
+            console.error(`Could not check the ban list for ${member.id} (attempt ${attempt}):`, SafeError(err));
             if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         }
     }
@@ -64,7 +64,7 @@ async function handleMuteCheck(member: GuildMember, profile: UserProfile | null)
         await member.timeout(TimeoutLength(mute.action.until), "Mute is still active, they left and joined again");
         await SendLog(member.client, member.guild.id, `<@${member.id}> joined while muted (case #${mute.number}), the mute was put back.`);
     } catch (err) {
-        console.error(`Failed to put the mute back on ${member.user.tag}:`, err);
+        console.error(`Failed to put the mute back on ${member.user.tag}:`, SafeError(err));
         await SendLog(member.client, member.guild.id, `<@${member.id}> joined while muted (case #${mute.number}) but I couldn't put the mute back, please do it by hand.`);
     }
 }
@@ -76,7 +76,7 @@ async function sendWelcomeMessage(member: GuildMember, client: Client) {
     if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
 
     // Filter out bots
-    const humanMemberCount = member.guild.members.cache.filter((mm) => !mm.user.bot).size;
+    const humanMemberCount = member.guild.members.cache.filter((guildMember) => !guildMember.user.bot).size;
 
     const embed = new EmbedBuilder()
         .setTitle("Välkommen")

@@ -5,6 +5,7 @@ import { RunSubcommand } from "../../../utils/subcommands.js";
 
 import { builder as activeBuilder } from "./active.js";
 import { builder as bansBuilder } from "./bans.js";
+import { builder as caseBuilder } from "./case.js";
 import { builder as historyBuilder } from "./history.js";
 import { builder as noteBuilder } from "./note.js";
 import { builder as recentBuilder } from "./recent.js";
@@ -19,6 +20,7 @@ const command: Command = {
 		.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
 		.addSubcommand(historyBuilder)
+		.addSubcommand(caseBuilder)
 		.addSubcommand(recentBuilder)
 		.addSubcommand(bansBuilder)
 		.addSubcommand(activeBuilder)

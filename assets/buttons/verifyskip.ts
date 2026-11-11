@@ -1,5 +1,5 @@
 import type { ButtonInteraction } from "discord.js";
-import { FinishVerify } from "../../utils/verifyFlow.js";
+import { FinishVerify } from "../../features/verify/flow.js";
 
 // The "Hoppa över" button under the pronoun question, the custom id is verifyskip:<city>:<class>:<year>
 const button: Button = {

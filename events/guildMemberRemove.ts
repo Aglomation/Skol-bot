@@ -1,12 +1,12 @@
 import type { GuildMember, PartialGuildMember } from "discord.js";
 import { Events } from "discord.js";
 
-import { PRIVACY_PREFERENCE } from "../utils/privacyOptions.js";
+import { PRIVACY_PREFERENCE } from "../db/schema.js";
 import { DeletePersonalData, GetProfile, UpdateProfile } from "../utils/profileManager.js";
 
 export default {
-	name: Events.GuildMemberRemove,
-	once: false,
+    name: Events.GuildMemberRemove,
+    once: false,
     async execute(member: GuildMember | PartialGuildMember) {
         const profile = await GetProfile(member.id, member.guild.id);
 
@@ -19,7 +19,7 @@ export default {
             case PRIVACY_PREFERENCE.DELETE_ALL:
                 // moderation history is kept as the privacy policy allows
                 await DeletePersonalData(member.id, member.guild.id);
-                console.log(`Deleted all data for user ${member.id} due to privacy preference.`);
+                console.log("A member left, all of their data was deleted as they chose.");
                 break;
 
             case PRIVACY_PREFERENCE.DELETE_OPTIONAL:
@@ -31,12 +31,12 @@ export default {
                 break;
 
             case PRIVACY_PREFERENCE.KEEP_ALL:
-                console.log(`Kept all data for user ${member.id} due to privacy preference.`);
+                console.log("A member left, their data was kept as they chose.");
                 break;
 
             default:
-                console.log(`Unknown privacy preference (${preference}) for user ${member.id}. Doing nothing.`);
+                console.log(`Unknown privacy preference (${preference}) on a member that left. Doing nothing.`);
                 break;
         }
-	},
+    },
 };

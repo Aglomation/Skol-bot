@@ -1,5 +1,5 @@
 import type { Client } from "discord.js";
-import { RecordSnapshot } from "../../utils/memberHistory.js";
+import { RecordSnapshot } from "../../features/memberHistory.js";
 
 const repeating: Repeating = {
 	data: {

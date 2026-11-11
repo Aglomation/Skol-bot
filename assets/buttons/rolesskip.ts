@@ -1,5 +1,5 @@
 import type { ButtonInteraction } from "discord.js";
-import { FinishRoles, SetPronouns } from "../../utils/verifyFlow.js";
+import { FinishRoles, SetPronouns } from "../../features/verify/flow.js";
 
 // The button under the pronoun question in /roles
 // rolesskip:clear removes the pronouns, rolesskip:<city>:<class>:<year> skips the question in /roles all

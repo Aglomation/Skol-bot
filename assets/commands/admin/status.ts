@@ -3,11 +3,11 @@ import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../db/client.js";
 import { userProfileTable } from "../../../db/schema.js";
+import { GetSessions, IsActive } from "../../../features/lfg.js";
+import { IsTicketChannel, IsTicketClosed } from "../../../features/tickets.js";
 import { GetFullServerConfig } from "../../../utils/configManager.js";
-import { GetSessions, IsActive } from "../../../utils/lfg.js";
 import { HasPermission } from "../../../utils/permissions.js";
 import { GetTasks } from "../../../utils/taskStatus.js";
-import { IsTicketChannel, IsTicketClosed } from "../../../utils/tickets.js";
 import { SETTINGS } from "../config/settings.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>

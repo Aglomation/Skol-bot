@@ -1,11 +1,10 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder } from "discord.js";
-import { GetNextBirthdays, GetSortedBirthdays } from "../../../utils/birthdayUtils.js";
+import { GetNextBirthdays, GetSortedBirthdays, NumToMonth } from "../../../features/birthdays.js";
 import { GetDisplayName } from "../../../utils/memberUtils.js";
-import { NumToMonth } from "../../../utils/stringConvert.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
-    subcommand
+	subcommand
 		.setName("next")
 		.setDescription("Shows the next birthday")
 		.setDescriptionLocalizations({

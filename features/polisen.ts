@@ -57,24 +57,21 @@ export function IsEventPath(url: unknown): url is string {
 	return typeof url === "string" && /^\/[^\s\\]*$/.test(url) && !url.startsWith("//");
 }
 
-/**
- * Loads the existing cache file into an Array.
- */
+/** The saved events, none if there is no file yet or it can't be read */
 export async function LoadPolisenCache(): Promise<PolisenEvent[]> {
 	try {
 		await fs.mkdir(CACHE_DIR, { recursive: true });
 		const data = await fs.readFile(CACHE_FILE, "utf-8");
 		return JSON.parse(data);
 	} catch {
-		return []; // Return empty array if file doesn't exist or is invalid
+		return [];
 	}
 }
-/**
- * Saves the Array values back to the cache file.
- */
+
+/** Saves the events for the next run, and for the button that shows more about an event */
 export async function SavePolisenCache(data: PolisenEvent[]): Promise<void> {
 	// written to another file first and then renamed, so the button never reads a half written cache
 	const tempFile = `${CACHE_FILE}.tmp`;
-	await fs.writeFile(tempFile, JSON.stringify(data, null, 0));
+	await fs.writeFile(tempFile, JSON.stringify(data));
 	await fs.rename(tempFile, CACHE_FILE);
 }

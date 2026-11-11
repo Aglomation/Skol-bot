@@ -76,7 +76,7 @@ async function sendWelcomeMessage(member: GuildMember, client: Client) {
     if (!client?.user || !channel?.permissionsFor(client.user)?.has(PermissionFlagsBits.SendMessages)) return;
 
     // Filter out bots
-    const humanMemberCount = member.guild.members.cache.filter((mm) => !mm.user.bot).size;
+    const humanMemberCount = member.guild.members.cache.filter((guildMember) => !guildMember.user.bot).size;
 
     const embed = new EmbedBuilder()
         .setTitle("Välkommen")

@@ -170,34 +170,91 @@ export function Slug(name: string): string {
 		.slice(0, 80) || "user";
 }
 
+// The role that is pinged when a ticket is opened, leave it empty to ping nobody
+const TICKET_PING_ROLE_ID: string = "1560617409998757992";
+
+/** What the bot needs in the ticket category to make the channels */
+const BOT_PERMISSIONS_IN_CATEGORY = [
+	PermissionFlagsBits.ViewChannel,
+	PermissionFlagsBits.SendMessages,
+	PermissionFlagsBits.ManageChannels,
+	PermissionFlagsBits.ManageRoles,
+];
+
 /**
- * Makes a ticket for the person that pressed the button, a private text channel in the ticket category
- * Only they and the staff can see it, and nobody gets in by being mentioned there
+ * The ticket category of the server, if it is set up and the bot can work in it
+ * Tells the person what is wrong when it is not
  */
+async function FindTicketCategory(interaction: ButtonInteraction, guild: Guild) {
+	const categoryId = await GetServerConfig(guild.id, "ticketCategory");
+	const category = categoryId ? guild.channels.cache.get(categoryId) : undefined;
+	if (!category || category.type !== ChannelType.GuildCategory) {
+		await interaction.editReply("Tickets aren't set up in this server, please contact a moderator.");
+		return null;
+	}
+
+	const botMember = guild.members.me;
+	if (!botMember || !category.permissionsFor(botMember).has(BOT_PERMISSIONS_IN_CATEGORY)) {
+		await interaction.editReply("I'm missing permissions in the ticket category, please contact an admin.");
+		return null;
+	}
+
+	return { category, botMember };
+}
+
+/** The roles of the moderators and the admins, the ones that exist in the server */
+async function FindStaffRoleIds(guild: Guild): Promise<string[]> {
+	const modRoleId = await GetServerConfig(guild.id, "modRoleId");
+	const adminRoleId = await GetServerConfig(guild.id, "adminRoleId");
+
+	return [modRoleId, adminRoleId].filter((id): id is string => !!id && guild.roles.cache.has(id));
+}
+
+/** Only the owner, the staff and the bot can see the ticket */
+function BuildTicketOverwrites(guild: Guild, ownerId: string, staffRoleIds: string[], botMemberId: string) {
+	return [
+		{ id: guild.roles.everyone.id, type: OverwriteType.Role, deny: [PermissionFlagsBits.ViewChannel] },
+		{ id: ownerId, type: OverwriteType.Member, allow: TICKET_PERMISSIONS },
+		...staffRoleIds.map((id) => ({
+			id,
+			type: OverwriteType.Role,
+			allow: [...TICKET_PERMISSIONS, PermissionFlagsBits.ManageMessages],
+		})),
+		{ id: botMemberId, type: OverwriteType.Member, allow: [...TICKET_PERMISSIONS, PermissionFlagsBits.ManageChannels] },
+	];
+}
+
+/** The first message of a ticket: explains what to do, pings the owner and the staff, and has the close and claim buttons */
+async function SendWelcomeMessage(channel: TextChannel, ownerId: string) {
+	const embed = new EmbedBuilder()
+		.setTitle("🎫 Ticket")
+		.setColor(Colors.Blurple)
+		.setDescription(
+			`Hi <@${ownerId}>! Describe what you need help with and a staff member will answer as soon as they can.\n\n` +
+				`Moderators can't help with verification issues, administrators will take those.\n\n` +
+				`-# When the ticket is closed a copy of the messages is saved for the staff.`,
+		);
+
+	await channel
+		.send({
+			content: `<@${ownerId}>${TICKET_PING_ROLE_ID ? ` <@&${TICKET_PING_ROLE_ID}>` : ""}`,
+			embeds: [embed],
+			components: BuildTicketRows(false),
+			// only the owner and the staff role, nobody else that ends up in the text
+			allowedMentions: { users: [ownerId], roles: TICKET_PING_ROLE_ID ? [TICKET_PING_ROLE_ID] : [] },
+		})
+		.catch((error) => console.error("Could not send the welcome message in a ticket:", SafeError(error)));
+}
+
 export async function CreateTicket(interaction: ButtonInteraction): Promise<void> {
 	const guild = interaction.guild;
 	if (!guild) return;
 
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	const categoryId = await GetServerConfig(guild.id, "ticketCategory");
-	const category = categoryId ? guild.channels.cache.get(categoryId) : undefined;
-	if (!category || category.type !== ChannelType.GuildCategory) {
-		await interaction.editReply("Tickets aren't set up in this server, please contact a moderator.");
-		return;
-	}
-
-	const me = guild.members.me;
-	const needed = [
-		PermissionFlagsBits.ViewChannel,
-		PermissionFlagsBits.SendMessages,
-		PermissionFlagsBits.ManageChannels,
-		PermissionFlagsBits.ManageRoles,
-	];
-	if (!me || !category.permissionsFor(me).has(needed)) {
-		await interaction.editReply("I'm missing permissions in the ticket category, please contact an admin.");
-		return;
-	}
+	const setup = await FindTicketCategory(interaction, guild);
+	if (!setup) return;
+	const { category, botMember } = setup;
 
 	const user = interaction.user;
 
@@ -207,13 +264,7 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 			return;
 		}
 
-		const modRoleId = await GetServerConfig(guild.id, "modRoleId");
-		const adminRoleId = await GetServerConfig(guild.id, "adminRoleId");
-
-		const staffRoleIds = [modRoleId, adminRoleId].filter(
-			(id): id is string => !!id && guild.roles.cache.has(id),
-		);
-
+		const staffRoleIds = await FindStaffRoleIds(guild);
 		const displayName = (interaction.member as GuildMember | null)?.displayName ?? user.username;
 
 		const channel = await guild.channels.create({
@@ -221,41 +272,11 @@ export async function CreateTicket(interaction: ButtonInteraction): Promise<void
 			type: ChannelType.GuildText,
 			parent: category.id,
 			topic: `ticket:${user.id} | ${displayName.slice(0, 100)}`,
-			permissionOverwrites: [
-				{ id: guild.roles.everyone.id, type: OverwriteType.Role, deny: [PermissionFlagsBits.ViewChannel] },
-				{ id: user.id, type: OverwriteType.Member, allow: TICKET_PERMISSIONS },
-				...staffRoleIds.map((id) => ({
-					id,
-					type: OverwriteType.Role,
-					allow: [...TICKET_PERMISSIONS, PermissionFlagsBits.ManageMessages],
-				})),
-				{ id: me.id, type: OverwriteType.Member, allow: [...TICKET_PERMISSIONS, PermissionFlagsBits.ManageChannels] },
-			],
+			permissionOverwrites: BuildTicketOverwrites(guild, user.id, staffRoleIds, botMember.id),
 			reason: `Ticket opened by ${user.username}`,
 		});
 
-		// the staff get a ping, one role is enough
-		const pingRoleId = "1560617409998757992";
-		// const pingRoleId = [adminRoleId, modRoleId].find((id) => !!id && staffRoleIds.includes(id));
-
-		const embed = new EmbedBuilder()
-			.setTitle("🎫 Ticket")
-			.setColor(Colors.Blurple)
-			.setDescription(
-				`Hi <@${user.id}>! Describe what you need help with and a staff member will answer as soon as they can.\n\n` +
-				`Moderators can't help with verification issues, administrators will take those.\n\n` +
-				`-# When the ticket is closed a copy of the messages is saved for the staff.`,
-			);
-
-		await channel
-			.send({
-				content: `<@${user.id}>${pingRoleId ? ` <@&${pingRoleId}>` : ""}`,
-				embeds: [embed],
-				components: BuildTicketRows(false),
-				// only the owner and the staff role, nobody else that ends up in the text
-				allowedMentions: { users: [user.id], roles: pingRoleId ? [pingRoleId] : [] },
-			})
-			.catch((error) => console.error("Could not send the welcome message in a ticket:", SafeError(error)));
+		await SendWelcomeMessage(channel, user.id);
 
 		await interaction.editReply(`Your ticket has been created: <#${channel.id}>`);
 		await SendLog(interaction.client, guild.id, `<@${user.id}> opened a ticket: <#${channel.id}>`);

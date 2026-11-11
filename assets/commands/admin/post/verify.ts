@@ -28,17 +28,24 @@ export default async function command(
 
 	const embed = new EmbedBuilder()
 		.setTitle("Verifiera din LBS-mejl 🔒")
-		.setDescription("Klicka på knappen nedan och läs reglerna i <#1497140071176863759> för att komma in på servern")
-		.setFooter({ text: "Använd /privacy policy för att läsa vår integritetspolicy. :3" })
-		.setColor(0x87CFEB);
+		.setDescription("Klicka på den gröna knappen nedan för att verifiera dig.")
+		.setColor(0x87CFEB)
+		.setAuthor({
+			name: "LBS Bot",
+			iconURL: "https://cdn.discordapp.com/icons/1497140069746741338/28df0568dc08e6808436dcc53f3bc09b.webp",
+		});
 
-	const btn = new ButtonBuilder()
+	const vbtn = new ButtonBuilder()
 		.setCustomId(button.data.customId)
 		.setLabel("Verifiera Här!")
 		.setEmoji("✅")
 		.setStyle(ButtonStyle.Success);
-
-	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(btn);
+	const pbtn = new ButtonBuilder()
+		.setCustomId("verify:privacy")
+		.setLabel("Integritetspolicy")
+		.setEmoji("📜")
+		.setStyle(ButtonStyle.Secondary);
+	const row = new ActionRowBuilder<ButtonBuilder>().addComponents(vbtn, pbtn);
 
 	const channel = await GetPostChannel(interaction);
 	if (!channel) return;

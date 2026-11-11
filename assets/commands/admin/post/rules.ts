@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
+import type { ChatInputCommandInteraction, Guild, SlashCommandSubcommandBuilder } from "discord.js";
 import {
     Colors,
     EmbedBuilder,
@@ -13,16 +13,14 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
         .setName("rules")
         .setDescription("Posts the server rules embed into the current channel");
 
-export default async function command(
-    interaction: ChatInputCommandInteraction,
-) {
-    if (!interaction.guild) return;
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+// the channels the rules point to (§2.2, §3.4 and the footer), the embed can't show channel mentions as links
+const MENTIONED_CHANNELS_MESSAGE =
+    "**Channels mentioned in the rules:**\n§2.2: <#1497140071391039520>\n§3.4: <#1497140071864864769>\nFooter: <#1499885683995840683>";
 
-    if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
-
-    const rulesEmbed = new EmbedBuilder()
-        .setAuthor({ name: "Rules & Guidelines", iconURL: interaction.guild?.iconURL() ?? undefined })
+/** The rules as one embed, remember to change the date in the footer when a rule changes */
+function BuildRulesEmbed(guild: Guild) {
+    return new EmbedBuilder()
+        .setAuthor({ name: "Rules & Guidelines", iconURL: guild.iconURL() ?? undefined })
         .setDescription(
             `**By being a member of this server, you agree to follow these rules.**\n` +
             `We apply common sense; if you are intentionally being disruptive, "it wasn't explicitly in the rules" will not be an excuse.\n\n` +
@@ -97,12 +95,21 @@ export default async function command(
                 "If you see someone breaking the rules, please open a #🚩・report!\n" +
                 "These rules were last updated on 8/7/2026."
         });
+}
+
+export default async function command(
+    interaction: ChatInputCommandInteraction,
+) {
+    if (!interaction.guild) return;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    if (!(await HasPermission(interaction, PermissionFlagsBits.BanMembers))) return;
 
     const channel = await GetPostChannel(interaction);
     if (!channel) return;
 
-    await channel.send({ embeds: [rulesEmbed] });
-    await channel.send("**Channels mentioned in the rules:**\n§2.2: <#1497140071391039520>\n§3.4: <#1497140071864864769>\nFooter: <#1499885683995840683>");
+    await channel.send({ embeds: [BuildRulesEmbed(interaction.guild)] });
+    await channel.send(MENTIONED_CHANNELS_MESSAGE);
 
     await interaction.deleteReply();
 }

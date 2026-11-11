@@ -1,17 +1,22 @@
-import type {
-	ChatInputCommandInteraction,
-	GuildMember,
-	GuildTextBasedChannel,
-	SlashCommandSubcommandBuilder,
-	TextChannel,
-} from "discord.js";
+import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
 import { ParseDuration } from "../../../utils/duration.js";
 import { SendLog } from "../../../utils/logChannel.js";
-import { AddModAction, TimeoutLength, UntilFromDuration } from "../../../utils/moderationManager.js";
-import { CheckHierarchy, HasPermission } from "../../../utils/permissions.js";
-import { PurgeChannels } from "../../../utils/purgeMessages.js";
-import { DeferReply, DELETE_MESSAGES_CHOICES, INVALID_DURATION } from "./shared.js";
+import { TimeoutLength, UntilFromDuration } from "../../../utils/moderationManager.js";
+import { CheckHierarchy } from "../../../utils/permissions.js";
+import {
+	CaseLabel,
+	DELETE_MESSAGES_CHOICES,
+	DescribeEnd,
+	DescribeEndForLog,
+	ExpiresAt,
+	FindChannelsToPurge,
+	INVALID_DURATION,
+	PurgeAndLog,
+	RecordCase,
+	SendDirectMessage,
+	StartModRequest,
+} from "./shared.js";
 
 export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 	subcommand
@@ -49,102 +54,54 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setRequired(false)
 		);
 
-export default async function command(
-	interaction: ChatInputCommandInteraction
-) {
-	await DeferReply(interaction);
-	if (!interaction.guild) {
-		await interaction.editReply({
-			content: "This command can only be used in a server.",
-		});
-		return;
-	}
-	// Ensure interaction.member is treated as a GuildMember to access permissions
-	const executor = interaction.member as GuildMember;
+export default async function command(interaction: ChatInputCommandInteraction) {
+	// a timeout is the moderate members permission, "mute members" is the voice mute
+	const request = await StartModRequest(interaction, PermissionFlagsBits.ModerateMembers);
+	if (!request) return;
 
-	// a timeout is the moderate members permission, mute members is the voice mute
-	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
-
-	const user = interaction.options.getUser("user", true);
-	const member = interaction.options.getMember("user") as GuildMember | null;
-	const reason = interaction.options.getString("reason", true);
-	const date = ParseDuration(interaction.options.getString("duration") || "");
-	const deleteMessagesDuration = ParseDuration(
-		interaction.options.getString("deletemessages", false) || "",
-	);
-
+	const { member, user, guild, reason } = request;
 	if (!member) {
 		await interaction.editReply("User is not in this server.");
 		return;
 	}
 
-	const denied = CheckHierarchy(executor, member);
-	if (denied) {
-		await interaction.editReply(denied);
+	const hierarchyError = CheckHierarchy(request.moderator, member);
+	if (hierarchyError) {
+		await interaction.editReply(hierarchyError);
 		return;
 	}
 
-	if (!date) {
+	const durationMs = ParseDuration(interaction.options.getString("duration") ?? "");
+	if (!durationMs) {
 		await interaction.editReply(INVALID_DURATION);
 		return;
 	}
+	const purgeDurationMs = ParseDuration(interaction.options.getString("deletemessages") ?? "");
 
 	try {
-		// If the duration is longer than 28 days it needs to be refreshed later.
-		await member.timeout(TimeoutLength(UntilFromDuration(date)), reason);
+		// a timeout can't be longer than 28 days, a longer mute is renewed by the bot later (TimeoutLength)
+		await member.timeout(TimeoutLength(UntilFromDuration(durationMs)), reason);
+		const expiresAt = ExpiresAt(durationMs);
 
-		const expiresAt = Number.isFinite(date)
-			? Math.floor((Date.now() + date) / 1000)
-			: null;
-
-		let dmSent = true;
-		await user
-			.send(
-				`## You have been muted in ${interaction.guild?.name}\n` +
+		const dmSent = await SendDirectMessage(
+			user,
+			`## You have been muted in ${guild.name}\n` +
 				`**Reason:** ${reason}\n` +
-				`**Ends:** ${expiresAt ? `<t:${expiresAt}:F> (<t:${expiresAt}:R>)` : "Never (permanent)"}\n\n` +
+				`**Ends:** ${DescribeEnd(expiresAt)}\n\n` +
 				`Until then you can't send messages, react or speak in voice channels. If you think this is a mistake, reply to this message and the staff team will see it.`,
-			)
-			.catch(() => {
-				dmSent = false;
-			});
+		);
 
-		// save it in the moderation history
-		const caseNumber = await AddModAction(user.id, interaction.guild.id, {
-			type: "mute",
-			by: interaction.user.id,
-			reason,
-			until: UntilFromDuration(date),
-			...(dmSent ? {} : { dm: false }),
-		});
+		const caseNumber = await RecordCase(request, "mute", { dmSent, until: UntilFromDuration(durationMs) });
 
 		await interaction.editReply(
-			`**${user.tag}** has been muted. (case #${caseNumber ?? "?"})` +
+			`**${user.tag}** has been muted. (${CaseLabel(caseNumber)})` +
 				(caseNumber === null ? "\nI couldn't save the mute in the database, so it won't be refreshed or put back if they leave and join again." : ""),
 		);
+		await SendLog(interaction.client, guild.id, `${interaction.user.tag} has muted <@${user.id}> until: ${DescribeEndForLog(expiresAt)} for the reason: ${reason} (${CaseLabel(caseNumber)})`);
 
-		await SendLog(interaction.client, interaction.guild.id, `${interaction.user.tag} has muted <@${user.id}> until: ${expiresAt ? `<t:${expiresAt}>` : "Indefinite"} for the reason: ${reason} (case #${caseNumber ?? "?"})`);
-
-		// Purge messages if option is set
-		if (deleteMessagesDuration && deleteMessagesDuration > 0 && member) {
-			const channels = member.guild.channels.cache.filter(
-				(ch): ch is TextChannel =>
-					ch.isTextBased() && ch.permissionsFor(member).has("ViewChannel"),
-			);
-			const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
-
-			const results = await PurgeChannels(
-				channelsArray,
-				user.id,
-				deleteMessagesDuration,
-			);
-
-			await SendLog(interaction.client, interaction.guild.id, `Deleted ${results.reduce((acc, curr) => acc + curr, 0)} messages from <@${user.id}> as part of the mute.`);
-		}
-	} catch (err) {
-		console.error(err);
-		await interaction.editReply(
-			"I got an error while trying to mute that user. Make sure my role is high enough (or my code is just bad).",
-		);
+		await PurgeAndLog(request, FindChannelsToPurge(member, purgeDurationMs), purgeDurationMs, "mute");
+	} catch (error) {
+		console.error(error);
+		await interaction.editReply("I got an error while trying to mute that user. Make sure my role is high enough (or my code is just bad).");
 	}
 }

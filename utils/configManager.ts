@@ -157,11 +157,3 @@ export async function FindAllNonNullKeysConfig(
 		return [];
 	}
 }
-
-/**
- * Remove the config of a server, used when the bot has been removed from it for good
- */
-export async function DeleteServerConfig(id: string): Promise<void> {
-	await db.delete(serverConfigTable).where(eq(serverConfigTable.id, id));
-	ClearServerConfigCache(id);
-}

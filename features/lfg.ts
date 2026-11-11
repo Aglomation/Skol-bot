@@ -259,15 +259,6 @@ export async function CancelSession(client: Client, session: LfgSession, byId: s
 	if (channel) await Say(channel, session, `🗑️ **${session.game}** was cancelled by <@${byId}>.${others.length > 0 ? `\n${Mentions(others)}` : ""}`, others);
 }
 
-/**
- * Deletes the sessions of a server, used when the bot has been removed from it for good
- */
-export async function RemoveGuildFromLfg(guildId: string): Promise<void> {
-	for (const session of await GetSessions(guildId)) sessions.delete(session.id);
-
-	await SaveSessions();
-}
-
 export async function RemoveUserFromLfg(client: Client, guildId: string, userId: string): Promise<void> {
 	for (const session of await GetSessions(guildId)) {
 		if (session.hostId === userId) {

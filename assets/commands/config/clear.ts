@@ -14,7 +14,7 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setName("setting")
 				.setDescription("The setting to remove")
 				.setRequired(true)
-				.addChoices(...SETTINGS.map((s) => ({ name: s.label, value: s.name }))),
+				.addChoices(...SETTINGS.map((setting) => ({ name: setting.label, value: setting.name }))),
 		);
 
 export default async function command(
@@ -25,7 +25,7 @@ export default async function command(
 
 	if (!(await HasPermission(interaction, PermissionFlagsBits.Administrator))) return;
 
-	const setting = SETTINGS.find((s) => s.name === interaction.options.getString("setting", true));
+	const setting = SETTINGS.find((candidate) => candidate.name === interaction.options.getString("setting", true));
 	if (!setting) {
 		await interaction.editReply("Unknown setting.");
 		return;

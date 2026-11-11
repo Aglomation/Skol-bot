@@ -276,25 +276,28 @@ async function GiveTeacherRole(member: GuildMember, email: string): Promise<void
 	if (teacherRole) await member.roles.add(teacherRole);
 }
 
+/** Gives the verified role if the server has one, throws if the bot can't (its role is probably too low) */
+async function GiveVerifiedRole(member: GuildMember): Promise<void> {
+	const verifiedRoleId = await GetServerConfig(member.guild.id, "verifiedRoleId");
+	const verifiedRole = verifiedRoleId ? member.guild.roles.cache.get(verifiedRoleId) : undefined;
+	if (verifiedRole) await member.roles.add(verifiedRole);
+}
+
 /**
  * Gives a member everything they get for verifying: the verified role, the roles from the verify questions and the teacher role for teachers
  * Used when the form comes in (messageCreate) and by /admin verify manual
  * @returns false if the verified or teacher role couldn't be given (the bots role is probably too low)
  */
 export async function CompleteVerification(member: GuildMember, email: string): Promise<boolean> {
-	const guild = member.guild;
-
 	try {
-		const verifiedRoleId = await GetServerConfig(guild.id, "verifiedRoleId");
-		const verifiedRole = verifiedRoleId ? guild.roles.cache.get(verifiedRoleId) : undefined;
-		if (verifiedRole) await member.roles.add(verifiedRole);
+		await GiveVerifiedRole(member);
 	} catch (error) {
 		console.error("Could not give the verified role:", SafeError(error));
 		return false;
 	}
 
 	// city, class, year and pronouns from the verify questions, if they are gone the member gets told to pick them again
-	const pending = TakePendingRoles(guild.id, member.id);
+	const pending = TakePendingRoles(member.guild.id, member.id);
 	if (pending) {
 		if (!(await ApplyVerifyRoles(member, pending.roleIds, pending.asked))) await NotifyRolesFailed(member);
 	} else {
@@ -312,6 +315,80 @@ export async function CompleteVerification(member: GuildMember, email: string): 
 	return true;
 }
 
+const VERIFY_CODE_LENGTH = 5;
+const VERIFY_CODE_ATTEMPTS = 5;
+
+/**
+ * Someone who already verified with an email (they left and came back, or picked their roles again) only needs their roles, there is no form
+ */
+async function RestoreVerifiedMember(
+	interaction: StringSelectMenuInteraction | ButtonInteraction,
+	email: string,
+	roleIds: ReturnType<typeof ResolveRoles>,
+	asked: ReturnType<typeof AskedGroups>,
+): Promise<void> {
+	const member = interaction.member as GuildMember | null;
+	if (!member) return;
+
+	await GiveVerifiedRole(member);
+	const rolesGiven = await ApplyVerifyRoles(member, roleIds, asked);
+
+	// a teacher that left and came back gets the teacher role again, same as when they first verified
+	await GiveTeacherRole(member, email);
+
+	await interaction.update({
+		content:
+			`You have been verified successfully!\nLinked to: ${email}` +
+			(rolesGiven ? "" : "\nI couldn't give you all of your roles, use `/roles all` to pick them again or make a support ticket."),
+		embeds: [],
+		components: [],
+	});
+}
+
+/**
+ * The code the person types in the form, so the form answer can be tied to their account
+ * They keep the code they already have, a new one is made (and saved) if not
+ * @returns null if it couldn't be saved
+ */
+async function GetVerifyCode(userId: string, guildId: string, existingCode: string | null): Promise<string | null> {
+	if (existingCode) return existingCode;
+
+	for (let attempt = 0; attempt < VERIFY_CODE_ATTEMPTS; attempt++) {
+		const code = GenerateRandomString(VERIFY_CODE_LENGTH);
+		const result = await UpdateProfile(userId, guildId, { verifycode: code });
+
+		if (result === null) return code;
+		// the code is unique, so a duplicate is just bad luck and another try can work, anything else won't get better
+		if (result !== PROFILE_DUPLICATE) return null;
+	}
+
+	return null;
+}
+
+/** The message with the code and the link to the form, alumni get another text (they can't log in with a school account) */
+function BuildFormMessage(verificationCode: string, alumni: boolean) {
+	const embed = alumni
+		? new EmbedBuilder()
+				.setTitle("Verifiering för alumner")
+				.setDescription(
+					`Du har valt ett år där de flesta har tagit studenten.\n\n` +
+						`Har du tagit studenten och inte längre har en skolmail: svara **Ja** på frågan om studenten i formuläret och skicka in bevis, så verifierar en moderator dig manuellt. Du får dina roller då.\n\n` +
+						`Går du fortfarande kvar på skolan: logga in med ditt **@*lbs.se**-konto och svara **Nej**.\n\n` +
+						`Din kod för formuläret är: \`${verificationCode}\``,
+				)
+				.setColor("#f2ff00")
+		: new EmbedBuilder()
+				.setTitle("⚠️ Viktigt")
+				.setDescription(
+					`Din webbläsare måste vara inloggad på ditt **@*lbs.se**-konto.\n\n` + `Din kod för formuläret är: \`${verificationCode}\``,
+				)
+				.setColor("#f2ff00");
+
+	const formLinkButton = new ButtonBuilder().setLabel("Gå till formuläret").setStyle(ButtonStyle.Link).setURL(`${formURL}${verificationCode}`);
+
+	return { embeds: [embed], components: [new ActionRowBuilder<ButtonBuilder>().addComponents(formLinkButton)] };
+}
+
 /**
  * Called after the last question, saves the answers with the verify code and shows the form
  * If they already have an email they are verified straight away
@@ -327,80 +404,22 @@ export async function FinishVerify(
 
 	const roleIds = ResolveRoles(cityKey, classKey, yearKey, pronounKeys);
 	const asked = AskedGroups(pronounKeys);
-	const alumni = YEARS.find((option) => option.key === yearKey)?.alumni ?? false;
 	const profile = await GetProfile(interaction.user.id, interaction.guild.id);
 
-	// already verified with an email, they only needed the roles
 	if (profile?.email) {
-		const member = interaction.member as GuildMember | null;
-		if (!member) return;
-
-		const verifiedRoleId = await GetServerConfig(interaction.guild.id, "verifiedRoleId");
-		const verifiedRole = verifiedRoleId ? interaction.guild.roles.cache.get(verifiedRoleId) : undefined;
-		if (verifiedRole) await member.roles.add(verifiedRole);
-		const rolesGiven = await ApplyVerifyRoles(member, roleIds, asked);
-
-		// a teacher that left and came back gets the teacher role again, same as when they first verified
-		await GiveTeacherRole(member, profile.email);
-
-		await interaction.update({
-			content: `You have been verified successfully!\nLinked to: ${profile.email}` +
-				(rolesGiven ? "" : "\nI couldn't give you all of your roles, use `/roles all` to pick them again or make a support ticket."),
-			embeds: [],
-			components: [],
-		});
+		await RestoreVerifiedMember(interaction, profile.email, roleIds, asked);
 		return;
 	}
 
-	// Generate a random 5 character verification code, only saved if they don't have one already
-	let verificationCode = profile?.verifycode ?? null;
+	const verificationCode = await GetVerifyCode(interaction.user.id, interaction.guild.id, profile?.verifycode ?? null);
 	if (!verificationCode) {
-		for (let attempt = 0; attempt < 5 && !verificationCode; attempt++) {
-			const code = GenerateRandomString(5);
-			const updateResult = await UpdateProfile(interaction.user.id, interaction.guild.id, { verifycode: code });
-
-			if (updateResult === null) verificationCode = code;
-			else if (updateResult !== PROFILE_DUPLICATE) break;
-		}
-
-		if (!verificationCode) {
-			await interaction.update({
-				content: `An error occurred while updating your profile. Please try again.`,
-				embeds: [],
-				components: [],
-			});
-			return;
-		}
+		await interaction.update({ content: `An error occurred while updating your profile. Please try again.`, embeds: [], components: [] });
+		return;
 	}
 
 	// the answers stay in memory until the form verifies them
 	SavePendingRoles(interaction.guild.id, interaction.user.id, { roleIds, asked });
 
-	const embed = alumni
-		? new EmbedBuilder()
-			.setTitle("Verifiering för alumner")
-			.setDescription(
-				`Du har valt ett år där de flesta har tagit studenten.\n\n` +
-				`Har du tagit studenten och inte längre har en skolmail: svara **Ja** på frågan om studenten i formuläret och skicka in bevis, så verifierar en moderator dig manuellt. Du får dina roller då.\n\n` +
-				`Går du fortfarande kvar på skolan: logga in med ditt **@*lbs.se**-konto och svara **Nej**.\n\n` +
-				`Din kod för formuläret är: \`${verificationCode}\``,
-			)
-			.setColor("#f2ff00")
-		: new EmbedBuilder()
-			.setTitle("⚠️ Viktigt")
-			.setDescription(
-				`Din webbläsare måste vara inloggad på ditt **@*lbs.se**-konto.\n\n` +
-				`Din kod för formuläret är: \`${verificationCode}\``,
-			)
-			.setColor("#f2ff00");
-
-	const formLinkButton = new ButtonBuilder()
-		.setLabel("Gå till formuläret")
-		.setStyle(ButtonStyle.Link)
-		.setURL(`${formURL}${verificationCode}`);
-
-	await interaction.update({
-		embeds: [embed],
-		components: [new ActionRowBuilder<ButtonBuilder>().addComponents(formLinkButton)],
-	});
+	const alumni = YEARS.find((option) => option.key === yearKey)?.alumni ?? false;
+	await interaction.update(BuildFormMessage(verificationCode, alumni));
 }

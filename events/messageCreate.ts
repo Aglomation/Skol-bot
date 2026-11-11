@@ -4,8 +4,7 @@ import type {
     Message,
 } from "discord.js";
 import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events } from "discord.js";
-import { MaskEmail } from "../features/emails.js";
-import { IsSchoolEmail } from "../features/emails.js";
+import { IsSchoolEmail, MaskEmail } from "../features/emails.js";
 import { CompleteVerification } from "../features/verify/flow.js";
 import { GetServerConfig } from "../utils/configManager.js";
 import { SafeError } from "../utils/errorText.js";
@@ -105,81 +104,98 @@ async function handleHoneypot(message: Message) {
     await message.delete().catch(() => null);
 
     // Purge logic
-    const channels = message.guild.channels.cache.filter((c) => c.isTextBased());
-    const channelsArray = channels.map((c) => c as GuildTextBasedChannel);
-    const results = await PurgeChannels(channelsArray, compromisedUserId);
-    const totalDeleted = results.reduce((acc, curr) => acc + curr, 0);
+    const textChannels = message.guild.channels.cache
+        .filter((channel) => channel.isTextBased())
+        .map((channel) => channel as GuildTextBasedChannel);
+    const deletedPerChannel = await PurgeChannels(textChannels, compromisedUserId);
+    const totalDeleted = deletedPerChannel.reduce((total, count) => total + count, 0);
 
     await SendLog(client, message.guild.id, `Honeypot wipe complete. Wiped ${totalDeleted+1} messages from <@${compromisedUserId}>.`);
 }
 
+/** The answer of the form in the channel is replied to, so the moderators see what became of it */
+const replyToFormAnswer = (message: Message, text: string) => message.reply(text).catch(() => null);
+
+type FormAnswer = { profile: UserProfile; email: string };
+
+/**
+ * Reads the message the verification form sends ("email$$code") and checks it
+ * @returns who it is for and which email, null if something is wrong (the message is replied to with what)
+ */
+async function checkFormAnswer(message: Message): Promise<FormAnswer | null> {
+    const [rawEmail, verifyCode] = message.content.replace(/\s+/g, "").split("$$");
+
+    if (!rawEmail || !verifyCode) {
+        await replyToFormAnswer(message, "Invalid formatting, didn't include two parts split by $$");
+        return null;
+    }
+
+    const profile = await FindByValue("verifycode", verifyCode);
+    if (!profile) {
+        await replyToFormAnswer(message, "Invalid verification code.");
+        return null;
+    }
+
+    if (!profile.discordId) {
+        await replyToFormAnswer(message, "Verification code found but no ID was tied to it");
+        return null;
+    }
+
+    if (profile.email) {
+        await replyToFormAnswer(message, `This user already has an email tied to their account.\n[${MaskEmail(profile.email)}]`);
+        return null;
+    }
+
+    // lowercase so Name@lbs.se and name@lbs.se count as the same email
+    const email = rawEmail.toLowerCase();
+
+    // checks for valid email while allowing subdomains
+    if (!IsSchoolEmail(email)) {
+        await sendInvalidEmailNotice(message, profile.discordId, email, verifyCode);
+        return null;
+    }
+
+    return { profile, email };
+}
+
+/** Saves the email, and gives the member their roles. The form's message is deleted if it all worked */
+async function saveEmailAndGiveRoles(message: Message, { profile, email }: FormAnswer) {
+    const saved = await UpdateProfile(profile.discordId, profile.serverId, { email });
+    if (saved === PROFILE_DUPLICATE) {
+        // the email is unique, so another account already uses it, nobody gets verified on it twice
+        await replyToFormAnswer(message, `This email is already linked to another account.\n[${MaskEmail(email)}]`);
+        await sendEmailInUseNotice(message.client, profile.serverId, profile.discordId);
+        return;
+    }
+    if (saved !== null) {
+        await replyToFormAnswer(message, "Could not save the email, check the console.");
+        return;
+    }
+
+    const guild = message.client.guilds.cache.get(profile.serverId);
+    const member = await guild?.members.fetch(profile.discordId).catch(() => null);
+    if (!member) {
+        await replyToFormAnswer(message, "The email was saved, but the user isn't in the server so no roles were given.");
+        return;
+    }
+
+    // the answers from the verify questions are only kept in memory, they are taken out in here
+    const completed = await CompleteVerification(member, email);
+    if (!completed) {
+        // the message stays so the moderators see it
+        await replyToFormAnswer(message, "The email was saved, but I couldn't give the roles (check that my role is above them). The user can press the verify button again to get them.");
+        return;
+    }
+
+    await message.delete().catch(() => null);
+}
+
 async function handleVerification(message: Message) {
-    if (message.webhookId !== CONFIG.WEBHOOKS.VERIFYBACKEND) return;
-    if (!message.guild) return;
-    const client = message.client;
+    if (message.webhookId !== CONFIG.WEBHOOKS.VERIFYBACKEND || !message.guild) return;
 
     try {
-        const [rawEmail, verify] = message.content.replace(/\s+/g, "").split("$$");
-
-        if (!rawEmail || !verify) {
-            await message.reply("Invalid formatting, didn't include two parts split by $$").catch(() => null);
-            return;
-        }
-
-        const profile = await FindByValue("verifycode", verify);
-        if (!profile) {
-            await message.reply("Invalid verification code.").catch(() => null);
-            return;
-        }
-
-        const userId = profile.discordId;
-        if (!userId) {
-            await message.reply("Verification code found but no ID was tied to it").catch(() => null);
-            return;
-        }
-
-        if (profile.email) {
-            await message.reply(`This user already has an email tied to their account.\n[${MaskEmail(profile.email)}]`).catch(() => null);
-            return;
-        }
-
-        // lowercase so Name@lbs.se and name@lbs.se count as the same email
-        const email = rawEmail.toLowerCase();
-
-        // checks for valid email while allowing subdomains
-        if (!IsSchoolEmail(email)) {
-            await sendInvalidEmailNotice(message, profile.discordId, email, verify);
-            return;
-        }
-
-        const saved = await UpdateProfile(userId, profile.serverId, { email });
-        if (saved === PROFILE_DUPLICATE) {
-            // the email is unique, so another account already uses it, nobody gets verified on it twice
-            await message.reply(`This email is already linked to another account.\n[${MaskEmail(email)}]`).catch(() => null);
-            await sendEmailInUseNotice(client, profile.serverId, userId);
-            return;
-        }
-        if (saved !== null) {
-            await message.reply("Could not save the email, check the console.").catch(() => null);
-            return;
-        }
-
-        const guild = client.guilds.cache.get(profile.serverId);
-        const member = await guild?.members.fetch(userId).catch(() => null);
-        if (!member) {
-            await message.reply("The email was saved, but the user isn't in the server so no roles were given.").catch(() => null);
-            return;
-        }
-
-        // the answers from the verify questions are only kept in memory, they are taken out in here
-        const completed = await CompleteVerification(member, email);
-        if (!completed) {
-            // the message stays so the moderators see it
-            await message.reply("The email was saved, but I couldn't give the roles (check that my role is above them). The user can press the verify button again to get them.").catch(() => null);
-            return;
-        }
-        await message.delete().catch(() => null);
-
+        const answer = await checkFormAnswer(message);
+        if (answer) await saveEmailAndGiveRoles(message, answer);
     } catch (error) {
         console.error("Error processing verification webhook:", SafeError(error));
     }

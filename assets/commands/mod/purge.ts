@@ -20,8 +20,8 @@ export default async function command(interaction: ChatInputCommandInteraction) 
 	if (!(await HasPermission(interaction, PermissionFlagsBits.ManageMessages))) return;
 
 	const channel = interaction.channel;
-	const me = interaction.guild.members.me;
-	if (!channel?.isTextBased() || channel.isDMBased() || !me || !channel.permissionsFor(me).has(PermissionFlagsBits.ManageMessages)) {
+	const botMember = interaction.guild.members.me;
+	if (!channel?.isTextBased() || channel.isDMBased() || !botMember || !channel.permissionsFor(botMember).has(PermissionFlagsBits.ManageMessages)) {
 		await interaction.editReply("I can't delete messages in this channel, I need the Manage Messages permission here.");
 		return;
 	}

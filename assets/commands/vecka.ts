@@ -37,6 +37,8 @@ function GetWeekRange(date: CalendarDate): { start: CalendarDate; end: CalendarD
 	return { start: AddDays(date, 1 - weekday), end: AddDays(date, 7 - weekday) };
 }
 
+// Easter Sunday by the Meeus/Jones/Butcher algorithm
+// I stole this entire thing from google no idea how it works
 function GetEaster(year: number): CalendarDate {
 	const a = year % 19;
 	const b = Math.floor(year / 100);

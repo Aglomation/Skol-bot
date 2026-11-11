@@ -1,6 +1,6 @@
 import type { ChatInputCommandInteraction, SlashCommandSubcommandBuilder } from "discord.js";
 import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from "discord.js";
-import type { ModActionType } from "../../../utils/moderationManager.js";
+import type { ModAction, ModActionType } from "../../../utils/moderationManager.js";
 import { FlattenActions, GetActiveBan, GetActiveMute, GetModProfiles } from "../../../utils/moderationManager.js";
 import { HasPermission } from "../../../utils/permissions.js";
 import { TYPE_INFO } from "./shared.js";
@@ -18,30 +18,24 @@ export const builder = (subcommand: SlashCommandSubcommandBuilder) =>
 				.setRequired(false),
 		);
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// notes, unmutes and unbans don't say much about how much a moderator or a user is involved
+const ACTIONS_THAT_COUNT_AS_INVOLVED: ModActionType[] = ["warn", "mute", "kick", "softban"];
+
+type ServerProfile = Awaited<ReturnType<typeof GetModProfiles>>[number];
+
 function TopList(counts: Map<string, number>, max = 5): string {
 	const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, max);
-	return top.length > 0 ? top.map(([id, count], i) => `${i + 1}. <@${id}> • ${count}`).join("\n") : "Nobody";
+	return top.length > 0 ? top.map(([id, count], rank) => `${rank + 1}. <@${id}> • ${count}`).join("\n") : "Nobody";
 }
 
-export default async function command(
-	interaction: ChatInputCommandInteraction,
-) {
-	if (!interaction.guild) return;
-	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+const increment = (counts: Map<string, number>, key: string) => counts.set(key, (counts.get(key) ?? 0) + 1);
 
-	const days = interaction.options.getInteger("days") ?? 30;
-	const since = Date.now() - days * 24 * 60 * 60 * 1000;
-
-	const profiles = await GetModProfiles(interaction.guild.id);
-	const entries = FlattenActions(profiles).filter((entry) => !entry.action.voided);
-
-	if (entries.length === 0) {
-		await interaction.editReply("There is no moderation history yet.");
-		return;
-	}
-
-	const types = Object.keys(TYPE_INFO) as ModActionType[];
+/**
+ * Counts the actions, in total and since a time, and who the active moderators and the most actioned users are (since that time)
+ */
+function CountActions(entries: { userId: string; action: ModAction }[], since: number) {
 	const total: Record<string, number> = {};
 	const recent: Record<string, number> = {};
 	const moderators = new Map<string, number>();
@@ -53,35 +47,62 @@ export default async function command(
 
 		recent[action.type] = (recent[action.type] ?? 0) + 1;
 
-		// notes and the unmutes/unbans dont say much about how much a mod or user is involved
-		if (action.type === "warn" || action.type === "mute" || action.type === "kick" || action.type === "softban") {
-			users.set(userId, (users.get(userId) ?? 0) + 1);
-			if (action.by) moderators.set(action.by, (moderators.get(action.by) ?? 0) + 1);
+		if (ACTIONS_THAT_COUNT_AS_INVOLVED.includes(action.type)) {
+			increment(users, userId);
+			if (action.by) increment(moderators, action.by);
 		}
 	}
 
-	let activeMutes = 0;
-	let activeBans = 0;
+	return { total, recent, moderators, users };
+}
+
+/** How many users are muted or banned right now */
+function CountActivePunishments(profiles: ServerProfile[]) {
+	let muted = 0;
+	let banned = 0;
+
 	for (const profile of profiles) {
 		const profileData = { moderation: profile.actions };
-		if (GetActiveMute(profileData)) activeMutes++;
-		if (GetActiveBan(profileData)) activeBans++;
+		if (GetActiveMute(profileData)) muted++;
+		if (GetActiveBan(profileData)) banned++;
 	}
 
-	const counts = types
+	return { muted, banned };
+}
+
+export default async function command(interaction: ChatInputCommandInteraction) {
+	if (!interaction.guild) return;
+	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+	if (!(await HasPermission(interaction, PermissionFlagsBits.ModerateMembers))) return;
+
+	const days = interaction.options.getInteger("days") ?? 30;
+
+	const profiles = await GetModProfiles(interaction.guild.id);
+	// a voided action was a mistake, it doesn't count
+	const entries = FlattenActions(profiles).filter((entry) => !entry.action.voided);
+
+	if (entries.length === 0) {
+		await interaction.editReply("There is no moderation history yet.");
+		return;
+	}
+
+	const { total, recent, moderators, users } = CountActions(entries, Date.now() - days * DAY_MS);
+	const active = CountActivePunishments(profiles);
+
+	const actionLines = (Object.keys(TYPE_INFO) as ModActionType[])
 		.map((type) => `${TYPE_INFO[type].emoji} ${TYPE_INFO[type].label}: **${recent[type] ?? 0}** (${total[type] ?? 0} total)`)
 		.join("\n");
 
 	const embed = new EmbedBuilder()
 		.setTitle(`Moderation stats (last ${days} days)`)
 		.addFields(
-			{ name: "Actions", value: counts },
-			{ name: "Active right now", value: `🔇 ${activeMutes} muted\n🔨 ${activeBans} banned`, inline: true },
+			{ name: "Actions", value: actionLines },
+			{ name: "Active right now", value: `🔇 ${active.muted} muted\n🔨 ${active.banned} banned`, inline: true },
 			{ name: "Users with history", value: `${profiles.length}`, inline: true },
 			{ name: "Most active moderators", value: TopList(moderators) },
 			{ name: "Most actioned users", value: TopList(users) },
 		)
-		.setColor(0x5865F2)
+		.setColor(0x5865f2)
 		.setTimestamp();
 
 	await interaction.editReply({ embeds: [embed] });

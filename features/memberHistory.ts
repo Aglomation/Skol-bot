@@ -42,7 +42,8 @@ export async function RecordSnapshot(guild: Guild, now = Date.now()): Promise<bo
 	}
 
 	const all = await store.Get();
-	const days = (all[guild.id] ??= {});
+	const days = all[guild.id] ?? {};
+	if (!all[guild.id]) all[guild.id] = days;
 	days[GetDateKey(now)] = { total: verified.members.size, cities };
 
 	const oldest = GetDateKey(now - KEEP_DAYS * 86400000);
@@ -52,14 +53,6 @@ export async function RecordSnapshot(guild: Guild, now = Date.now()): Promise<bo
 
 	await store.Save();
 	return true;
-}
-
-/**
- * Deletes the history of a server, used when the bot has been removed from it for good
- */
-export async function DeleteGuildHistory(guildId: string): Promise<void> {
-	delete (await store.Get())[guildId];
-	await store.Save();
 }
 
 export async function GetSnapshots(guildId: string, days: number, now = Date.now()): Promise<[string, Snapshot][]> {

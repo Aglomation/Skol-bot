@@ -24,6 +24,18 @@ export function IsLeapYear(year: number): boolean {
 // a birthday saved without a year gets this year instead, it is a leap year so the 29th of February still works
 export const HIDDEN_YEAR = 1604;
 
+/** Negative if a comes first in the year, positive if b does */
+export function CompareDates(a: { month: number; day: number }, b: { month: number; day: number }): number {
+	return a.month !== b.month ? a.month - b.month : a.day - b.day;
+}
+
+/** The age someone has (or turns) this year, counting from the day of the birthday itself */
+export function AgeToday(birthday: BirthdayDate, today: BirthdayDate): number {
+	const hasHadBirthday = CompareDates(birthday, today) <= 0;
+
+	return today.year - birthday.year - (hasHadBirthday ? 0 : 1);
+}
+
 export const HasBirthYear = (birthday: { year: number }) => birthday.year !== HIDDEN_YEAR;
 
 /**

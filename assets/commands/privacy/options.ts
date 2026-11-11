@@ -39,7 +39,7 @@ export default async function command(
     }
 
     const optionValue = interaction.options.getInteger("option", true);
-    const selectedChoiceName = privacyChoices.find(c => c.value === optionValue)?.name;
+    const selectedChoiceName = privacyChoices.find((choice) => choice.value === optionValue)?.name;
 
     const saved = await UpdateProfile(interaction.user.id, interaction.guild.id, { privacyOption: optionValue });
     if (saved === PROFILE_FAILED) {

@@ -30,10 +30,7 @@ export default async function command(
 		.setTitle("Verifiera din LBS-mejl 🔒")
 		.setDescription("Klicka på den gröna knappen nedan för att verifiera dig.")
 		.setColor(0x87CFEB)
-		.setAuthor({
-			name: "LBS Bot",
-			iconURL: "https://cdn.discordapp.com/icons/1497140069746741338/28df0568dc08e6808436dcc53f3bc09b.webp",
-		});
+		.setThumbnail("https://cdn.discordapp.com/icons/1497140069746741338/28df0568dc08e6808436dcc53f3bc09b.webp");
 
 	const vbtn = new ButtonBuilder()
 		.setCustomId(button.data.customId)

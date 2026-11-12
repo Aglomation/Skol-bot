@@ -12,7 +12,7 @@ import { RecordTaskRun, RegisterTask } from "./utils/taskStatus.js";
 
 // How the bot starts: see startBot() at the bottom. Everything under assets/ and events/ is found by looking in those
 // folders, so a new command, button, event or repeating task only needs its file, nothing is registered in here.
-
+ 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 dotenv.config({ path: path.join(process.cwd(), ".env"), quiet: true });

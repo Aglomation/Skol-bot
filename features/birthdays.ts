@@ -17,6 +17,17 @@ export function TodayInSweden(now = new Date()): BirthdayDate {
 	return { year, month, day };
 }
 
+/**
+ * The date of a saved birthday, read in Sweden's timezone, same as the list does
+ * Old rows saved at swedish midnight are the day before in UTC, midnight UTC rows are the same day in both
+ * @param timestamp Seconds
+ */
+export function BirthdayParts(timestamp: number): BirthdayDate {
+	const { year, month, day } = GetSwedenParts(timestamp * 1000);
+
+	return { year, month, day };
+}
+
 export function IsLeapYear(year: number): boolean {
 	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
@@ -149,11 +160,10 @@ const formatBirthdayLine = (guild: Guild | null, member: UserProfile, currentYea
 	const name = GetDisplayName(guild, member.discordId);
 	const mention = `(<@${member.discordId}>)`;
 
-	// birthdays are saved as midnight UTC
-	const birthdayDate = new Date((member.birthday as number) * 1000);
-	if (birthdayDate.getUTCFullYear() === HIDDEN_YEAR) return `${name} ${mention}`;
+	const birthday = BirthdayParts(member.birthday as number);
+	if (!HasBirthYear(birthday)) return `${name} ${mention}`;
 
-	return `${name} ${mention} - ${currentYear - birthdayDate.getUTCFullYear()} Years old`;
+	return `${name} ${mention} - ${currentYear - birthday.year} Years old`;
 };
 
 // "server:user:month-day" of everyone that already got their message today, so setting a birthday on the day itself can't post it twice
@@ -179,11 +189,7 @@ export async function AnnounceBirthdays(client: Client, guild: Guild, members: U
 	const todaysBirthdays = members.filter((member) => !announced.has(`${guild.id}:${member.discordId}:${day}`));
 	if (todaysBirthdays.length === 0) return;
 
-	todaysBirthdays.sort((a, b) => {
-		const yearA = new Date((a.birthday as number) * 1000)?.getUTCFullYear() || 0;
-		const yearB = new Date((b.birthday as number) * 1000)?.getUTCFullYear() || 0;
-		return yearB - yearA;
-	});
+	todaysBirthdays.sort((a, b) => BirthdayParts(b.birthday as number).year - BirthdayParts(a.birthday as number).year);
 
 	const descriptionLines = todaysBirthdays.map(member =>
 		formatBirthdayLine(guild, member, today.year)

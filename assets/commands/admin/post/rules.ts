@@ -45,8 +45,8 @@ function BuildRulesEmbed(guild: Guild) {
                 name: "*2. CONTENT & MEDIA*",
                 value:
                     `​\n**1 § NSFW (18+):**\n` +
-                    `All content (images, text, links) that is pornographic, violent, or otherwise inappropriate is strictly prohibited. This is a school-aligned community.\n` +
-                    `*Penalty:* Immediate Permanent Ban for explicit pornography. Warning / Mute depending on the content.\n\n` +
+                    `Sexually explicit, pornographic, or gratuitously violent content (images, text, links) is strictly prohibited in this school-aligned community. However, there is a bit of a gray area for genuine artistic, cinematic, or narrative projects (e.g., animated shorts, storyboards, mature themes). You can dip a toe across the line for creative intent, just don't cross it entirely. Any borderline material **must be spoiler-tagged with a clear content warning** explaining what is hidden.\n` +
+                    `*Penalty:* Immediate Permanent Ban for explicit pornography. Removal / Warning / Mute depending on the content.\n\n` +
                     `**2 § AI-Generated Material:**\n` +
                     `No "AI-slop" in Art channel.\n` +
                     `*Penalty:* Content removal -> Warning -> 1d Mute.\n\n` +

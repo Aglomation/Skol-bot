@@ -93,7 +93,7 @@ function BuildRulesEmbed(guild: Guild) {
             text: "Please treat others with kindness and help us keep the vibes positive!\n" +
                 "If you have any questions, contact a moderator or administrator.\n" +
                 "If you see someone breaking the rules, please open a #🚩・report!\n" +
-                "These rules were last updated on 8/7/2026."
+                "These rules were last updated on 18/11/2026."
         });
 }
 

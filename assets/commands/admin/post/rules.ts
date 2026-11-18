@@ -75,7 +75,7 @@ function BuildRulesEmbed(guild: Guild) {
                 value:
                     `​\n**1 § Profile Integrity:**\n` +
                     `Your username and profile picture must not be offensive or impersonate others.\n` +
-                    `*Penalty:* Request to change -> Kick.\n`
+                    `*Penalty:* Request to change -> Kick.\n​`
             },
             {
                 name: "*5. PRIVACY POLICY*",
@@ -86,7 +86,7 @@ function BuildRulesEmbed(guild: Guild) {
                     `\n**2 § Data Management:**\n` +
                     `\`/privacy options\` to set your privacy preferences.\n` +
                     `\`/privacy mydata\` to request a copy of your data.\n` +
-                    `\`/privacy deleteme\` to delete your data and revoke server access.\n`
+                    `\`/privacy deleteme\` to delete your data and revoke server access.\n​`
             }
         )
         .setFooter({
